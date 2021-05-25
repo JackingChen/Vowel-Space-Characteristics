@@ -265,6 +265,7 @@ class Articulation:
 
         """
         fs, data_audio=read(audio)
+        #normalize raw wavform
         data_audio=data_audio-np.mean(data_audio)
         data_audio=data_audio/float(np.max(np.abs(data_audio)))
         size_frameS=self.sizeframe*float(fs)

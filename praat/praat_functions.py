@@ -38,11 +38,12 @@ def praat_vuv(audio_filaname, resultsp, resultst, time_stepF0=0, minf0=75, maxf0
 	:param averageVUVPeriod: half of this value will be taken to be the amount to which a voiced interval will extend 							beyond its initial and final points, default is 0.01
 	:returns: nothing
 	"""
-	command='praat '+path_praat_script+'/vuv_praat.praat '
+	command='praat --run '+path_praat_script+'/vuv_praat.praat '
 	command+=audio_filaname+' '+resultsp +' '+  resultst+' '
 	command+=str(minf0)+' '+str(maxf0)+' '
 	command+=str(time_stepF0)+' '+str(maxVUVPeriod)+' '+str(averageVUVPeriod)
 	os.system(command)
+    
 
 def praat_formants(audio_filename, results_filename,sizeframe,step, n_formants=5, max_formant=5500):
 	"""
@@ -58,7 +59,7 @@ def praat_formants(audio_filename, results_filename,sizeframe,step, n_formants=5
 	:param max_formant: maximum frequencyof formants to look for
 	:returns: nothing
 	"""
-	command='praat '+path_praat_script+'/FormantsPraat.praat '
+	command='praat --run '+path_praat_script+'/FormantsPraat.praat '
 	command+=audio_filename + ' '+results_filename+' '
 	command+=str(n_formants)+' '+ str(max_formant) + ' '
 	command+=str(float(sizeframe)/2)+' '
@@ -157,6 +158,7 @@ def decodeFormants(fileTxt):
 	while (ji<len(end_line1)-1):
 		line1=datam[end_line1[ji]+1:end_line1[ji+1]]
 		cond=(line1=='3' or line1=='4' or line1=='5')
+# 		cond2=(line1 in [str(i) for i in range(10)])
 		if (cond):
 			F1.append(float(datam[end_line1[ji+1]+1:end_line1[ji+2]]))
 			F2.append(float(datam[end_line1[ji+3]+1:end_line1[ji+4]]))

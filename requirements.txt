@@ -8,3 +8,5 @@ kaldi_io==0.9.0
 matplotlib==3.0.2
 torch==0.4.1
 scikit_learn==0.23.1
+
+
