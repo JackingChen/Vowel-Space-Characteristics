@@ -214,7 +214,9 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--filepath', default='/mnt/sdd/jackchen/egs/formosa/s6/Segmented_ADOS_emotion',
                         help='path of the base directory')
-    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Audacity',
+    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Audacity_Word',
+                        help='path of the base directory')
+    parser.add_argument('--checkpointpath', default='/homes/ssd1/jackchen/DisVoice/phonation/features',
                         help='path of the base directory')
     parser.add_argument('--outpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
@@ -235,6 +237,7 @@ outpath=args.outpath
 AVERAGEMETHOD=args.avgmethod
 path_app = base_path
 sys.path.append(path_app)
+checkpointpath_manual=args.checkpointpath
 PhonationPath=base_path + "/phonation" 
 
 
@@ -266,8 +269,8 @@ silence = AudioSegment.silent(duration=silence_duration_ms)
 if os.path.exists('Gen_formant_multiprocess.log'):
     os.remove('Gen_formant_multiprocess.log')
 
-checkpointpath=PhonationPath+"Phonation_dict_bag_{}.pkl".format(dataset_name)
-if not os.path.exists(checkpointpath):
+chkptpath=PhonationPath+"/Phonation_dict_bag_{}.pkl".format(dataset_name)
+if not os.path.exists(chkptpath):
     Phonation_dict_bag=Dict()
     for file in tqdm(files):
         # print(file)
@@ -294,14 +297,14 @@ if not os.path.exists(checkpointpath):
     tmpPath=PhonationPath + "/features"
     if not os.path.exists(tmpPath):
         os.makedirs(tmpPath)
-    pickle.dump(Phonation_dict_bag,open(checkpointpath,"wb"))
+    pickle.dump(Phonation_dict_bag,open(chkptpath,"wb"))
 else:
-    Phonation_dict_bag=pickle.load(open(checkpointpath,"rb"))
+    Phonation_dict_bag=pickle.load(open(chkptpath,"rb"))
 
-checkpointpath_kid=PhonationPath+"df_phonation_kid_{}.pkl".format(dataset_name)
-checkpointpath_doc=PhonationPath+"df_phonation_doc_{}.pkl".format(dataset_name)
-if not os.path.exists(checkpointpath_kid) or \
-   not os.path.exists(checkpointpath_doc):
+chkptpath_kid=PhonationPath+"/df_phonation_kid_{}.pkl".format(dataset_name)
+chkptpath_doc=PhonationPath+"/df_phonation_doc_{}.pkl".format(dataset_name)
+if not os.path.exists(chkptpath_kid) or \
+   not os.path.exists(chkptpath_doc):
     Phonation_role_dict=Dict()
     for keys, values in Phonation_dict_bag.items():
         if '_K' in keys:
@@ -311,20 +314,51 @@ if not os.path.exists(checkpointpath_kid) or \
     
     df_phonation_kid=pd.DataFrame.from_dict(Phonation_role_dict['K']).T
     df_phonation_doc=pd.DataFrame.from_dict(Phonation_role_dict['D']).T
-    pickle.dump(df_phonation_kid,open(checkpointpath_kid,"wb"))
-    pickle.dump(df_phonation_doc,open(checkpointpath_doc,"wb"))
+    pickle.dump(df_phonation_kid,open(chkptpath_kid,"wb"))
+    pickle.dump(df_phonation_doc,open(chkptpath_doc,"wb"))
 else:
-    df_phonation_kid=pickle.load(open(checkpointpath_kid,"rb"))
-    df_phonation_doc=pickle.load(open(checkpointpath_doc,"rb"))
+    df_phonation_kid=pickle.load(open(chkptpath_kid,"rb"))
+    df_phonation_doc=pickle.load(open(chkptpath_doc,"rb"))
+
+chkptpath_kid_TD=args.checkpointpath + "/df_phonation_kid_ADOS_TD.pkl"
+chkptpath_kid_ASD=args.checkpointpath + "/df_phonation_kid_ADOS.pkl"
+chkptpath_doc_ASD=args.checkpointpath + "/df_phonation_doc_ADOS.pkl"
+chkptpath_doc_TD=args.checkpointpath + "/df_phonation_doc_ADOS_TD.pkl"
+
+# df_phonation_kid_TD=pickle.load(open(chkptpath_kid_TD,"rb"))
+# df_phonation_kid_ASD=pickle.load(open(chkptpath_kid_ASD,"rb"))
+# df_phonation_doc_ASD=pickle.load(open(chkptpath_doc_ASD,"rb"))
+# df_phonation_doc_TD=pickle.load(open(chkptpath_doc_TD,"rb"))
 
 
-dataset_str='{ds}_DvsK'.format(ds=dataset_name)
-df_ttest_result=pd.DataFrame()
-for col in df_phonation_kid.columns:
-    df_ttest_result.loc[dataset_str+"-p-val",col]=stats.ttest_ind(df_phonation_kid[col].dropna(),df_phonation_doc[col].dropna())[1].astype(float)
-df_ttest_result=df_ttest_result.T 
 
-result_path="RESULTS/"
-if not os.path.exists(result_path):
-    os.makedirs(result_path)
-df_ttest_result.to_excel(result_path+dataset_str+".xlsx")
+def TTest_Cmp_checkpoint(chkptpath_1,chkptpath_2):
+    df_phonation_1=pickle.load(open(chkptpath_1,"rb"))
+    df_phonation_2=pickle.load(open(chkptpath_2,"rb"))
+    name1=os.path.basename(chkptpath_1).replace(".pkl","")
+    name2=os.path.basename(chkptpath_2).replace(".pkl","")
+    
+    dataset_str='{name1}vs{name2}'.format(name1=name1,name2=name2)
+    df_ttest_result=pd.DataFrame()
+    for col in df_phonation_1.columns:
+        df_ttest_result.loc[dataset_str+"-p-val",col]=stats.ttest_ind(df_phonation_1[col].dropna(),df_phonation_2[col].dropna())[1].astype(float)
+    df_ttest_result=df_ttest_result.T 
+    
+    result_path="RESULTS/"
+    if not os.path.exists(result_path):
+        os.makedirs(result_path)
+    df_ttest_result.to_excel(result_path+dataset_str+".xlsx")
+
+TTest_Cmp_checkpoint(chkptpath_doc_ASD,chkptpath_doc_TD)
+TTest_Cmp_checkpoint(chkptpath_kid_ASD,chkptpath_kid_TD)
+
+# dataset_str='{ds}_DvsK'.format(ds=dataset_name)
+# df_ttest_result=pd.DataFrame()
+# for col in df_phonation_kid.columns:
+#     df_ttest_result.loc[dataset_str+"-p-val",col]=stats.ttest_ind(df_phonation_kid[col].dropna(),df_phonation_doc[col].dropna())[1].astype(float)
+# df_ttest_result=df_ttest_result.T 
+
+# result_path="RESULTS/"
+# if not os.path.exists(result_path):
+#     os.makedirs(result_path)
+# df_ttest_result.to_excel(result_path+dataset_str+".xlsx")

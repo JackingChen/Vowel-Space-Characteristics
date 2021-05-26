@@ -333,6 +333,173 @@ class Phonation:
         else:
             raise ValueError(fmt+" is not supported")
 
+class Phonation_jack:
+    """
+    Compute phonation features from sustained vowels and continuous speech.
+
+    For continuous speech, the features are computed over voiced segments
+
+    Seven descriptors are computed:
+
+    1. First derivative of the fundamental Frequency
+
+    2. Second derivative of the fundamental Frequency
+
+    3. Jitter
+
+    4. Shimmer
+
+    5. Amplitude perturbation quotient
+
+    6. Pitch perturbation quotient
+
+    7. Logaritmic Energy
+
+    Static or dynamic matrices can be computed:
+
+    Static matrix is formed with 29 features formed with (seven descriptors) x (4 functionals: mean, std, skewness, kurtosis) + degree of Unvoiced
+
+    Dynamic matrix is formed with the seven descriptors computed for frames of 40 ms.
+
+    Notes:
+
+    1. In dynamic features the first 11 frames of each recording are not considered to be able to stack the APQ and PPQ descriptors with the remaining ones.
+    2. The fundamental frequency is computed the RAPT algorithm. To use the PRAAT method,  change the "self.pitch method" variable in the class constructor.
+
+    Script is called as follows
+
+    >>> python phonation.py <file_or_folder_audio> <file_features> <static (true or false)> <plots (true or false)> <format (csv, txt, npy, kaldi, torch)>
+
+    Examples command line:
+
+    >>> python phonation.py "../audios/001_a1_PCGITA.wav" "phonationfeaturesAst.txt" "true" "true" "txt"
+    >>> python phonation.py "../audios/098_u1_PCGITA.wav" "phonationfeaturesUst.csv" "true" "true" "csv"
+    >>> python phonation.py "../audios/098_u1_PCGITA.wav" "phonationfeaturesUdyn.pt" "false" "true" "torch"
+
+    >>> python phonation.py "../audios/" "phonationfeaturesst.txt" "true" "false" "txt"
+    >>> python phonation.py "../audios/" "phonationfeaturesst.csv" "true" "false" "csv"
+    >>> python phonation.py "../audios/" "phonationfeaturesdyn.pt" "false" "false" "torch"
+
+    Examples directly in Python
+
+    >>> from disvoice.phonation import Phonation
+    >>> phonation=Phonation()
+    >>> file_audio="../audios/001_a1_PCGITA.wav"
+    >>> features=phonation.extract_features_file(file_audio, static, plots=True, fmt="numpy")
+    >>> features2=phonation.extract_features_file(file_audio, static, plots=True, fmt="dataframe")
+    >>> features3=phonation.extract_features_file(file_audio, dynamic, plots=True, fmt="torch")
+    
+    >>> path_audios="../audios/"
+    >>> features1=phonation.extract_features_path(path_audios, static, plots=False, fmt="numpy")
+    >>> features2=phonation.extract_features_path(path_audios, static, plots=False, fmt="torch")
+    >>> features3=phonation.extract_features_path(path_audios, static, plots=False, fmt="dataframe")
+
+    """
+    def __init__(self):
+        self.pitch_method="rapt"
+        self.size_frame=0.04
+        self.size_step=0.02
+        self.minf0=60
+        self.maxf0=350
+        self.voice_bias=-0.2
+        self.energy_thr_percent=0.025
+        self.PATH = os.path.dirname(os.path.abspath(__file__))
+        self.head=["DF0", "DDF0", "Jitter", "Shimmer", "apq", "ppq", "logE"]
+
+    def extract_features_file(self, audio, static=True, plots=False, fmt="npy", kaldi_file=""):
+        """Extract the phonation features from an audio file
+        
+        :param audio: .wav audio file.
+        :param static: whether to compute and return statistic functionals over the feature matrix, or return the feature matrix computed over frames
+        :param plots: timeshift to extract the features
+        :param fmt: format to return the features (npy, dataframe, torch, kaldi)
+        :param kaldi_file: file to store kaldi features, only valid when fmt=="kaldi"
+        :returns: features computed from the audio file.
+
+        >>> phonation=Phonation()
+        >>> file_audio="../audios/001_a1_PCGITA.wav"
+        >>> features1=phonation.extract_features_file(file_audio, static=True, plots=True, fmt="npy")
+        >>> features2=phonation.extract_features_file(file_audio, static=True, plots=True, fmt="dataframe")
+        >>> features3=phonation.extract_features_file(file_audio, static=False, plots=True, fmt="torch")
+        >>> phonation.extract_features_file(file_audio, static=False, plots=False, fmt="kaldi", kaldi_file="./test")
+        """
+        fs, data_audio=read(audio)
+        data_audio=data_audio-np.mean(data_audio)
+        data_audio=data_audio/float(np.max(np.abs(data_audio)))
+        size_frameS=self.size_frame*float(fs)
+        size_stepS=self.size_step*float(fs)
+        overlap=size_stepS/size_frameS
+        if self.pitch_method == 'praat':
+            name_audio=audio.split('/')
+            temp_uuid='phon'+name_audio[-1][0:-4]
+            if not os.path.exists(self.PATH+'/../tempfiles/'):
+                os.makedirs(self.PATH+'/../tempfiles/')
+            temp_filename_vuv=self.PATH+'/../tempfiles/tempVUV'+temp_uuid+'.txt'
+            temp_filename_f0=self.PATH+'/../tempfiles/tempF0'+temp_uuid+'.txt'
+            praat_functions.praat_vuv(audio, temp_filename_f0, temp_filename_vuv, time_stepF0=self.size_step, minf0=self.minf0, maxf0=self.maxf0)
+            F0,_=praat_functions.decodeF0(temp_filename_f0,len(data_audio)/float(fs),self.size_step)
+            os.remove(temp_filename_vuv)
+            os.remove(temp_filename_f0)
+        elif self.pitch_method == 'rapt':
+            data_audiof=np.asarray(data_audio*(2**15), dtype=np.float32)
+            F0=pysptk.sptk.rapt(data_audiof, fs, int(size_stepS), min=self.minf0, max=self.maxf0, voice_bias=self.voice_bias, otype='f0')
+        F0nz=F0[F0!=0]
+        Jitter=jitter_env(F0nz, len(F0nz))
+        nF=int((len(data_audio)/size_frameS/overlap))-1
+        Amp=[]
+        logE=[]
+        apq=[]
+        ppq=[]
+        DF0=np.diff(F0nz, 1)
+        DDF0=np.diff(DF0,1)
+        F0z=F0[F0==0]
+        totaldurU=len(F0z)
+        thresholdE=10*logEnergy([self.energy_thr_percent])
+        degreeU=100*float(totaldurU)/len(F0)
+        lnz=0
+        for l in range(nF):
+            data_frame=data_audio[int(l*size_stepS):int(l*size_stepS+size_frameS)]
+            energy=10*logEnergy(data_frame)
+            if F0[l]!=0:
+                Amp.append(np.max(np.abs(data_frame)))
+                logE.append(energy)
+                if lnz>=12: # TODO:
+                    amp_arr=np.asarray([Amp[j] for j in range(lnz-12, lnz)])
+                    #print(amp_arr)
+                    apq.append(APQ(amp_arr))
+                if lnz>=6: # TODO:
+                    f0arr=np.asarray([F0nz[j] for j in range(lnz-6, lnz)])
+                    ppq.append(PPQ(1/f0arr))
+                lnz=lnz+1
+
+        Shimmer=shimmer_env(Amp, len(Amp))
+        apq=np.asarray(apq)
+        ppq=np.asarray(ppq)
+        logE=np.asarray(logE)
+
+
+        if len(apq)==0:
+            print("warning, there is not enough long voiced segments to compute the APQ, in this case APQ=shimmer")
+            apq=Shimmer
+
+
+        # if len(Shimmer)==len(apq):
+        #     feat_mat=np.vstack((DF0[5:], DDF0[4:], Jitter[6:], Shimmer[6:], apq[6:], ppq, logE[6:])).T
+        # else:
+        #     feat_mat=np.vstack((DF0[11:], DDF0[10:], Jitter[12:], Shimmer[12:], apq, ppq[6:], logE[12:])).T
+
+        feat_v=dynamic2statict([DF0, DDF0, Jitter, Shimmer, apq, ppq, logE])
+        
+        head_st=[]
+        df={}
+        for k in ["avg", "std", "skewness", "kurtosis"]:
+            for h in self.head:
+                head_st.append(k+" "+h)
+        for e, k in enumerate(head_st):
+            df[k]=[feat_v[e]]
+                    
+        return pd.DataFrame(df)
+
 if __name__=="__main__":
 
     if len(sys.argv)!=6:

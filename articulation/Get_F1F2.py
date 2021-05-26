@@ -68,7 +68,7 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--filepath', default='/mnt/sdd/jackchen/egs/formosa/s6/Segmented_ADOS_emotion',
                         help='path of the base directory')
-    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Audacity',
+    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Audacity_Word',
                         help='path of the base directory')
     parser.add_argument('--outpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
@@ -286,8 +286,12 @@ def process_audio(file):
     
     
     for st,ed,symb in df_segInfo.values:
-        st_ms=st * 1000 #Works in milliseconds
-        ed_ms=ed * 1000 #Works in milliseconds
+        ''' Allow an extention of a half window length  for audio segment calculation'''
+        st_ext= np.max(st - F1F2_extractor.size_frame/2,0)
+        ed_ext= min(ed + F1F2_extractor.size_frame/2,max(df_segInfo[1]))
+        # segment_lengths.append((ed-st)) # np.quantile(segment_lengths,0.05)=0.08
+        st_ms=st_ext * 1000 #Works in milliseconds
+        ed_ms=ed_ext * 1000 #Works in milliseconds
         
         audio_segment = silence + audio[st_ms:ed_ms] + silence
         temp_outfile=F1F2_extractor.PATH+'/../tempfiles/tempwav{}.wav'.format(utt+symb)
@@ -430,73 +434,73 @@ for phone in phones_check:
     Manual area
 
 '''
-# Formants_utt_symb=Dict()
-# Formants_people_symb=Dict()
-# # =============================================================================
-# for file in tqdm(files[13:20]):
-#     filename=os.path.basename(file).split(".")[0]
-#     spkr_name='_'.join(filename.split("_")[:-3])
-#     utt='_'.join(filename.split("_")[:])
-#     audiofile=filepath+"/{name}.wav".format(name=filename)
-#     trn=trnpath+"/{name}.txt".format(name=filename)
-#     df_segInfo=pd.read_csv(trn, header=None,delimiter='\t')
+Formants_utt_symb=Dict()
+Formants_people_symb=Dict()
+# =============================================================================
+for file in tqdm(files[13:20]):
+    filename=os.path.basename(file).split(".")[0]
+    spkr_name='_'.join(filename.split("_")[:-3])
+    utt='_'.join(filename.split("_")[:])
+    audiofile=filepath+"/{name}.wav".format(name=filename)
+    trn=trnpath+"/{name}.txt".format(name=filename)
+    df_segInfo=pd.read_csv(trn, header=None,delimiter='\t')
     
-#     audio = AudioSegment.from_wav(audiofile)
-#     F1F2_extractor=Extract_F1F2()
-    
-    
+    audio = AudioSegment.from_wav(audiofile)
+    F1F2_extractor=Extract_F1F2()
     
     
-#     for st,ed,symb in df_segInfo.values:
-#         st_ms=st * 1000 #Works in milliseconds
-#         ed_ms=ed * 1000 #Works in milliseconds
+    
+    
+    for st,ed,symb in df_segInfo.values:
+        st_ms=st * 1000 #Works in milliseconds
+        ed_ms=ed * 1000 #Works in milliseconds
         
-#         audio_segment = silence + audio[st_ms:ed_ms] + silence
-#         temp_outfile=F1F2_extractor.PATH+'/../tempfiles/tempwav{}.wav'.format(utt+symb)
+        audio_segment = silence + audio[st_ms:ed_ms] + silence
+        temp_outfile=F1F2_extractor.PATH+'/../tempfiles/tempwav{}.wav'.format(utt+symb)
         
-#         audio_segment.export(temp_outfile, format="wav")
-#         [F1,F2]=F1F2_extractor.extract_features_file(temp_outfile)
-#         if len(F1) == 0 or len(F2)==0:
-#             F1_static,F2_static = -1,-1
-#         else:
-#             F1_static=functional_method(F1,method=AVERAGEMETHOD)
-#             F2_static=functional_method(F2,method=AVERAGEMETHOD)
+        audio_segment.export(temp_outfile, format="wav")
+        [F1,F2]=F1F2_extractor.extract_features_file(temp_outfile)
+        if len(F1) == 0 or len(F2)==0:
+            F1_static,F2_static = -1,-1
+        else:
+            F1_static=functional_method(F1,method=AVERAGEMETHOD)
+            F2_static=functional_method(F2,method=AVERAGEMETHOD)
         
         
-#         assert  math.isnan(F1_static) == False and math.isnan(F2_static) == False
-#         os.remove(temp_outfile)
+        assert  math.isnan(F1_static) == False and math.isnan(F2_static) == False
+        os.remove(temp_outfile)
         
-#         tmp_dict=Dict()
-#         tmp_dict[symb].F1=F1_static
-#         tmp_dict[symb].F2=F2_static
-#         df_tmp=pd.DataFrame.from_dict(tmp_dict)
-#         if utt not in  Formants_utt_symb.keys():
-#             Formants_utt_symb[utt]=df_tmp
-#         else:
-#             Formants_utt_symb[utt]=pd.concat([Formants_utt_symb[utt],df_tmp],axis=1)
+        tmp_dict=Dict()
+        tmp_dict[symb].F1=F1_static
+        tmp_dict[symb].F2=F2_static
+        df_tmp=pd.DataFrame.from_dict(tmp_dict)
+        if utt not in  Formants_utt_symb.keys():
+            Formants_utt_symb[utt]=df_tmp
+        else:
+            Formants_utt_symb[utt]=pd.concat([Formants_utt_symb[utt],df_tmp],axis=1)
         
-#         if len(F1) != 0 and len(F2)!=0:
-            # if spkr_name not in Formants_people_symb.keys():
-            #     if symb not in Formants_people_symb[spkr_name].keys():
-            #         Formants_people_symb[spkr_name][symb]=[[F1_static, F2_static]]
-            #     elif symb in Formants_people_symb[spkr_name].keys():
-            #         Formants_people_symb[spkr_name][symb].append([F1_static, F2_static])
-            # else:
-            #     if symb not in Formants_people_symb[spkr_name].keys():
-            #         Formants_people_symb[spkr_name][symb]=[[F1_static, F2_static]]
-            #     elif symb in Formants_people_symb[spkr_name].keys(): 
-            #         Formants_people_symb[spkr_name][symb].append([F1_static, F2_static])
-#     Formants_utt_symb[utt] = Formants_utt_symb[utt].T
-#     if args.check:
-#         if len(Utt_phf_dict[utt][Utt_phf_dict[utt].index != 'SIL']) != len(Formants_utt_symb[utt][Formants_utt_symb[utt].index != "SIL"]):
-#             with open('Gen_formant_multiprocess.log', 'a') as f:
-#                 string=utt + ": utt in Utt_phf_dict " + str(len(Utt_phf_dict[utt])) + " Not Match utt in Formants_utt_symb "+  str(len(Formants_utt_symb[utt])) + "\n"
+        if len(F1) != 0 and len(F2)!=0:
+            if spkr_name not in Formants_people_symb.keys():
+                if symb not in Formants_people_symb[spkr_name].keys():
+                    Formants_people_symb[spkr_name][symb]=[[F1_static, F2_static]]
+                elif symb in Formants_people_symb[spkr_name].keys():
+                    Formants_people_symb[spkr_name][symb].append([F1_static, F2_static])
+            else:
+                if symb not in Formants_people_symb[spkr_name].keys():
+                    Formants_people_symb[spkr_name][symb]=[[F1_static, F2_static]]
+                elif symb in Formants_people_symb[spkr_name].keys(): 
+                    Formants_people_symb[spkr_name][symb].append([F1_static, F2_static])
+    Formants_utt_symb[utt] = Formants_utt_symb[utt].T
+    if args.check:
+        if len(Utt_phf_dict[utt][Utt_phf_dict[utt].index != 'SIL']) != len(Formants_utt_symb[utt][Formants_utt_symb[utt].index != "SIL"]):
+            with open('Gen_formant_multiprocess.log', 'a') as f:
+                string=utt + ": utt in Utt_phf_dict " + str(len(Utt_phf_dict[utt])) + " Not Match utt in Formants_utt_symb "+  str(len(Formants_utt_symb[utt])) + "\n"
                 
-#                 f.write(string)
-#         assert len(Formants_utt_symb[utt]) !=0
+                f.write(string)
+        assert len(Formants_utt_symb[utt]) !=0
     
-# pickle.dump(Formants_utt_symb,open(outpath+"/Formants_utt_symb_cmp.pkl","wb"))
-# pickle.dump(Formants_people_symb,open(outpath+"/Formants_people_symb_cmp.pkl","wb"))
+pickle.dump(Formants_utt_symb,open(outpath+"/Formants_utt_symb_cmp.pkl","wb"))
+pickle.dump(Formants_people_symb,open(outpath+"/Formants_people_symb_cmp.pkl","wb"))
 
 
 # =============================================================================
