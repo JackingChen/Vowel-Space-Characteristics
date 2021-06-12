@@ -29,7 +29,7 @@ sys.path.append(path_app+'/../')
 import praat.praat_functions as praat_functions
 from script_mananger import script_manager
 
-from utils import dynamic2statict_artic, save_dict_kaldimat, get_dict
+from utils_jack import dynamic2statict_artic, save_dict_kaldimat, get_dict
 
 
 
@@ -464,7 +464,79 @@ class Articulation:
             else:
                 dictX=get_dict(Features, ids)
                 save_dict_kaldimat(dictX, kaldi_file)
+class Extract_F1F2:
 
+    """Extract the articulation features from an audio file
+    
+    >>> articulation=Articulation()
+    >>> file_audio="../audios/001_ddk1_PCGITA.wav"
+    >>> features1=articulation.extract_features_file(file_audio, static=True, plots=True, fmt="npy")
+    >>> features2=articulation.extract_features_file(file_audio, static=True, plots=True, fmt="dataframe")
+    >>> features3=articulation.extract_features_file(file_audio, static=False, plots=True, fmt="torch")
+    >>> articulation.extract_features_file(file_audio, static=False, plots=False, fmt="kaldi", kaldi_file="./test")
+    
+    >>> path_audio="../audios/"
+    >>> features1=articulation.extract_features_path(path_audio, static=True, plots=False, fmt="npy")
+    >>> features2=articulation.extract_features_path(path_audio, static=True, plots=False, fmt="csv")
+    >>> features3=articulation.extract_features_path(path_audio, static=False, plots=True, fmt="torch")
+    >>> articulation.extract_features_path(path_audio, static=False, plots=False, fmt="kaldi", kaldi_file="./test.ark")
+    """
+    
+    def __init__(self,maxf0=400, minf0=75):
+        self.pitch_method="praat"
+        self.sizeframe=0.04
+        self.step=0.02
+        self.nB=22
+        self.nMFCC=12
+        self.minf0=75
+        self.maxf0=400
+        self.voice_bias=-0.2
+        self.len_thr_miliseconds=270.0
+        self.PATH = os.path.dirname(os.path.abspath(__file__))
+        
+    def extract_features_file(self,audio, static=True, plots=False, fmt="npy", kaldi_file=""):
+        fs, data_audio=read(audio)
+        #normalize raw wavform
+        data_audio=data_audio-np.mean(data_audio)
+        data_audio=data_audio/float(np.max(np.abs(data_audio)))
+        size_frameS=self.sizeframe*float(fs)
+        size_stepS=self.step*float(fs)
+        overlap=size_stepS/size_frameS
+    
+        if self.pitch_method == 'praat':
+            name_audio=audio.split('/')
+            temp_uuid='articulation'+name_audio[-1][0:-4]
+            if not os.path.exists(self.PATH+'/../tempfiles/'):
+                os.makedirs(self.PATH+'/../tempfiles/')
+            temp_filename_vuv=self.PATH+'/../tempfiles/tempVUV'+temp_uuid+'.txt'
+            temp_filename_f0=self.PATH+'/../tempfiles/tempF0'+temp_uuid+'.txt'
+            praat_functions.praat_vuv(audio, temp_filename_f0, temp_filename_vuv, time_stepF0=self.step, minf0=self.minf0, maxf0=self.maxf0)
+            F0,_=praat_functions.decodeF0(temp_filename_f0,len(data_audio)/float(fs),self.step)
+            segmentsFull,segmentsOn,segmentsOff=praat_functions.read_textgrid_trans(temp_filename_vuv,data_audio,fs,self.sizeframe)
+            os.remove(temp_filename_vuv)
+            os.remove(temp_filename_f0)
+        elif self.pitch_method == 'rapt':
+            data_audiof=np.asarray(data_audio*(2**15), dtype=np.float32)
+            F0=pysptk.sptk.rapt(data_audiof, fs, int(size_stepS), min=self.minf0, max=self.maxf0, voice_bias=self.voice_bias, otype='f0')
+
+            segmentsOn=V_UV(F0, data_audio, fs, 'onset')
+            segmentsOff=V_UV(F0, data_audio, fs, 'offset')
+            
+            
+        name_audio=audio.split('/')
+        temp_uuid='artic'+name_audio[-1][0:-4]
+        if not os.path.exists(self.PATH+'/../tempfiles/'):
+            os.makedirs(self.PATH+'/../tempfiles/')
+        temp_filename=self.PATH+'/../tempfiles/tempFormants'+temp_uuid+'.txt'
+        praat_functions.praat_formants(audio, temp_filename,self.sizeframe,self.step)
+        [F1, F2]=praat_functions.decodeFormants(temp_filename)
+        # print("Length of the audio file = {audio}, length of F1 = {F1}, length of F2 = {F2}, length of F0 = {F0}".format(\
+        #                                                             audio=int(len(data_audio)/fs/0.02), F1=len(F1), F2=len(F2), F0= len(F0)))
+        # assert int(len(data_audio)/fs/0.02)- len(F1) ==2
+        
+        os.remove(temp_filename)
+        
+        return [F1, F2]
 
 if __name__=="__main__":
 

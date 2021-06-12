@@ -24,7 +24,7 @@ import uuid
 import pandas as pd
 path_app = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(path_app+'/../')
-from utils import dynamic2statict, save_dict_kaldimat
+from utils_jack import dynamic2statict, save_dict_kaldimat
 import praat.praat_functions as praat_functions
 from script_mananger import script_manager
 import torch
@@ -355,7 +355,7 @@ class Phonation_jack:
 
     7. Logaritmic Energy
 
-    Static or dynamic matrices can be computed:
+    Static or dynamic matrices can be computed:maxf0
 
     Static matrix is formed with 29 features formed with (seven descriptors) x (4 functionals: mean, std, skewness, kurtosis) + degree of Unvoiced
 
@@ -395,12 +395,12 @@ class Phonation_jack:
     >>> features3=phonation.extract_features_path(path_audios, static, plots=False, fmt="dataframe")
 
     """
-    def __init__(self):
+    def __init__(self, maxf0=350, minf0=60):
         self.pitch_method="rapt"
         self.size_frame=0.04
         self.size_step=0.02
-        self.minf0=60
-        self.maxf0=350
+        self.minf0=minf0
+        self.maxf0=maxf0
         self.voice_bias=-0.2
         self.energy_thr_percent=0.025
         self.PATH = os.path.dirname(os.path.abspath(__file__))

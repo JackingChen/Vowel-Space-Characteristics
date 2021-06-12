@@ -126,4 +126,104 @@ def multi_find(s, r):
                 i = i + 1
     return(_complete)
 
+def functional_method(data, method='middle', window=3):
+    
+    if method=="mean":
+        ret=np.mean(data)
+    elif method=="middle":
+        ret=np.mean(data[int(len(data)/2)-window: int(len(data)/2)+window])
+    
+    return ret
+from sklearn.utils import (as_float_array, check_array, check_X_y, safe_sqr,
+                     safe_mask)
+import warnings
+from scipy import special, stats
+def f_classif(X, y):
+    
+    """Compute the ANOVA F-value for the provided sample.
 
+    Read more in the :ref:`User Guide <univariate_feature_selection>`.
+
+    Parameters
+    ----------
+    X : {array-like, sparse matrix} shape = [n_samples, n_features]
+        The set of regressors that will be tested sequentially.
+
+    y : array of shape(n_samples)
+        The data matrix.
+
+    Returns
+    -------
+    F : array, shape = [n_features,]
+        The set of F values.
+
+    pval : array, shape = [n_features,]
+        The set of p-values.
+
+    See also
+    --------
+    chi2: Chi-squared stats of non-negative features for classification tasks.
+    f_regression: F-value between label/feature for regression tasks.
+    """
+    # X, y = check_X_y(X, y, ['csr', 'csc', 'coo'])
+    args = [X[safe_mask(X, y == k)] for k in np.unique(y)]
+    n_classes = len(args)
+    args = [as_float_array(a) for a in args]
+    n_samples_per_class = np.array([a.shape[0] for a in args])
+    n_samples = np.sum(n_samples_per_class)
+    ss_alldata = sum(safe_sqr(a).sum(axis=0) for a in args) #sum of square of all data [21001079.59736017]
+    sums_args = [np.asarray(a.sum(axis=0)) for a in args] #sum of data in each group [3204.23910828, 7896.25971663, 5231.79595847]
+    square_of_sums_alldata = sum(sums_args) ** 2  # square of summed data [2.66743853e+08]
+    square_of_sums_args = [s ** 2 for s in sums_args]
+    sstot = ss_alldata - square_of_sums_alldata / float(n_samples)
+    ssbn = 0.
+    for k, _ in enumerate(args):
+        ssbn += square_of_sums_args[k] / n_samples_per_class[k]
+    ssbn -= square_of_sums_alldata / float(n_samples)
+    sswn = sstot - ssbn
+    dfbn = n_classes - 1
+    dfwn = n_samples - n_classes
+    msb = ssbn / float(dfbn)
+    msw = sswn / float(dfwn)
+    constant_features_idx = np.where(msw == 0.)[0]
+    if (np.nonzero(msb)[0].size != msb.size and constant_features_idx.size):
+        warnings.warn("Features %s are constant." % constant_features_idx,
+                      UserWarning)
+    f = msb / msw
+    # flatten matrix to vector in sparse case
+    f = np.asarray(f).ravel()
+    prob = special.fdtrc(dfbn, dfwn, f)
+    return f, prob, msb, msw, ssbn
+# =============================================================================
+'''
+
+Get additional information
+
+'''
+import pandas as pd
+# =============================================================================
+
+Labelfile='/homes/ssd1/jackchen/jackchen/ADOS_data/workplace/label_ADOS_87.xlsx'
+df_labels=pd.read_excel(Labelfile)
+Info_name_sex=df_labels[['name','sex']]
+Info_name_sex.loc[Info_name_sex['sex']==1,'sex']='male'
+Info_name_sex.loc[Info_name_sex['sex']==2,'sex']='female'
+
+Labelfile='/homes/ssd1/jackchen/DisVoice/data/ADOS_TD_Label22.xlsx'
+df_labels_TD=pd.read_excel(Labelfile)
+Info_name_sex_TD=df_labels_TD[['name','sex']]
+# Info_name_sex_TD['sex'][Info_name_sex_TD['sex']==1]='male'
+Info_name_sex_TD.loc[Info_name_sex_TD['sex']==1,'sex']='male'
+Info_name_sex_TD.loc[Info_name_sex_TD['sex']==2,'sex']='female'
+
+Info_name_sex=Info_name_sex.append(Info_name_sex_TD)
+from addict import  Dict
+''' codings of filename '''
+Namecode_dict=Dict()
+Namecode_dict['1st_pass']={'role':-3,'emotion':-1}
+Namecode_dict['1st_pass']={'role':-3,'emotion':-1}
+Namecode_dict['2nd_pass']={'role':-4,'emotion':-2}
+''' min/max F0 for F1/F2 estimation '''
+F0_parameter_dict=Dict()
+F0_parameter_dict['male']={'f0_min':75,'f0_max':400}
+F0_parameter_dict['female']={'f0_min':75,'f0_max':800}

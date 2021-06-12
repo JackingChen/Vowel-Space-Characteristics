@@ -34,7 +34,7 @@ from scipy.stats import spearmanr,pearsonr
 import statistics 
 import os
 import statsmodels.api as sm
-
+from varname import nameof
 
 def NameMatchAssertion(Formants_people_symb,name):
     ''' check the name in  Formants_people_symb matches the names in label'''
@@ -134,7 +134,7 @@ EDia=sqrt((F2a–F2i)^2+(F1a–F1i)^2)
 EDau=sqrt((F2u–F2a)^2+(F1u–F1a)^2)
 S=(EDiu+EDia+EDau)/2
 '''
-Stat_med_str='mean'
+
 # =============================================================================
 
 def get_args():
@@ -144,17 +144,17 @@ def get_args():
         )
     parser.add_argument('--base_path', default='/homes/ssd1/jackchen/DisVoice/articulation',
                         help='path of the base directory', dest='base_path')
-    parser.add_argument('--filepath', default='/mnt/sdd/jackchen/egs/formosa/s6/Segmented_ADOS_emotion',
-                        help='path of the base directory')
-    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Audacity',
-                        help='path of the base directory')
     parser.add_argument('--pklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--Inspect', default=False,
                             help='path of the base directory')
-    parser.add_argument('--correlation_type', default='pearsonr',
-                            help='path of the base directory')
+    parser.add_argument('--correlation_type', default='spearmanr',
+                            help='spearmanr|pearsonr')
     parser.add_argument('--label_choose_lst', default=['ADOS_C'],
+                            help='path of the base directory')
+    parser.add_argument('--Stat_med_str_VSA', default='mean',
+                            help='path of the base directory')
+    parser.add_argument('--role', default='ASDTD',
                             help='path of the base directory')
     args = parser.parse_args()
     return args
@@ -171,24 +171,30 @@ def get_args():
 ''' parse namespace '''
 args = get_args()
 base_path=args.base_path
-filepath=args.filepath
-trnpath=args.trnpath
 pklpath=args.pklpath
 INSPECT=args.Inspect
 label_choose_lst=args.label_choose_lst # labels are too biased
+Stat_med_str=args.Stat_med_str_VSA
 
 ''' Vowels sets '''
 Vowels_single=['i_','E','axr','A_','u_','ax','O_']
 Vowels_prosody_single=[phonewoprosody.Phoneme_sets[v]  for v in Vowels_single]
 Vowels_prosody_single=[item for sublist in Vowels_prosody_single for item in sublist]
 
-
-
-Formants_utt_symb=pickle.load(open(pklpath+"/Formants_utt_symb_bymiddle.pkl","rb"))
-Formants_people_symb=pickle.load(open(pklpath+"/Formants_people_symb_bymiddle.pkl","rb"))
+windowsize=1
+role=args.role
+# Formants_utt_symb=pickle.load(open(pklpath+"/Formants_utt_symb_bymiddle.pkl","rb"))
+Formants_people_symb=pickle.load(open(pklpath+"/Formants_people_symb_bymiddle_window{0}_{1}.pkl".format(windowsize,role),"rb"))
+# Formants_people_symb=pickle.load(open(pklpath+"/Formants_people_symb_bymiddle.pkl".format(role),"rb"))
 
 label_set=['ADOS_C','ADOS_S','ADOS_SC']
+# =============================================================================
 
+'''
+    Inspect area
+'''
+
+# =============================================================================
 
 
 # =============================================================================
@@ -226,14 +232,22 @@ NameMatchAssertion(Formants_people_symb,Label.label_raw['name'].values)
 
 
 ''' Vowel AUI rule is using phonewoprosody '''
-PhoneMapp_dict={'u':['w']+phonewoprosody.Phoneme_sets['u_'],\
-                'i':['j']+phonewoprosody.Phoneme_sets['i_'],\
+# PhoneMapp_dict={'u':['w']+phonewoprosody.Phoneme_sets['u_'],\
+#                 'i':['j']+phonewoprosody.Phoneme_sets['i_'],\
+#                 'a':phonewoprosody.Phoneme_sets['A_']}
+
+PhoneMapp_dict={'u':phonewoprosody.Phoneme_sets['u_'],\
+                'i':phonewoprosody.Phoneme_sets['i_'],\
                 'a':phonewoprosody.Phoneme_sets['A_']}
+    
+
+    
 Vowels_AUI=Dict()
 Vowels_AUI_sampNum=Dict()
-for people in Label.label_raw.sort_values(by='ADOS_C')['name']:
+# for people in Label.label_raw.sort_values(by='ADOS_C')['name']:
+for people in Formants_people_symb.keys():    
     for phone, values in Formants_people_symb[people].items():
-        if phone not in [e  for phoneme in ['w','j','A_','u_','i_'] for e in phonewoprosody.Phoneme_sets[phoneme]]:
+        if phone not in [e for _, phoneme in PhoneMapp_dict.items() for e in phoneme]: # update fixed 2021/05/27
             continue
         else:
             for p_key, p_val in PhoneMapp_dict.items():
@@ -260,21 +274,17 @@ for key1, values1 in Vowels_AUI.items():
         Vowels_AUI_mean[key1][key2]=np.mean(np.vstack(values2 ),axis=0)
 
 Vowels_5As=Dict()
-for people in Label.label_raw.sort_values(by='ADOS_C')['name']:
+# for people in Label.label_raw.sort_values(by='ADOS_C')['name']:
+for people in Formants_people_symb.keys():
     for phone, values in Formants_people_symb[people].items():
         if phone in phonewoprosody.Phoneme_sets['A_']:
             Vowels_5As[people][phone]=values # Take only the first character of phone, [A_]
 # =============================================================================
 Statistic_method={'mean':np.mean,'median':np.median,'mode':stats.mode}
 
-df_formant_statistic=pd.DataFrame([],columns=['FCR','VSA1','VSA2','LnVSA','ADOS','u_num','a_num','i_num',\
-                                              'F_vals_f1', 'F_vals_f2', 'F_val_mix', 'criterion_score',\
-                                              'sex', 'age_year', 'Module',\
-                                              'MSB_f1','MSB_f2','MSW_f1','MSW_f2','SSBN_f1','SSBN_f2',\
-                                              'dau1','dai1','diu1','daudai1','daudiu1','daidiu1','daidiudau1',\
-                                              'dau2','dai2','diu2','daudai2','daudiu2','daidiu2','daidiudau2',\
-                                              'F2i_u','F1a_u'])
-for people in Vowels_AUI_mean.keys():
+df_formant_statistic=pd.DataFrame()
+for people in Vowels_AUI_mean.keys(): #update 2021/05/27 fixed 
+    RESULT_dict={}
     F12_raw_dict=Vowels_AUI[people]
     F12_val_dict={k:[] for k in ['u','a','i']}
     for k,v in F12_raw_dict.items():
@@ -283,12 +293,12 @@ for people in Vowels_AUI_mean.keys():
         else:
             F12_val_dict[k]=Statistic_method[Stat_med_str](v,axis=0)
     
-    u_num, a_num, i_num=Vowels_AUI_sampNum[people]['u'],Vowels_AUI_sampNum[people]['a'],Vowels_AUI_sampNum[people]['i']
+    RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=Vowels_AUI_sampNum[people]['u'],Vowels_AUI_sampNum[people]['a'],Vowels_AUI_sampNum[people]['i']
     
-    ASDlab=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
-    sex=Label.label_raw['sex'][Label.label_raw['name']==people].values[0]
-    age=Label.label_raw['age_year'][Label.label_raw['name']==people].values[0]
-    module=Label.label_raw['Module'][Label.label_raw['name']==people].values[0]
+    RESULT_dict['ADOS']=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
+    RESULT_dict['sex']=Label.label_raw['sex'][Label.label_raw['name']==people].values[0]
+    RESULT_dict['age']=Label.label_raw['age_year'][Label.label_raw['name']==people].values[0]
+    RESULT_dict['Module']=Label.label_raw['Module'][Label.label_raw['name']==people].values[0]
     
     u=F12_val_dict['u']
     a=F12_val_dict['a']
@@ -296,53 +306,52 @@ for people in Vowels_AUI_mean.keys():
 
     
     if len(u)==0 or len(a)==0 or len(i)==0:
-        df_formant_statistic.loc[people]=[10, 0,\
-                                      0, 0, ASDlab[0],\
-                                      len(u), len(a), len(i),\
-                                      0, 0, 0,\
-                                      0,0,0,0,\
-                                      0,0,0,0,0,0,\
-                                      0,0,0,0,0,0,0,\
-                                      0,0,0,0,0,0,0,\
-                                      0,0]
-        
+        u_num= RESULT_dict['u_num'] if type(RESULT_dict['u_num'])==int else 0
+        i_num= RESULT_dict['i_num'] if type(RESULT_dict['i_num'])==int else 0
+        a_num= RESULT_dict['a_num'] if type(RESULT_dict['a_num'])==int else 0
+        df_RESULT_list=pd.DataFrame(np.zeros([1,len(df_formant_statistic.columns)]),columns=df_formant_statistic.columns)
+        df_RESULT_list.index=[people]
+        df_RESULT_list['FCR']=10
+        df_RESULT_list['ADOS']=RESULT_dict['ADOS'][0]
+        df_RESULT_list[['u_num','a_num','i_num']]=[u_num, i_num, a_num]
+        df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
         continue
     
     numerator=u[1] + a[1] + i[0] + u[0]
     demominator=i[1] + a[0]
-    FCR=np.float(numerator/demominator)
-    F2i_u= u[1]/i[1]
-    F1a_u= u[0]/a[0]
+    RESULT_dict['FCR']=np.float(numerator/demominator)
+    RESULT_dict['F2i_u']= u[1]/i[1]
+    RESULT_dict['F1a_u']= u[0]/a[0]
     # assert FCR <=2
     
-    VSA1=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
+    RESULT_dict['VSA1']=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
     
-    LnVSA=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
+    RESULT_dict['LnVSA']=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
     
     EDiu=np.sqrt((u[1]-i[1])**2+(u[0]-i[0])**2)
     EDia=np.sqrt((a[1]-i[1])**2+(a[0]-i[0])**2)
     EDau=np.sqrt((u[1]-a[1])**2+(u[0]-a[0])**2)
     S=(EDiu+EDia+EDau)/2
-    VSA2=np.sqrt(S*(S-EDiu)*(S-EDia)*(S-EDau))
+    RESULT_dict['VSA2']=np.sqrt(S*(S-EDiu)*(S-EDia)*(S-EDau))
     
-    LnVSA=np.sqrt(np.log(S)*(np.log(S)-np.log(EDiu))*(np.log(S)-np.log(EDia))*(np.log(S)-np.log(EDau)))
+    RESULT_dict['LnVSA']=np.sqrt(np.log(S)*(np.log(S)-np.log(EDiu))*(np.log(S)-np.log(EDia))*(np.log(S)-np.log(EDau)))
     
     ''' a u i distance '''
-    dau1 = np.abs(a[0] - u[0])
-    dai1 = np.abs(a[0] - i[0])
-    diu1 = np.abs(i[0] - u[0])
-    daudai1 = dau1 + dai1
-    daudiu1 = dau1 + diu1
-    daidiu1 = dai1 + diu1
-    daidiudau1 = dai1 + diu1+ dau1
+    RESULT_dict['dau1'] = np.abs(a[0] - u[0])
+    RESULT_dict['dai1'] = np.abs(a[0] - i[0])
+    RESULT_dict['diu1'] = np.abs(i[0] - u[0])
+    RESULT_dict['daudai1'] = RESULT_dict['dau1'] + RESULT_dict['dai1']
+    RESULT_dict['daudiu1'] = RESULT_dict['dau1'] + RESULT_dict['diu1']
+    RESULT_dict['daidiu1'] = RESULT_dict['dai1'] + RESULT_dict['diu1']
+    RESULT_dict['daidiudau1'] = RESULT_dict['dai1'] + RESULT_dict['diu1']+ RESULT_dict['dau1']
     
-    dau2 = np.abs(a[1] - u[1])
-    dai2 = np.abs(a[1] - i[1])
-    diu2 = np.abs(i[1] - u[1])
-    daudai2 = dau2 + dai2
-    daudiu2 = dau2 + diu2
-    daidiu2 = dai2 + diu2
-    daidiudau2 = dai2 + diu2+ dau2
+    RESULT_dict['dau2'] = np.abs(a[1] - u[1])
+    RESULT_dict['dai2'] = np.abs(a[1] - i[1])
+    RESULT_dict['diu2'] = np.abs(i[1] - u[1])
+    RESULT_dict['daudai2'] = RESULT_dict['dau2'] + RESULT_dict['dai2']
+    RESULT_dict['daudiu2'] = RESULT_dict['dau2'] + RESULT_dict['diu2']
+    RESULT_dict['daidiu2'] = RESULT_dict['dai2'] + RESULT_dict['diu2']
+    RESULT_dict['daidiudau2'] = RESULT_dict['dai2'] + RESULT_dict['diu2']+ RESULT_dict['dau2']
     
     # =============================================================================
     ''' F-value, Valid Formant measure '''
@@ -361,20 +370,27 @@ for people in Vowels_AUI_mean.keys():
     print("utt number of group u = {0}, utt number of group i = {1}, utt number of group A = {2}".format(\
         len(u),len(a),len(i)))
     F_vals=f_classif(df_vowel[['F1','F2']].values,df_vowel['target'].values)[0]
-    F_vals_f1=F_vals[0]
-    F_vals_f2=F_vals[1]
-    F_val_mix=F_vals_f1 + F_vals_f2
+    RESULT_dict['F_vals_f1']=F_vals[0]
+    RESULT_dict['F_vals_f2']=F_vals[1]
+    RESULT_dict['F_val_mix']=RESULT_dict['F_vals_f1'] + RESULT_dict['F_vals_f2']
     
     msb=f_classif(df_vowel[['F1','F2']].values,df_vowel['target'].values)[2]
     msw=f_classif(df_vowel[['F1','F2']].values,df_vowel['target'].values)[3]
     ssbn=f_classif(df_vowel[['F1','F2']].values,df_vowel['target'].values)[4]
     
-    MSB_f1=msb[0]
-    MSB_f2=msb[1]
-    MSW_f1=msw[0]
-    MSW_f2=msw[1]
-    SSBN_f1=ssbn[0]
-    SSBN_f2=ssbn[1]
+    
+    
+    RESULT_dict['MSB_f1']=msb[0]
+    RESULT_dict['MSB_f2']=msb[1]
+    MSB_f1 , MSB_f2 = RESULT_dict['MSB_f1'], RESULT_dict['MSB_f2']
+    RESULT_dict['MSB_mix']=MSB_f1 + MSB_f2
+    RESULT_dict['MSW_f1']=msw[0]
+    RESULT_dict['MSW_f2']=msw[1]
+    MSW_f1 , MSW_f2 = RESULT_dict['MSW_f1'], RESULT_dict['MSW_f2']
+    RESULT_dict['MSW_mix']=MSW_f1 + MSW_f2
+    RESULT_dict['SSBN_f1']=ssbn[0]
+    RESULT_dict['SSBN_f2']=ssbn[1]
+    
     # =============================================================================
     # criterion
     # F1u < F1a
@@ -396,23 +412,16 @@ for people in Vowels_AUI_mean.keys():
     filt3 = [1 if F2u < F2i else 0]
     filt4 = [1 if F1i < F1a else 0]
     filt5 = [1 if F2a < F2i else 0]
-    criterion_score=np.sum([filt1,filt2,filt3,filt4,filt5])
-    
-    
-    df_formant_statistic.loc[people]=[np.round(FCR,3), np.round(VSA1,3),\
-                                      np.round(VSA2,3), np.round(LnVSA,3), ASDlab[0],\
-                                      u_num, a_num, i_num,\
-                                      np.round(F_vals_f1,3), np.round(F_vals_f2,3), np.round(F_val_mix,3),\
-                                      np.round(criterion_score,3),sex,age,module,\
-                                      MSB_f1, MSB_f2, MSW_f1, MSW_f2,SSBN_f1,SSBN_f2,\
-                                      dau1,dai1,diu1,daudai1,daudiu1,daidiu1,daidiudau1,\
-                                      dau2,dai2,diu2,daudai2,daudiu2,daidiu2,daidiudau2,\
-                                      F2i_u, F1a_u]
+    RESULT_dict['criterion_score']=np.sum([filt1,filt2,filt3,filt4,filt5])
+
+    df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
+    df_RESULT_list.index=[people]
+    df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
 
 outpklpath="Pickles/Session_formants_people_vowel_feat/"
 if not os.path.exists(outpklpath):
     os.makedirs(outpklpath)
-pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals.pkl","wb"))
+pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
 
 
 df_formant_statistic_bool=(df_formant_statistic['u_num']!=0) & (df_formant_statistic['a_num']!=0) & (df_formant_statistic['i_num']!=0)
@@ -433,13 +442,13 @@ df_formant_statistic['ADOS_cate'][df_formant_statistic['ADOS']>=3]=2
 # =============================================================================
 
 ''' Calculate correlations '''
-# columns=['FCR','VSA1','VSA2','LnVSA','F_vals_f1', 'F_vals_f2', 'F_val_mix', 'criterion_score',\
-#          'MSB_f1','MSB_f2','MSW_f1','MSW_f2','SSBN_f1','SSBN_f2']
+columns=['FCR','VSA1','F_vals_f1', 'F_vals_f2', 'F_val_mix',\
+          'MSB_f1','MSB_f2','MSB_mix','MSW_f1','MSW_f2','SSBN_f1','SSBN_f2']
 
-columns=['FCR','VSA1','F_vals_f1', 'F_vals_f2', 'F_val_mix','MSB_f1','MSB_f2',\
-         'dau1','dai1','diu1','daudai1','daudiu1','daidiu1','daidiudau1',\
-         'dau2','dai2','diu2','daudai2','daudiu2','daidiu2','daidiudau2',\
-         'F2i_u','F1a_u']
+# columns=['FCR','VSA1','F_vals_f1', 'F_vals_f2', 'F_val_mix','MSB_f1','MSB_f2',\
+#          'dau1','dai1','diu1','daudai1','daudiu1','daidiu1','daidiudau1',\
+#          'dau2','dai2','diu2','daudai2','daudiu2','daidiu2','daidiudau2',\
+#          'F2i_u','F1a_u']
 def Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns, corr_label='ADOS', constrain_sex=-1, constrain_module=-1, constrain_assessment=-1):
     '''
         constrain_sex: 1 for boy, 2 for girl
@@ -484,24 +493,23 @@ def Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns, corr_
     return df_pearsonr_table
 
 
-
 # for N in range(10):
-#     df_pearsonr_table=Calculate_correlation(df_formant_statistic,N,columns)
+#     df_pearsonr_table=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1)
 N=5
 Aaadf_pearsonr_table_NoLimit=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1)
-Aaadf_pearsonr_table_NoLimitWithADOScat=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,corr_label='ADOS_cate',constrain_sex=-1, constrain_module=-1)
-Aaadf_pearsonr_table_normal=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_assessment=0)
-Aaadf_pearsonr_table_ASD=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_assessment=1)
-Aaadf_pearsonr_table_autism=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_assessment=2)
+# Aaadf_pearsonr_table_NoLimitWithADOScat=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,corr_label='ADOS_cate',constrain_sex=-1, constrain_module=-1)
+# Aaadf_pearsonr_table_normal=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_assessment=0)
+# Aaadf_pearsonr_table_ASD=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_assessment=1)
+# Aaadf_pearsonr_table_autism=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_assessment=2)
 
-Aaadf_pearsonr_table_boy_M3=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=1, constrain_module=3)
-Aaadf_pearsonr_table_girl_M3=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=2, constrain_module=3)
-Aaadf_pearsonr_table_boy_M4=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=1, constrain_module=4)
-Aaadf_pearsonr_table_girl_M4=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=2, constrain_module=4)
-Aaadf_pearsonr_table_M3=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=3)
-Aaadf_pearsonr_table_M4=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=4)
-Aaadf_pearsonr_table_boy=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=1, constrain_module=-1)
-Aaadf_pearsonr_table_girl=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=2, constrain_module=-1)
+# Aaadf_pearsonr_table_boy_M3=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=1, constrain_module=3)
+# Aaadf_pearsonr_table_girl_M3=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=2, constrain_module=3)
+# Aaadf_pearsonr_table_boy_M4=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=1, constrain_module=4)
+# Aaadf_pearsonr_table_girl_M4=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=2, constrain_module=4)
+# Aaadf_pearsonr_table_M3=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=3)
+# Aaadf_pearsonr_table_M4=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=4)
+# Aaadf_pearsonr_table_boy=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=1, constrain_module=-1)
+# Aaadf_pearsonr_table_girl=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=2, constrain_module=-1)
 # Aaadf_pearsonr_table_N7=Calculate_correlation(df_formant_statistic,7,columns)
 
 filter_boy=df_formant_statistic['sex']==1
@@ -643,71 +651,36 @@ df_pid[df_pid['name_id']==69].index
 
 '''
 # =============================================================================
-
-print("F_vals_f1: M3 vs M4",stats.ttest_ind(df_formant_statistic[filter_M3]['F_vals_f1'], df_formant_statistic[filter_M4]['F_vals_f1']))
-print("F_vals_f1: M3 vs M4",df_formant_statistic[filter_M3]['F_vals_f1'].mean(), df_formant_statistic[filter_M4]['F_vals_f1'].mean())
-print("F_vals_f1: boy vs girl",stats.ttest_ind(df_formant_statistic[filter_boy]['F_vals_f1'], df_formant_statistic[filter_girl]['F_vals_f1']))
-print("F_vals_f1: boy vs girl",df_formant_statistic[filter_boy]['F_vals_f1'].mean(), df_formant_statistic[filter_girl]['F_vals_f1'].mean())
-print("F_vals_f1: boy M3 vs boy M4",stats.ttest_ind(df_formant_statistic[filter_boy_M3]['F_vals_f1'], df_formant_statistic[filter_boy_M4]['F_vals_f1']))
-print("F_vals_f1: boy M3 vs boy M4",df_formant_statistic[filter_boy_M3]['F_vals_f1'].mean(), df_formant_statistic[filter_boy_M4]['F_vals_f1'].mean())
-print("F_vals_f1: girl M3 vs girl M4",stats.ttest_ind(df_formant_statistic[filter_girl_M3]['F_vals_f1'], df_formant_statistic[filter_girl_M4]['F_vals_f1']))
-print("F_vals_f1: girl M3 vs girl M4",df_formant_statistic[filter_girl_M3]['F_vals_f1'].mean(), df_formant_statistic[filter_girl_M4]['F_vals_f1'].mean())
-print("F_vals_f1: girl M3 vs boy M3",stats.ttest_ind(df_formant_statistic[filter_girl_M3]['F_vals_f1'], df_formant_statistic[filter_boy_M3]['F_vals_f1']))
-print("F_vals_f1: girl M3 vs boy M3",df_formant_statistic[filter_girl_M3]['F_vals_f1'].mean(), df_formant_statistic[filter_boy_M3]['F_vals_f1'].mean())
-print("F_vals_f1: girl M4 vs boy M4",stats.ttest_ind(df_formant_statistic[filter_girl_M4]['F_vals_f1'], df_formant_statistic[filter_boy_M4]['F_vals_f1']))
-print("F_vals_f1: girl M4 vs boy M4",df_formant_statistic[filter_girl_M4]['F_vals_f1'].mean(), df_formant_statistic[filter_boy_M4]['F_vals_f1'].mean())
+df_formant_statistic_doc=pickle.load(open(outpklpath+"Formant_AUI_tVSAFCRFvals_ASDdoc.pkl","rb"))
+df_formant_statistic_kid=pickle.load(open(outpklpath+"Formant_AUI_tVSAFCRFvals_ASDkid.pkl","rb"))
+df_formant_statistic77_path='Pickles/Session_formants_people_vowel_feat/Formant_AUI_tVSAFCRFvals_ASDkid.pkl'
+df_formant_statistic_77=pickle.load(open(df_formant_statistic77_path,'rb'))
+df_formant_statistic_ASDTD_path='Pickles/Session_formants_people_vowel_feat/Formant_AUI_tVSAFCRFvals_ASDTD.pkl'
+df_formant_statistic_TD=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))
 
 
-print("F_vals_f2: M3 vs M4",stats.ttest_ind(df_formant_statistic[filter_M3]['F_vals_f2'], df_formant_statistic[filter_M4]['F_vals_f2']))
-print("F_vals_f2: M3 vs M4",df_formant_statistic[filter_M3]['F_vals_f2'].mean(), df_formant_statistic[filter_M4]['F_vals_f2'].mean())
-print("F_vals_f2: boy vs girl",stats.ttest_ind(df_formant_statistic[filter_boy]['F_vals_f2'], df_formant_statistic[filter_girl]['F_vals_f2']))
-print("F_vals_f2: boy vs girl",df_formant_statistic[filter_boy]['F_vals_f2'].mean(), df_formant_statistic[filter_girl]['F_vals_f2'].mean())
-print("F_vals_f2: boy M3 vs boy M4",stats.ttest_ind(df_formant_statistic[filter_boy_M3]['F_vals_f2'], df_formant_statistic[filter_boy_M4]['F_vals_f2']))
-print("F_vals_f2: boy M3 vs boy M4",df_formant_statistic[filter_boy_M3]['F_vals_f2'].mean(), df_formant_statistic[filter_boy_M4]['F_vals_f2'].mean())
-print("F_vals_f2: girl M3 vs girl M4",stats.ttest_ind(df_formant_statistic[filter_girl_M3]['F_vals_f2'], df_formant_statistic[filter_girl_M4]['F_vals_f2']))
-print("F_vals_f2: girl M3 vs girl M4",df_formant_statistic[filter_girl_M3]['F_vals_f2'].mean(), df_formant_statistic[filter_girl_M4]['F_vals_f2'].mean())
+def criterion_filter(df_formant_statistic,N=10,constrain_sex=-1, constrain_module=-1):
+    filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
+    filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
+    if constrain_sex != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['sex']==constrain_sex)
+    if constrain_module != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['Module']==constrain_module)
+    return df_formant_statistic[filter_bool]
+sex=2
+df_formant_statistic_77=criterion_filter(df_formant_statistic_77,constrain_sex=sex)
+df_formant_statistic_TD=criterion_filter(df_formant_statistic_TD,constrain_sex=sex)
 
-print("F_val_mix: M3 vs M4",stats.ttest_ind(df_formant_statistic[filter_M3]['F_val_mix'], df_formant_statistic[filter_M4]['F_val_mix']))
-print("F_val_mix: M3 vs M4",df_formant_statistic[filter_M3]['F_val_mix'].mean(), df_formant_statistic[filter_M4]['F_val_mix'].mean())
-print("F_val_mix: boy vs girl",stats.ttest_ind(df_formant_statistic[filter_boy]['F_val_mix'], df_formant_statistic[filter_girl]['F_val_mix']))
-print("F_val_mix: boy vs girl",df_formant_statistic[filter_boy]['F_val_mix'].mean(), df_formant_statistic[filter_girl]['F_val_mix'].mean())
-print("F_val_mix: boy M3 vs boy M4",stats.ttest_ind(df_formant_statistic[filter_boy_M3]['F_val_mix'], df_formant_statistic[filter_boy_M4]['F_val_mix']))
-print("F_val_mix: boy M3 vs boy M4",df_formant_statistic[filter_boy_M3]['F_val_mix'].mean(), df_formant_statistic[filter_boy_M4]['F_val_mix'].mean())
-print("F_val_mix: girl M3 vs girl M4",stats.ttest_ind(df_formant_statistic[filter_girl_M3]['F_val_mix'], df_formant_statistic[filter_girl_M4]['F_val_mix']))
-print("F_val_mix: girl M3 vs girl M4",df_formant_statistic[filter_girl_M3]['F_val_mix'].mean(), df_formant_statistic[filter_girl_M4]['F_val_mix'].mean())
 
-print("VSA1: M3 vs M4",stats.ttest_ind(df_formant_statistic[filter_M3]['VSA1'], df_formant_statistic[filter_M4]['VSA1']))
-print("VSA1: M3 vs M4",df_formant_statistic[filter_M3]['VSA1'].mean(), df_formant_statistic[filter_M4]['VSA1'].mean())
-print("VSA1: boy vs girl",stats.ttest_ind(df_formant_statistic[filter_boy]['VSA1'], df_formant_statistic[filter_girl]['VSA1']))
-print("VSA1: boy vs girl",df_formant_statistic[filter_boy]['VSA1'].mean(), df_formant_statistic[filter_girl]['VSA1'].mean())
-print("VSA1: boy M3 vs boy M4",stats.ttest_ind(df_formant_statistic[filter_boy_M3]['VSA1'], df_formant_statistic[filter_boy_M4]['VSA1']))
-print("VSA1: boy M3 vs boy M4",df_formant_statistic[filter_boy_M3]['VSA1'].mean(), df_formant_statistic[filter_boy_M4]['VSA1'].mean())
-print("VSA1: girl M3 vs girl M4",stats.ttest_ind(df_formant_statistic[filter_girl_M3]['VSA1'], df_formant_statistic[filter_girl_M4]['VSA1']))
-print("VSA1: girl M3 vs girl M4",df_formant_statistic[filter_girl_M3]['VSA1'].mean(), df_formant_statistic[filter_girl_M4]['VSA1'].mean())
+comb=[['df_formant_statistic_TD','df_formant_statistic_77'],]
+Parameters=['F_vals_f1','F_vals_f2','F_val_mix','MSB_f1','MSB_f2','MSB_mix','MSW_f1','MSW_f2','MSW_mix']
 
-print("FCR: M3 vs M4",stats.ttest_ind(df_formant_statistic[filter_M3]['FCR'], df_formant_statistic[filter_M4]['FCR']))
-print("FCR: M3 vs M4",df_formant_statistic[filter_M3]['FCR'].mean(), df_formant_statistic[filter_M4]['FCR'].mean())
-print("FCR: boy vs girl",stats.ttest_ind(df_formant_statistic[filter_boy]['FCR'], df_formant_statistic[filter_girl]['FCR']))
-print("FCR: boy vs girl",df_formant_statistic[filter_boy]['FCR'].mean(), df_formant_statistic[filter_girl]['FCR'].mean())
-print("FCR: boy M3 vs boy M4",stats.ttest_ind(df_formant_statistic[filter_boy_M3]['FCR'], df_formant_statistic[filter_boy_M4]['FCR']))
-print("FCR: boy M3 vs boy M4",df_formant_statistic[filter_boy_M3]['FCR'].mean(), df_formant_statistic[filter_boy_M4]['FCR'].mean())
-print("FCR: girl M3 vs girl M4",stats.ttest_ind(df_formant_statistic[filter_girl_M3]['FCR'], df_formant_statistic[filter_girl_M4]['FCR']))
-print("FCR: girl M3 vs girl M4",df_formant_statistic[filter_girl_M3]['FCR'].mean(), df_formant_statistic[filter_girl_M4]['FCR'].mean())
-
-print("MSB_f1: M3 vs M4",stats.ttest_ind(df_formant_statistic[filter_M3]['MSB_f1'], df_formant_statistic[filter_M4]['MSB_f1']))
-print("MSB_f1: M3 vs M4",df_formant_statistic[filter_M3]['MSB_f1'].mean(), df_formant_statistic[filter_M4]['MSB_f1'].mean())
-print("MSB_f1: boy vs girl",stats.ttest_ind(df_formant_statistic[filter_boy]['MSB_f1'], df_formant_statistic[filter_girl]['MSB_f1']))
-print("MSB_f1: boy vs girl",df_formant_statistic[filter_boy]['MSB_f1'].mean(), df_formant_statistic[filter_girl]['MSB_f1'].mean())
-print("MSB_f1: boy M3 vs boy M4",stats.ttest_ind(df_formant_statistic[filter_boy_M3]['MSB_f1'], df_formant_statistic[filter_boy_M4]['MSB_f1']))
-print("MSB_f1: boy M3 vs boy M4",df_formant_statistic[filter_boy_M3]['MSB_f1'].mean(), df_formant_statistic[filter_boy_M4]['MSB_f1'].mean())
-print("MSB_f1: girl M3 vs girl M4",stats.ttest_ind(df_formant_statistic[filter_girl_M3]['MSB_f1'], df_formant_statistic[filter_girl_M4]['MSB_f1']))
-print("MSB_f1: girl M3 vs girl M4",df_formant_statistic[filter_girl_M3]['MSB_f1'].mean(), df_formant_statistic[filter_girl_M4]['MSB_f1'].mean())
-
-print("MSB_f2: M3 vs M4",stats.ttest_ind(df_formant_statistic[filter_M3]['MSB_f2'], df_formant_statistic[filter_M4]['MSB_f2']))
-print("MSB_f2: M3 vs M4",df_formant_statistic[filter_M3]['MSB_f2'].mean(), df_formant_statistic[filter_M4]['MSB_f2'].mean())
-print("MSB_f2: boy vs girl",stats.ttest_ind(df_formant_statistic[filter_boy]['MSB_f2'], df_formant_statistic[filter_girl]['MSB_f2']))
-print("MSB_f2: boy vs girl",df_formant_statistic[filter_boy]['MSB_f2'].mean(), df_formant_statistic[filter_girl]['MSB_f2'].mean())
-print("MSB_f2: boy M3 vs boy M4",stats.ttest_ind(df_formant_statistic[filter_boy_M3]['MSB_f2'], df_formant_statistic[filter_boy_M4]['MSB_f2']))
-print("MSB_f2: boy M3 vs boy M4",df_formant_statistic[filter_boy_M3]['MSB_f2'].mean(), df_formant_statistic[filter_boy_M4]['MSB_f2'].mean())
-print("MSB_f2: girl M3 vs girl M4",stats.ttest_ind(df_formant_statistic[filter_girl_M3]['MSB_f2'], df_formant_statistic[filter_girl_M4]['MSB_f2']))
-print("MSB_f2: girl M3 vs girl M4",df_formant_statistic[filter_girl_M3]['MSB_f2'].mean(), df_formant_statistic[filter_girl_M4]['MSB_f2'].mean())
+df_ttest_result=pd.DataFrame([],columns=['doc-kid','p-val'])
+for role_1,role_2  in comb:
+    for parameter in Parameters:
+        test=stats.ttest_ind(vars()[role_1][parameter], vars()[role_2][parameter])
+        print(parameter, '{0} vs {1}'.format(role_1,role_2),test)
+        print(role_1+':',vars()[role_1][parameter].mean(),role_2+':',vars()[role_2][parameter].mean())
+        df_ttest_result.loc[parameter,'doc-kid'] = vars()[role_1][parameter].mean() - vars()[role_2][parameter].mean()
+        df_ttest_result.loc[parameter,'p-val'] = test[1]
+        

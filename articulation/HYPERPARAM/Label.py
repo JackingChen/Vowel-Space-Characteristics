@@ -20,7 +20,9 @@ label_Bin_all={}
 
 label_path=base_dir+'label_ADOS_77.xlsx'
 label_raw=pd.read_excel(label_path)
-
+Labelfile_TD='/homes/ssd1/jackchen/DisVoice/data/ADOS_TD_Label22.xlsx'
+df_labels_TD=pd.read_excel(Labelfile_TD)
+label_raw=label_raw.append(df_labels_TD)
 #double check label and feature
 #check_df=pd.DataFrame([],columns=['label','feature'])
 #check_df['label2']=label_raw['name']

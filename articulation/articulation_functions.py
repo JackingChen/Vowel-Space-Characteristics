@@ -4,6 +4,7 @@ import numpy as np
 import sys
 import pysptk
 
+
 def bark(f):
 	x=(f*0.00076)
 	x2=(f/7500)**2
@@ -125,3 +126,5 @@ def V_UV(F0, data_audio, fs, transition, size_tran=0.04):
                 endframe=int(border+size_tran*fs)
                 segment.append(data_audio[initframe:endframe])
     return segment
+
+
