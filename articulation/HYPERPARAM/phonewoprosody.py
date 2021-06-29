@@ -8,6 +8,7 @@ Created on Fri Oct 23 15:13:47 2020
 
 import collections
 
+
 # Phoneme_sets=collections.OrderedDict()
 # Phoneme_sets['A_']=['A:', 'A:1', 'A:2', 'A:3', 'A:4', 'A:5']
 # Phoneme_sets['aI']=['aI1', 'aI2','aI3', 'aI4', 'aI5']
@@ -220,3 +221,16 @@ Manner_sets_simple2['fricative'] = Phoneme_sets['s'] + Phoneme_sets['ss'] + Phon
 Manner_sets_simple2['Vowel']=Phoneme_sets['A_'] + Phoneme_sets['O_'] + Phoneme_sets['ax'] + Phoneme_sets['E'] +\
                     Phoneme_sets['aI'] + Phoneme_sets['eI'] + Phoneme_sets['aU'] + Phoneme_sets['oU'] +\
                     Phoneme_sets['axr'] + Phoneme_sets['i_'] + Phoneme_sets['u_'] + Phoneme_sets['y'] 
+                    
+# =============================================================================
+'''
+
+    
+
+'''             
+# =============================================================================
+
+PhoneMapp_dict={'u:':Phoneme_sets['u_'],\
+                'i:':Phoneme_sets['i_']+['j'],\
+                'A:':Phoneme_sets['A_']}
+PhoneOI=['i:','u:','A:']

@@ -3,8 +3,8 @@ import math
 import numpy as np
 import sys
 import pysptk
-
-
+from parselmouth.praat import call
+import parselmouth 
 def bark(f):
 	x=(f*0.00076)
 	x2=(f/7500)**2
@@ -128,3 +128,35 @@ def V_UV(F0, data_audio, fs, transition, size_tran=0.04):
     return segment
 
 
+def measureFormants(sound, f0min,f0max, time_step=0.0025,MaxnumForm=5,Maxformant=5000,framesize=0.025):
+    sound = parselmouth.Sound(sound) # read the sound
+    pitch = call(sound, "To Pitch (cc)", 0, f0min, 15, 'no', 0.03, 0.45, 0.01, 0.35, 0.14, f0max)
+    pointProcess = call(sound, "To PointProcess (periodic, cc)", f0min, f0max)
+    
+    formants = call(sound, "To Formant (burg)", time_step, MaxnumForm, Maxformant, framesize, 50)
+    numPoints = call(pointProcess, "Get number of points")
+
+    f1_list = []
+    f2_list = []
+    f3_list = []
+    f4_list = []
+    
+    # Measure formants only at glottal pulses
+    for point in range(0, numPoints):
+        point += 1
+        t = call(pointProcess, "Get time from index", point)
+        f1 = call(formants, "Get value at time", 1, t, 'Hertz', 'Linear')
+        f2 = call(formants, "Get value at time", 2, t, 'Hertz', 'Linear')
+        f3 = call(formants, "Get value at time", 3, t, 'Hertz', 'Linear')
+        f4 = call(formants, "Get value at time", 4, t, 'Hertz', 'Linear')
+        f1_list.append(f1)
+        f2_list.append(f2)
+        f3_list.append(f3)
+        f4_list.append(f4)
+    
+    f1_list = [f1 for f1 in f1_list if str(f1) != 'nan']
+    f2_list = [f2 for f2 in f2_list if str(f2) != 'nan']
+    f3_list = [f3 for f3 in f3_list if str(f3) != 'nan']
+    f4_list = [f4 for f4 in f4_list if str(f4) != 'nan']
+
+    return f1_list, f2_list

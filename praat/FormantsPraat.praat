@@ -11,3 +11,5 @@ Read from file... 'directoryParent$'
 To Formant (burg)... 'time_step' 'MaxnumForm' 'Maxformant' 'framesize' 50
 Write to short text file... 'directoryTarget$'
 
+
+
