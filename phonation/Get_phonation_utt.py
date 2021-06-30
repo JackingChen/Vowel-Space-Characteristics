@@ -47,15 +47,6 @@ import inspect
 from multiprocessing import Pool, current_process
 
 def measurePitch(voiceID, f0min, f0max, unit):
-    # =============================================================================
-    '''
-    
-        If you use this code for publishment, please cite this:
-            DOI 10.17605/OSF.IO/HUZ7D
-            https://osf.io/huz7d/
-    
-    '''
-    # =============================================================================
     columns=['duration', 'meanF0', 'stdevF0', 'hnr', 'localJitter', 'localabsoluteJitter', 'rapJitter', 'ppq5Jitter', 'ddpJitter', 'localShimmer', 'localdbShimmer', 'apq3Shimmer', 'aqpq5Shimmer', 'apq11Shimmer', 'ddaShimmer']
     sound = parselmouth.Sound(voiceID) # read the sound
     duration = call(sound, "Get total duration") # duration
