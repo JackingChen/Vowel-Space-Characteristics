@@ -16,7 +16,8 @@ file_basepath='/homes/ssd1/jackchen/DisVoice/articulation'
 # Formants_utt_symb_path=file_basepath + '/Pickles/Formants_utt_symb_bymiddle_window3.pkl'
 # Formants_people_symb_path=file_basepath + '/Pickles/Formants_people_symb_bymiddle_window3.pkl'
 
-Formants_utt_symb_path=file_basepath + '/Pickles/[Testing]Formants_utt_Auto_symb_bymiddle.pkl'
+# Formants_utt_symb_path=file_basepath + '/Pickles/[Testing]Formants_utt_Auto_symb_bymiddle.pkl'
+Formants_utt_symb_path=file_basepath + '/Pickles/[Analyzing]Formants_utt_symb_limited.pkl'
 Formants_people_symb_path=file_basepath + '/Pickles/[Testing]Formants_people_Auto_symb_bymiddle.pkl'
 df_formant_statistic_path=file_basepath + '/Pickles/Session_formants_people_vowel_feat/Formant_AUI_tVSAFCRFvals_ASDkid.pkl'
 

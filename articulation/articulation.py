@@ -109,7 +109,7 @@ class Articulation:
         self.Stat_med_str_VSA=Stat_med_str_VSA
         self.Inspect_features=['F1','F2']
         
-    def calculate_features(self,Vowels_AUI,Label):
+    def calculate_features(self,Vowels_AUI,Label,PhoneOfInterest):
         # =============================================================================
         # Code calculate vowel features
         Statistic_method={'mean':np.mean,'median':np.median,'mode':stats.mode}
@@ -119,23 +119,23 @@ class Articulation:
         for people in Vowels_AUI.keys(): #update 2021/05/27 fixed 
             RESULT_dict={}
             F12_raw_dict=Vowels_AUI[people]
-            F12_val_dict={k:[] for k in ['u','a','i']}
+            F12_val_dict={k:[] for k in PhoneOfInterest}
             for k,v in F12_raw_dict.items():
                 if self.Stat_med_str_VSA == 'mode':
                     F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v,axis=0)[0].ravel()
                 else:
                     F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v,axis=0)
             RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=\
-                len(Vowels_AUI[people]['u']),len(Vowels_AUI[people]['a']),len(Vowels_AUI[people]['i'])
+                len(Vowels_AUI[people]['u:']),len(Vowels_AUI[people]['A:']),len(Vowels_AUI[people]['i:'])
             
             RESULT_dict['ADOS']=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
             RESULT_dict['sex']=Label.label_raw['sex'][Label.label_raw['name']==people].values[0]
             RESULT_dict['age']=Label.label_raw['age_year'][Label.label_raw['name']==people].values[0]
             RESULT_dict['Module']=Label.label_raw['Module'][Label.label_raw['name']==people].values[0]
             
-            u=F12_val_dict['u']
-            a=F12_val_dict['a']
-            i=F12_val_dict['i']
+            u=F12_val_dict['u:']
+            a=F12_val_dict['A:']
+            i=F12_val_dict['i:']
         
             
             if len(u)==0 or len(a)==0 or len(i)==0:
@@ -144,9 +144,11 @@ class Articulation:
                 a_num= RESULT_dict['a_num'] if type(RESULT_dict['a_num'])==int else 0
                 df_RESULT_list=pd.DataFrame(np.zeros([1,len(df_formant_statistic.columns)]),columns=df_formant_statistic.columns)
                 df_RESULT_list.index=[people]
+                df_RESULT_list.loc[people,'u_num']=u_num
+                df_RESULT_list.loc[people,'a_num']=a_num
+                df_RESULT_list.loc[people,'i_num']=i_num
                 df_RESULT_list['FCR']=10
                 df_RESULT_list['ADOS']=RESULT_dict['ADOS'][0]
-                df_RESULT_list[['u_num','a_num','i_num']]=[u_num, i_num, a_num]
                 df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
                 continue
             
@@ -192,11 +194,11 @@ class Articulation:
             # =============================================================================
             # Get data
             F12_raw_dict=Vowels_AUI[people]
-            u=F12_raw_dict['u']
-            a=F12_raw_dict['a']
-            i=F12_raw_dict['i']
+            u=F12_raw_dict['u:']
+            a=F12_raw_dict['A:']
+            i=F12_raw_dict['i:']
             df_vowel = pd.DataFrame(np.vstack([u,a,i]),columns=self.Inspect_features)
-            df_vowel['vowel'] = np.hstack([np.repeat('u',len(u)),np.repeat('a',len(a)),np.repeat('i',len(i))])
+            df_vowel['vowel'] = np.hstack([np.repeat('u:',len(u)),np.repeat('A:',len(a)),np.repeat('i:',len(i))])
             df_vowel['target']=pd.Categorical(df_vowel['vowel'])
             df_vowel['target']=df_vowel['target'].cat.codes
             # F-test
@@ -232,9 +234,9 @@ class Articulation:
             # F1i < F1a
             # F2a < F2i
             # =============================================================================
-            u_mean=F12_val_dict['u']
-            a_mean=F12_val_dict['a']
-            i_mean=F12_val_dict['i']
+            u_mean=F12_val_dict['u:']
+            a_mean=F12_val_dict['A:']
+            i_mean=F12_val_dict['i:']
             
             F1u, F2u=u_mean[0], u_mean[1]
             F1a, F2a=a_mean[0], a_mean[1]
