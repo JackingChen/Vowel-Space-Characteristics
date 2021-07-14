@@ -391,4 +391,8 @@ for people in Vowels_AUI_mean.keys():
 
 ![praatPhoneStich](figures/phone_stitch_fig.png)
 
+流程：
+1. 根據上圖看出大略critical phone （AUI） 的狀況，至於這個phone在某個utterance發生了什麼狀況就要檢查Inspect/fileOfInterest/{utterance name}了
+![praatPhoneStich](figures/utteranceFormantPlot.png)
+
 ---
