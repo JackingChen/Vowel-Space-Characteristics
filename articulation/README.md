@@ -383,4 +383,12 @@ for people in Vowels_AUI_mean.keys():
 
 
 ## CalculatenPlotSampleScatter_bydiagnosis.py
+
+##  InspectF1F2Details.py 
+---
+這個腳本拿來產生praat檔，目的是用來檢查某個人的F1 F2 derive的結果怎樣。
+範例圖：
+
+![praatPhoneStich](figures/phone_stitch_fig.png)
+
 ---
