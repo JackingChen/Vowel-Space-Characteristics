@@ -70,6 +70,38 @@ from articulation import Extract_F1F2
 import Multiprocess
 import re
 import statistics
+import shutil
+
+def GetBetweenPhoneDistance(df_top_dict,\
+                            subtract_columns=['mean', 'min', '25%', '50%', '75%', 'max'],\
+                            people_index=['2016_10_12_01_219_1','2017_07_08_01_317']):
+    # =============================================================================
+    '''
+    
+        Calculate the distributional distance between a u i
+    
+    '''
+    BetweenPhoneDistance=Dict()
+    # =============================================================================
+    for symb in df_top_dict.keys():
+        for feat in df_top_dict[symb].keys():
+            print(df_top_dict[symb][feat])
+    df_subtract_asubu_F1=df_top_dict['A:']['F1'][subtract_columns].subtract(df_top_dict['u:']['F1'][subtract_columns])
+    df_subtract_asubu_F1['origin_A:_F1_std']=df_top_dict['A:']['F1']['std']
+    df_subtract_asubu_F1['origin_u:_F1_std']=df_top_dict['u:']['F1']['std']
+    dfsubtract_asubu_F1_certianpeople=df_subtract_asubu_F1.loc[people_index]
+    df_subtract_asubi_F1=df_top_dict['A:']['F1'][subtract_columns].subtract(df_top_dict['i:']['F1'][subtract_columns])
+    df_subtract_asubi_F1['origin_A:_F1_std']=df_top_dict['A:']['F1']['std']
+    df_subtract_asubi_F1['origin_i:_F1_std']=df_top_dict['i:']['F1']['std']
+    df_subtract_asubi_F1_certianpeople=df_subtract_asubi_F1.loc[people_index]
+    df_subtract_isubu_F2=df_top_dict['i:']['F2'][subtract_columns].subtract(df_top_dict['u:']['F2'][subtract_columns])
+    df_subtract_isubu_F2['origin_i:_F2_std']=df_top_dict['i:']['F2']['std']
+    df_subtract_isubu_F2['origin_u:_F2_std']=df_top_dict['u:']['F2']['std']
+    df_subtract_isubu_F2_certianpeople=df_subtract_isubu_F2.loc[people_index]
+    BetweenPhoneDistance['F1(a-u)']=dfsubtract_asubu_F1_certianpeople
+    BetweenPhoneDistance['F1(a-u)']=df_subtract_asubi_F1_certianpeople
+    BetweenPhoneDistance['F2(i-u)']=df_subtract_isubu_F2_certianpeople
+    return BetweenPhoneDistance
 
 def get_args():
     # we add compulsary arguments as named arguments for readability
@@ -83,8 +115,10 @@ def get_args():
     parser.add_argument('--filepath', default='/homes/ssd1/jackchen/DisVoice/data/Segmented_ADOS_TD_normalized',
                         help='/homes/ssd1/jackchen/DisVoice/data/{Segmented_ADOS_normalized|Segmented_ADOS_emotion_normalized|Segmented_ADOS_TD_normalized}')
     parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/kid_TD/ADOS_tdnn_fold_transfer',
-                        help='/mnt/sdd/jackchen/egs/formosa/s6/{Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/{kid|kid_TD}/ADOS_tdnn_fold_transfer | Alignment_human/kid/Audacity_phone|')
+                        help='/mnt/sdd/jackchen/egs/formosa/s6/{Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/{kid88|kid_TD}/ADOS_tdnn_fold_transfer | Alignment_human/kid/Audacity_phone|')
     parser.add_argument('--outpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+                        help='path of the base directory')
+    parser.add_argument('--plot_outpath', default='Plot/',
                         help='path of the base directory')
     parser.add_argument('--formantmethod', default='praat',
                         help='path of the base directory')
@@ -111,9 +145,11 @@ AVERAGEMETHOD=args.avgmethod
 path_app = base_path+'/../'
 sys.path.append(path_app)
 PoolFormantWindow=args.PoolFormantWindow
+plot_outpath=args.plot_outpath
 import praat.praat_functions as praat_functions
 from script_mananger import script_manager
 from utils_jack  import functional_method, Info_name_sex, F0_parameter_dict
+
 
 # =============================================================================
 '''
@@ -149,6 +185,7 @@ if os.path.exists('Gen_formant_multiprocess.log'):
 
 ''' Multithread processing start '''
 pool = Pool(int(os.cpu_count()))
+# pool = Pool(1)
 keys=[]
 interval=2
 for i in range(0,len(files),interval):
@@ -157,7 +194,7 @@ for i in range(0,len(files),interval):
 flat_keys=[item for sublist in keys for item in sublist]
 assert len(flat_keys) == len(files)
 
-multi=Multiprocess.Multi(filepath, MaxnumForm=5)
+multi=Multiprocess.Multi(filepath, MaxnumForm=5, AVERAGEMETHOD=AVERAGEMETHOD)
 # final_results=pool.starmap(process_audio, [([file_block,silence,trnpath,PoolFormantWindow]) for file_block in tqdm(keys)])
 final_results=pool.starmap(multi.process_audio, [([file_block,silence,trnpath,PoolFormantWindow]) for file_block in tqdm(keys)])
 
@@ -187,6 +224,13 @@ if not os.path.exists(outpath):
     os.makedirs(outpath)
 
 
+filedir=os.path.basename(filepath)
+role_rawstr=filedir[re.search("Segmented_",filedir).end():re.search("_normalized",filedir).start()]
+if 'TD' in role_rawstr:
+    role='ASDTD'
+else:
+    role='ASDkid'
+
 pickle.dump(Formants_utt_symb,open(outpath+"/Formants_utt_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow),"wb"))
 
 print("Finished creating Formants_utt_symb in", outpath+"/Formants_utt_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow))
@@ -195,7 +239,25 @@ pickle.dump(Formants_people_symb,open(outpath+"/Formants_people_symb_by{avgmed}_
 
 print("Finished creating Formants_people_symb in", outpath+"/Formants_people_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow))
 
+
+
+
+uttpath=outpath+"/Formants_utt_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow)
+utt_outpath=outpath+"/Formants_utt_symb_by{avgmed}_window{wind}_{role}.pkl".format(avgmed=AVERAGEMETHOD,\
+                                                                                   wind=PoolFormantWindow,\
+                                                                                   role=role)
+peoplepath=outpath+"/Formants_people_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow)
+people_outpath=outpath+"/Formants_people_symb_by{avgmed}_window{wind}_{role}.pkl".format(avgmed=AVERAGEMETHOD,\
+                                                                                   wind=PoolFormantWindow,\
+                                                                                   role=role)
+
+
     
+shutil.copy(uttpath, utt_outpath)
+shutil.copy(peoplepath, people_outpath)
+
+
+ 
 ''' Multithread processing end '''
 
 
@@ -223,7 +285,7 @@ print("Finished creating Formants_people_symb in", outpath+"/Formants_people_sym
 import seaborn as sns
 from HYPERPARAM import phonewoprosody, Label
 PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
-PhoneOI=phonewoprosody.PhoneOI
+PhoneOI=PhoneMapp_dict.keys()
 # =============================================================================
 Formants_utt_symb=pickle.load(open(outpath+"/Formants_utt_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow),"rb"))
 Formants_people_symb=pickle.load(open(outpath+"/Formants_people_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow),"rb"))
@@ -262,9 +324,9 @@ AUI_dict, _=Get_PersonalPhonedata(Formants_people_symb,PhoneOI=PhoneOI)
 
 # =============================================================================
 # Plot boxplots
-PeopleOfInterest=['2016_06_27_02_017_1', '2016_07_30_01_148', '2016_08_26_01_168_1',
-       '2016_09_24_01_174_1'] # Manual choose
-
+# PeopleOfInterest=['2016_06_27_02_017_1', '2016_07_30_01_148', '2016_08_26_01_168_1',
+#        '2016_09_24_01_174_1'] # Manual choose
+PeopleOfInterest=Formants_people_symb.keys()
 # =============================================================================
 Name2num=Dict()
 for i,k in enumerate(sorted(AUI_dict.keys())):
@@ -297,6 +359,7 @@ for feat in args.Inspect_features:
 # =============================================================================
 # Joint plot those people of data
 # =============================================================================
+plot_outpath=plot_outpath+trnpath[re.search("new_system",trnpath).end()+1:re.search("ADOS_tdnn",trnpath).start()-1]
 for people in PeopleOfInterest:
     df_samples_AUI=pd.DataFrame()
     for symb in AUI_dict[people].keys():
@@ -309,10 +372,12 @@ for people in PeopleOfInterest:
 
     
     
+    if not os.path.exists(plot_outpath):
+        os.makedirs(plot_outpath)
     # info_str="""f1MSB:Vowel: {0}""".format(symb)
     title='{0}_{1}'.format(people, symb)
     plt.title( title )
-    # plt.savefig (plot_outpath+"/{0}.png".format(title))
+    plt.savefig (plot_outpath+"/{0}.png".format(title))
     # plt.text(x=0, y=0,s=info_str)
 
 # =============================================================================
@@ -370,39 +435,8 @@ cond_feat1.to_frame().to_excel(condition_path+"F1A_lessThan_u.xlsx")
 cond_feat2.to_frame().to_excel(condition_path+"F1A_lessThan_i.xlsx")
 cond_feat3.to_frame().to_excel(condition_path+"F2i_lessThan_u.xlsx")
 
+# BetweenPhoneDistance= GetBetweenPhoneDistance(df_top_dict)
 
-def GetBetweenPhoneDistance(df_top_dict,\
-                            subtract_columns=['mean', 'min', '25%', '50%', '75%', 'max'],\
-                            people_index=['2016_10_12_01_219_1','2017_07_08_01_317']):
-    # =============================================================================
-    '''
-    
-        Calculate the distributional distance between a u i
-    
-    '''
-    BetweenPhoneDistance=Dict()
-    # =============================================================================
-    for symb in df_top_dict.keys():
-        for feat in df_top_dict[symb].keys():
-            print(df_top_dict[symb][feat])
-    df_subtract_asubu_F1=df_top_dict['A:']['F1'][subtract_columns].subtract(df_top_dict['u:']['F1'][subtract_columns])
-    df_subtract_asubu_F1['origin_A:_F1_std']=df_top_dict['A:']['F1']['std']
-    df_subtract_asubu_F1['origin_u:_F1_std']=df_top_dict['u:']['F1']['std']
-    dfsubtract_asubu_F1_certianpeople=df_subtract_asubu_F1.loc[people_index]
-    df_subtract_asubi_F1=df_top_dict['A:']['F1'][subtract_columns].subtract(df_top_dict['i:']['F1'][subtract_columns])
-    df_subtract_asubi_F1['origin_A:_F1_std']=df_top_dict['A:']['F1']['std']
-    df_subtract_asubi_F1['origin_i:_F1_std']=df_top_dict['i:']['F1']['std']
-    df_subtract_asubi_F1_certianpeople=df_subtract_asubi_F1.loc[people_index]
-    df_subtract_isubu_F2=df_top_dict['i:']['F2'][subtract_columns].subtract(df_top_dict['u:']['F2'][subtract_columns])
-    df_subtract_isubu_F2['origin_i:_F2_std']=df_top_dict['i:']['F2']['std']
-    df_subtract_isubu_F2['origin_u:_F2_std']=df_top_dict['u:']['F2']['std']
-    df_subtract_isubu_F2_certianpeople=df_subtract_isubu_F2.loc[people_index]
-    BetweenPhoneDistance['F1(a-u)']=dfsubtract_asubu_F1_certianpeople
-    BetweenPhoneDistance['F1(a-u)']=df_subtract_asubi_F1_certianpeople
-    BetweenPhoneDistance['F2(i-u)']=df_subtract_isubu_F2_certianpeople
-    return BetweenPhoneDistance
-BetweenPhoneDistance= GetBetweenPhoneDistance(df_top_dict)
-print(BetweenPhoneDistance)
 
 
 

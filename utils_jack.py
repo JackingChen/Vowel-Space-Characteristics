@@ -15,7 +15,10 @@ import sys
 path_app = '/mnt/sdd/jackchen/egs/formosa/s6/local'
 sys.path.append(path_app)
 from utils_wer.wer import  wer as WER
+sys.path.remove(path_app)
 from tqdm import tqdm
+
+
 def dynamic2static(feat):
 
     me=np.mean(feat,0)
@@ -133,8 +136,15 @@ def functional_method(data, method='middle', window=3):
     
     if method=="mean":
         ret=np.mean(data)
+        
     elif method=="middle":
-        ret=np.mean(data[int(len(data)/2)-window: int(len(data)/2)+window])
+        from_ind=max(0,int(len(data)/2)-window)
+        to_ind=min(len(data)-1,int(len(data)/2)+window)
+        
+        ret=np.mean(data[from_ind: to_ind])
+    
+    # print('data: ',data)
+    # print('ret: ',ret)
     
     return ret
 from sklearn.utils import (as_float_array, check_array, check_X_y, safe_sqr,
@@ -259,7 +269,7 @@ def Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb_cmp,Align_Ori
         Formant_people_symb_total['ori'][people]=Formant_people_symb_total['ori'][people].append(utt_hype)
     return Formant_people_symb_total
 
-def Gather_info_certainphones(Formant_people_symb_total,PhoneMapp_dict,PhoneOfInterest):
+def Gather_info_certainphones(Formant_people_symb_total,PhoneMapp_dict,PhoneOfInterest,):
     # =============================================================================
     #     AUI_dict[people][phone] = DF
     #     DF.loc[int] = [F1, F2, end, start, text, utt]
@@ -356,6 +366,21 @@ def GetValuelimit_IQR(AUI_info,PhoneMapp_dict,Inspect_features,maxFreq=5500,minF
                     limit_people_rule[people][phone][feat].max=upper
                     limit_people_rule[people][phone][feat].min=lower
     return limit_people_rule
+
+
+
+
+def Postprocess_dfformantstatistic(df_formant_statistic):
+    ''' Remove person that has unsufficient data '''
+    df_formant_statistic_bool=(df_formant_statistic['u_num']!=0) & (df_formant_statistic['a_num']!=0) & (df_formant_statistic['i_num']!=0)
+    df_formant_statistic=df_formant_statistic[df_formant_statistic_bool]
+    
+    ''' ADD ADOS category '''
+    df_formant_statistic['ADOS_cate']=np.array([0]*len(df_formant_statistic))
+    df_formant_statistic['ADOS_cate'][df_formant_statistic['ADOS']<2]=0
+    df_formant_statistic['ADOS_cate'][(df_formant_statistic['ADOS']<3) & (df_formant_statistic['ADOS']>=2)]=1
+    df_formant_statistic['ADOS_cate'][df_formant_statistic['ADOS']>=3]=2
+    return df_formant_statistic
 # =============================================================================
 '''
 
@@ -365,15 +390,15 @@ Get additional information
 import pandas as pd
 # =============================================================================
 
-Labelfile='/homes/ssd1/jackchen/jackchen/ADOS_data/workplace/label_ADOS_87.xlsx'
+Labelfile='/homes/ssd1/jackchen/gop_prediction/ADOS_label20210713.xlsx'
 df_labels=pd.read_excel(Labelfile)
-Info_name_sex=df_labels[['name','sex']]
+Info_name_sex=df_labels[['name','sex','age_year']].copy()
 Info_name_sex.loc[Info_name_sex['sex']==1,'sex']='male'
 Info_name_sex.loc[Info_name_sex['sex']==2,'sex']='female'
 
 Labelfile='/homes/ssd1/jackchen/DisVoice/data/ADOS_TD_Label22.xlsx'
 df_labels_TD=pd.read_excel(Labelfile)
-Info_name_sex_TD=df_labels_TD[['name','sex']]
+Info_name_sex_TD=df_labels_TD[['name','sex','age_year']].copy()
 # Info_name_sex_TD['sex'][Info_name_sex_TD['sex']==1]='male'
 Info_name_sex_TD.loc[Info_name_sex_TD['sex']==1,'sex']='male'
 Info_name_sex_TD.loc[Info_name_sex_TD['sex']==2,'sex']='female'

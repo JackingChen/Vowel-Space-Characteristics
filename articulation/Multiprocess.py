@@ -11,7 +11,13 @@ import re
 import pandas as pd
 import numpy as np
 import os, sys
-from articulation import Extract_F1F2
+
+# path_app = '/homes/ssd1/jackchen/DisVoice/articulation'
+# sys.path.append(path_app)
+try:
+    from .articulation import Extract_F1F2
+except:
+    from articulation import Extract_F1F2
 from pydub import AudioSegment
 try:
     from .articulation_functions import measureFormants
@@ -23,8 +29,8 @@ from utils_wer.wer import  wer as WER
 from utils_jack  import  Get_aligned_sequences
 
 
-path_app = '/homes/ssd1/jackchen/DisVoice'
-sys.path.append(path_app)
+# path_app = '/homes/ssd1/jackchen/DisVoice'
+# sys.path.append(path_app)
 from utils_jack  import functional_method, Info_name_sex, F0_parameter_dict
 
 class Multi:
@@ -58,9 +64,12 @@ class Multi:
             role=filename[re.search("[K|D]", filename).start()]
             if role =='D':
                 gender='female'
+                age_year=pd.Series([28])
             elif role =='K':
                 series_gend=Info_name_sex[Info_name_sex['name']==gender_query_str]['sex']
                 gender=series_gend.values[0]
+                age_year=Info_name_sex[Info_name_sex['name']==gender_query_str]['age_year']
+            
             
             minf0=F0_parameter_dict[gender]['f0_min']
             maxf0=F0_parameter_dict[gender]['f0_max']
@@ -85,20 +94,29 @@ class Multi:
                     [F1,F2]=F1F2_extractor.extract_features_file(temp_outfile)
                 elif self.formantmethod == 'praat':
                     try:
-                        MaxnumForm=5
-                        if 'u:' in symb:
-                            maxFormant=3000
-                        else:
-                            maxFormant=5000
+                        def GetmaxFormant(symb, age, sex):
+                            if age <= 12 or sex=='female':
+                                maxFormant=6000
+                            else:
+                                maxFormant=5000
+                            if 'u:' in symb:
+                                maxFormant=3000
+                            return maxFormant
+            
+                            
+                        maxFormant=GetmaxFormant(symb=symb, age=age_year.values[0], sex=gender)
+
                         [F1,F2]=measureFormants(temp_outfile,minf0,maxf0,time_step=F1F2_extractor.step,MaxnumForm=self.MaxnumForm,Maxformant=maxFormant,framesize=F1F2_extractor.sizeframe)
                     except :
+                        F1, F2 = [], []
                         print("Error processing ",utt+"__"+symb)
                         error_msg_bag.append(utt+"__"+symb)
                 
                 
-                if len(F1) == 0 or len(F2)==0:
+                if len(F1) < 2 or len(F2)<2: # don't accept the data with length = 0 for 1
                     F1_static, F2_static= -1, -1
                 else:
+                    # print(F1,F2)
                     F1_static=functional_method(F1,method=self.AVERAGEMETHOD,window=functional_method_window)
                     F2_static=functional_method(F2,method=self.AVERAGEMETHOD,window=functional_method_window)
                 

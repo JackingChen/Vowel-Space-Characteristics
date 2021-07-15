@@ -22,6 +22,12 @@ try:
     from .articulation_functions import extractTrans, V_UV
 except: 
     from articulation_functions import extractTrans, V_UV, measureFormants
+    
+try:
+    from .articulation import Extract_F1F2
+except:
+    from articulation import Extract_F1F2
+    
 import uuid
 import pandas as pd
 import torch
@@ -35,7 +41,6 @@ from pydub import AudioSegment
 
 from multiprocessing import Pool, current_process
 import pickle
-from articulation import Extract_F1F2
 import subprocess
 import re
 import seaborn as sns
@@ -88,8 +93,8 @@ filepath=args.filepath
 trnpath=args.trnpath
 outpath=args.outpath
 AVERAGEMETHOD=args.avgmethod
-path_app = base_path+'/../'
-sys.path.append(path_app)
+# path_app = base_path+'/../'
+# sys.path.append(path_app)
 Stat_med_str=args.Stat_med_str_VSA
 PoolFormantWindow=args.PoolFormantWindow
 Inspect_features=args.Inspect_features
@@ -218,7 +223,7 @@ Formants_utt_symb=pickle.load(open(outpath+"/[Testing]Formants_utt_{role}_symb_b
 # =============================================================================
 from HYPERPARAM import phonewoprosody, Label
 PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
-PhoneOI=phonewoprosody.PhoneOI
+PhoneOI=PhoneMapp_dict.keys()
 PhoneOfInterest=list(PhoneMapp_dict.keys())
 # =============================================================================
 # Use inter quartile range to decide the Formant limits    
@@ -250,11 +255,11 @@ if len(limit_people_rule) >0:
 # =============================================================================
 Dict_phone_Inspect=Dict()
 for phonesInspect in ['A:','u:','i:|j','A:|u:|i:|j']:
+# for phonesInspect in ['uA:','uO:','uaI','ueI']:
     df_evaluation_metric=EvaluateAlignments(Formants_utt_symb_cmp,Formants_utt_symb,phonesInspect)
     print('phones Inspect',phonesInspect)
     print(df_evaluation_metric)
     Dict_phone_Inspect[phonesInspect]=df_evaluation_metric
-
 
 
 
@@ -336,6 +341,27 @@ for symb in PhoneOfInterest:
         Dict_people_formant_diff[symb].loc[people]=df_FeatDist_average.values
 print("average deviation of features:",Inspect_features," is \n",df_FeatDist_average)
 aaa=ccc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

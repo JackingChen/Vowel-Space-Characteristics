@@ -18,7 +18,7 @@ base_dir='/homes/ssd1/jackchen/gop_prediction/'
 # =============================================================================
 label_Bin_all={}
 
-label_path=base_dir+'label_ADOS_77.xlsx'
+label_path=base_dir+'ADOS_label20210713.xlsx'
 label_raw=pd.read_excel(label_path)
 Labelfile_TD='/homes/ssd1/jackchen/DisVoice/data/ADOS_TD_Label22.xlsx'
 df_labels_TD=pd.read_excel(Labelfile_TD)
@@ -74,3 +74,4 @@ for label_str  in include:
 label_full={}
 for label_str  in label_choose:
     label_full[label_str]=np.array(label_raw[label_str])
+    label_full['name']=label_raw['name']
