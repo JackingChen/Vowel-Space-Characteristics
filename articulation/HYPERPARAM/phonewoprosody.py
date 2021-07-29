@@ -85,13 +85,23 @@ Phoneme_sets['ttss']=['ttss','ttss1', 'ttss2', 'ttss3', 'ttss4', 'ttss5']
 Phoneme_sets['ttss_h']=['ttss_h', 'ttss_h1','ttss_h2', 'ttss_h3', 'ttss_h4', 'ttss_h5']
 Phoneme_sets['u_']=['u:1', 'u:2', 'u:3','u:4', 'u:5', 'u:7']
 Phoneme_sets['uA_']=['uA:','uA:1','uA:2','uA:3','uA:4','uA:5']
-Phoneme_sets['uaI']=['uaI','uaI1','uaI2','uaI3','uaI4','uaI5']
-Phoneme_sets['uax']=['uax']
-Phoneme_sets['ueI']=['ueI','ueI1','ueI2','ueI3','ueI4','ueI5']
+Phoneme_sets['uaI_']=['uaI','uaI1','uaI2','uaI3','uaI4','uaI5']
+Phoneme_sets['uax_']=['uax']
+Phoneme_sets['ueI_']=['ueI','ueI1','ueI2','ueI3','ueI4','ueI5']
 Phoneme_sets['uO_']=['uO:','uO:1','uO:2','uO:3','uO:4','uO:5']
+Phoneme_sets['w-A_']=['w-A:','w-A:1','w-A:2','w-A:3','w-A:4','w-A:5']
+Phoneme_sets['w-aI_']=['w-aI','w-aI1','w-aI2','w-aI3','w-aI4','w-aI5']
+Phoneme_sets['w-ax_']=['w-ax']
+Phoneme_sets['w-eI_']=['w-eI','w-eI1','w-eI2','w-eI3','w-eI4','w-eI5']
+Phoneme_sets['w-O_']=['w-O:','w-O:1','w-O:2','w-O:3','w-O:4','w-O:5']
+Phoneme_sets['w']=['w']
 Phoneme_sets['x']=['x']
 Phoneme_sets['y']=['y1', 'y2', 'y3', 'y4', 'y5']
 Phoneme_sets['zz']=['zz','zz4', 'zz5']
+
+# To map the u in ['uA_', 'uaI_', 'uax_', 'ueI_', 'uO_'] to w If we need to split
+LeftSymbMapp=collections.OrderedDict()
+LeftSymbMapp['u']='w'
 
 
 
@@ -190,7 +200,7 @@ Manner_sets['affricate_aspirated'] = Phoneme_sets['ts_h'] + Phoneme_sets['ttss_h
 Manner_sets['fricative_sibilant'] = Phoneme_sets['s'] + Phoneme_sets['ss'] + Phoneme_sets['s6'] 
 Manner_sets['fricative_unsibilant'] = Phoneme_sets['f'] + Phoneme_sets['x']
 Manner_sets['liquid'] = Phoneme_sets['l'] + Phoneme_sets['zz']
-Manner_sets['glide'] =  Phoneme_sets['j'] + Phoneme_sets['y']
+Manner_sets['glide'] =  Phoneme_sets['j'] + Phoneme_sets['y'] + Phoneme_sets['w']
 Manner_sets['Vowel']=Phoneme_sets['A_'] + Phoneme_sets['O_'] + Phoneme_sets['ax'] + Phoneme_sets['E'] +\
                     Phoneme_sets['aI'] + Phoneme_sets['eI'] + Phoneme_sets['aU'] + Phoneme_sets['oU'] +\
                     Phoneme_sets['axr'] + Phoneme_sets['i_'] + Phoneme_sets['u_'] + Phoneme_sets['y'] 
@@ -208,7 +218,7 @@ Manner_sets_simple1['affricate_aspirated'] = Phoneme_sets['ts_h'] + Phoneme_sets
 Manner_sets_simple1['fricative_sibilant'] = Phoneme_sets['s'] + Phoneme_sets['ss'] + Phoneme_sets['s6'] 
 Manner_sets_simple1['fricative_unsibilant'] = Phoneme_sets['f'] + Phoneme_sets['x']
 Manner_sets_simple1['liquid'] = Phoneme_sets['l'] + Phoneme_sets['zz']
-Manner_sets_simple1['glide'] = Phoneme_sets['j']  + Phoneme_sets['y']
+Manner_sets_simple1['glide'] = Phoneme_sets['j']  + Phoneme_sets['y'] + Phoneme_sets['w']
 Manner_sets_simple1['Vowel']=Phoneme_sets['A_'] + Phoneme_sets['O_'] + Phoneme_sets['ax'] + Phoneme_sets['E'] +\
                     Phoneme_sets['aI'] + Phoneme_sets['eI'] + Phoneme_sets['aU'] + Phoneme_sets['oU'] +\
                     Phoneme_sets['axr'] + Phoneme_sets['i_'] + Phoneme_sets['u_'] + Phoneme_sets['y'] 
@@ -216,7 +226,7 @@ Manner_sets_simple1['Vowel']=Phoneme_sets['A_'] + Phoneme_sets['O_'] + Phoneme_s
 Manner_sets_simple2=collections.OrderedDict()
 Manner_sets_simple2['nasal'] = Phoneme_sets['m'] + Phoneme_sets['n']
 Manner_sets_simple2['liquid'] = Phoneme_sets['l'] + Phoneme_sets['zz']
-Manner_sets_simple2['glide'] =  Phoneme_sets['j'] + Phoneme_sets['y']
+Manner_sets_simple2['glide'] =  Phoneme_sets['j'] + Phoneme_sets['y'] + Phoneme_sets['w']
 Manner_sets_simple2['plosive']=Phoneme_sets['p'] + Phoneme_sets['t'] + Phoneme_sets['k'] +\
                        Phoneme_sets['p_h'] + Phoneme_sets['t_h'] + Phoneme_sets['k_h']
 Manner_sets_simple2['affricate'] = Phoneme_sets['ts'] + Phoneme_sets['ttss'] + Phoneme_sets['ts6'] +\
@@ -235,7 +245,7 @@ Manner_sets_simple2['Vowel']=Phoneme_sets['A_'] + Phoneme_sets['O_'] + Phoneme_s
 '''             
 # =============================================================================
 
-PhoneMapp_dict={'u:':Phoneme_sets['u_'],\
+PhoneMapp_dict={'u:':Phoneme_sets['u_']+['w'],\
                 'i:':Phoneme_sets['i_']+['j'],\
                 'A:':Phoneme_sets['A_']}
 # PhoneMapp_dict={'u:':Phoneme_sets['u_'],\

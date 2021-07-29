@@ -18,6 +18,7 @@ from metric import Evaluation_method
 
 import numpy as np
 from matplotlib import pyplot as plt
+from metric import independent_corr 
 
 def get_args():
     # we add compulsary arguments as named arguments for readability
@@ -66,24 +67,67 @@ N=2 # The least number of critical phones (A:, u:, i:)
 # =============================================================================
 # User define conditions (df_result['de-zero_num'].mean() > 5) to get wanted results
 # =============================================================================
-from Filtering_n_FeatureExtracting import Collector, Selector_Pval, Selector_Pval_colrow, Calculate_dfStatistics
-
+from Filtering_n_FeatureExtracting import Collector, Selector_Pval, Selector_Pval_colrow, Calculate_dfStatistics, Selector_Rval_colrow,\
+                                          Selector_independent_corr  
 Result_dict=Dict()
-for CtxPhone_types in tqdm(['Manner_simp1','Manner_simp2','Place_simp1','Place_simp2']):
+rows=['BWratio(A:,i:,u:)','BV(A:,i:,u:)_l2']
+Criteria_dict=Dict()
+Criteria_dict['BWratio(A:,i:,u:)'].r = 0.468
+Criteria_dict['BWratio(A:,i:,u:)'].N = 82
+Criteria_dict['BV(A:,i:,u:)_l2'].r = 0.481
+Criteria_dict['BV(A:,i:,u:)_l2'].N = 82
+significant_val=0.05
+r_val=0.
+for CtxPhone_types in tqdm(['Manner_simp1','Manner_simp2','Place_simp1','Place_simp2','']):
+# for CtxPhone_types in tqdm(['']):    
     df_result_FeatComb_table_collect=pickle.load(open(outpath+"/df_result_FeatComb_table_collect_{0}.pkl".format(CtxPhone_types),"rb"))
+    # df_result_FeatComb_table_collect=pickle.load(open(outpath+"/df_result_FeatComb_table_collect_{0}.pkl".format(CtxPhone_types),"rb"))
     # print(df_result_FeatComb_table_collect['LeftDepVowel_AUI'], df_result_FeatComb_table_collect['RightDepVowel_AUI'])
     
     df_significant_collection=Collector(df_result_FeatComb_table_collect)
-    df_significant_collection_stage2=Selector_Pval(df_significant_collection)
-    df_significant_collection_stage2_msbf1f2=Selector_Pval_colrow(df_significant_collection,col='spear_pvalue', rows=['MSB_f1(A:,i:,u:)','MSB_f2(A:,i:,u:)'])
-    Result_dict['min< thresh'].update(df_significant_collection_stage2)
-    Result_dict['msb< thresh'].update(df_significant_collection_stage2_msbf1f2)
+    # df_significant_collection_stage2=Selector_Pval(df_significant_collection, significant_val=significant_val)
+    # df_significant_collection_stage2_msbf1f2=Selector_Pval_colrow(df_significant_collection,col='spear_pvalue', rows=rows, significant_val=significant_val)
+    # df_significant_collection_stage2_msbf1f2=Selector_Rval_colrow(df_significant_collection,col='spearmanr', rows=rows, r_val=significant_val)
+    df_significant_collection_stage2_spearrsig=Selector_independent_corr(df_significant_collection,col='spearmanr',rows=rows,\
+                              Criteria_dict=Criteria_dict,\
+                              significant_val=0.95)  #Try to find the r value larger than non context dependent versions
+    # Result_dict['min< thresh'].update(df_significant_collection_stage2)
+    Result_dict['R significant'].update(df_significant_collection_stage2_spearrsig)
+
+def arrange_Resultdict(Result_dict,rows):
+    Result_feature_dict=Dict()
+    for row in rows:
+        Result_feature_dict[row]=pd.DataFrame()
+        for criterion in Result_dict.keys():
+            for keys, values in Result_dict[criterion].items():
+                df_result=values.loc[[row],:].copy()
+                df_result.index= keys + df_result.index
+                Result_feature_dict[row]=Result_feature_dict[row].append(df_result)
+    return Result_feature_dict
+
+
+
+cmp_r=0.468
+N_cmp_r=82
+Arranged_resultdict=arrange_Resultdict(Result_dict,rows)
+for feature in Arranged_resultdict.keys():
+    for idx in Arranged_resultdict[feature].index:
+        df_=Arranged_resultdict[feature].loc[idx]
+        xy, n= np.abs(cmp_r), N_cmp_r
+        ab, n2= np.abs(df_.iloc[0]), df_.iloc[-1]
+        z, p = independent_corr(xy, ab, n, n2 = n2, twotailed=False, method='fisher')
+        if (p < significant_val and ab > xy):
+            # print(idx)
+            # print(feature)
+            print(df_)
+            print("r: ",ab, ' p: ',p)
+
 
 
 
 for CtxPhone_types in tqdm(['Manner_simp1','Manner_simp2','Place_simp1','Place_simp2']):
-    Feature_dicts=pickle.load(open(outpath+"/AUI_ContextDepPhonesMerge_{0}_ij.pkl".format(CtxPhone_types),"rb"))
-    for comb in Result_dict['msb< thresh'].keys():
+    Feature_dicts=pickle.load(open(outpath+"/AUI_ContextDepPhonesMerge_{0}_uwij.pkl".format(CtxPhone_types),"rb"))
+    for comb in Result_dict['R significant'].keys():
         feattype=comb[re.search('_feat',comb).end():re.search('CtxDepVowel_AUI|LeftDepVowel_AUI|RightDepVowel_AUI',comb).end()]
         phone_str=comb[re.search('CtxDepVowel_AUI|LeftDepVowel_AUI|RightDepVowel_AUI',comb).end()+1:]
         CtxPhone={}

@@ -390,7 +390,7 @@ Get additional information
 import pandas as pd
 # =============================================================================
 
-Labelfile='/homes/ssd1/jackchen/gop_prediction/ADOS_label20210713.xlsx'
+Labelfile='/homes/ssd1/jackchen/gop_prediction/ADOS_label20210721.xlsx'
 df_labels=pd.read_excel(Labelfile)
 Info_name_sex=df_labels[['name','sex','age_year']].copy()
 Info_name_sex.loc[Info_name_sex['sex']==1,'sex']='male'

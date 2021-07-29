@@ -102,7 +102,7 @@ class CtxDepPhone_merger:
             if s in v:
                 return p
         return s  
-    def get_Dep_AUI(self,PeopleCtxDepPhoneFunctional_dict,mode="Ctx",PhoneOfInterest=['j','A_','u_','i_']):
+    def get_Dep_AUI(self,PeopleCtxDepPhoneFunctional_dict,PhoneMapp_dict,PhonesOfInterest,mode="Ctx"):
         ''' Filter out all critical phonemes instead of A U I'''
         ''' mode can be [Ctx, Left, Right]                     '''
         ''' and change PeopleCtxDepPhoneFunctional_dict[spk][phone] to AUI_ContextDepPhones[phone][spk] '''
@@ -120,7 +120,7 @@ class CtxDepPhone_merger:
                     critical_P=phone[:phone.find('+')]
                 
     
-                if critical_P in [e  for phoneme in PhoneOfInterest for e in self.phonewoprosody.Phoneme_sets[phoneme]]:
+                if critical_P in [e for phoneme in phonewoprosody.PhoneMapp_dict.keys() for e in PhoneMapp_dict[phoneme]]:
                     
                     if phone not in CtxDepVowel_AUI.keys():
                         if spk not in CtxDepVowel_AUI[phone].keys():
@@ -370,7 +370,6 @@ class CtxDepPhone_merger:
                 elif feat_type == 'Right':
                     critical_P=phone[:phone.find('+')]
                     right_P=phone[phone.find('+')+1:]
-                    
                     # if right_P in ['A','O','i','u']:
                     #     right_P=right_P+':'
                     

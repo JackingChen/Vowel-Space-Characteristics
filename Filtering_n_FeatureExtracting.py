@@ -7,10 +7,11 @@ Created on Fri Jul  9 10:23:47 2021
 """
 import os,glob
 from addict import Dict
+import numpy as np
 
 import articulation.articulation
 from articulation.HYPERPARAM import phonewoprosody, Label
-
+from metric import independent_corr 
 
 from metric import Evaluation_method
 # =============================================================================
@@ -32,20 +33,45 @@ def Collector(df_result_FeatComb_table_collect,correlation_type='spearmanr'):
 # cond=vars()['df_result']['de-zero_num'].mean() >5
 
 
-def Selector_Pval(df_significant_collection):
-    df_significant_collection_stage2=Dict()
-    for combstr, df_result in df_significant_collection.items():
-        if df_result['spear_pvalue'].min() < 0.0001:
-            df_significant_collection_stage2[combstr]=df_result
-            
-    return df_significant_collection_stage2
-
-def Selector_Pval_colrow(df_significant_collection,col='spear_pvalue',rows=['MSB_f1(A:,i:,u:)','MSB_f2(A:,i:,u:)']):
+def Selector_independent_corr(df_significant_collection,col='spearmanr',rows=['BWratio(A:,i:,u:)'],\
+                              Criteria_dict={},\
+                              significant_val=0.05):
     df_significant_collection_stage2=Dict()
     for combstr, df_result in df_significant_collection.items():
         cond=False
         for row in rows:
-            cond = cond or (df_result.loc[row,col] < 0.0001)
+            xy, n= np.abs(Criteria_dict[row].r), Criteria_dict[row].N
+            ab, n2= np.abs(df_result.loc[row,col]), df_result.loc[row,'de-zero_num']
+            z, p = independent_corr(xy, ab, n, n2 = n2, twotailed=True, method='fisher')
+            cond = cond or (p < significant_val and ab > xy)
+        if cond:
+            df_significant_collection_stage2[combstr]=df_result
+    return df_significant_collection_stage2
+
+def Selector_Pval(df_significant_collection, significant_val=0.001):
+    df_significant_collection_stage2=Dict()
+    for combstr, df_result in df_significant_collection.items():
+        if df_result['spear_pvalue'].min() < significant_val:
+            df_significant_collection_stage2[combstr]=df_result
+    return df_significant_collection_stage2
+
+def Selector_Pval_colrow(df_significant_collection,col='spear_pvalue',rows=['MSB_f1(A:,i:,u:)','MSB_f2(A:,i:,u:)'], significant_val=0.001):
+    df_significant_collection_stage2=Dict()
+    for combstr, df_result in df_significant_collection.items():
+        cond=False
+        for row in rows:
+            cond = cond or (df_result.loc[row,col] < significant_val)
+        if cond:
+            df_significant_collection_stage2[combstr]=df_result
+            
+    return df_significant_collection_stage2
+
+def Selector_Rval_colrow(df_significant_collection,col='spearmanr',rows=['MSB_f1(A:,i:,u:)','MSB_f2(A:,i:,u:)'], r_val=0.6):
+    df_significant_collection_stage2=Dict()
+    for combstr, df_result in df_significant_collection.items():
+        cond=False
+        for row in rows:
+            cond = cond or (df_result.loc[row,col] > np.abs(r_val))
         if cond:
             df_significant_collection_stage2[combstr]=df_result
             

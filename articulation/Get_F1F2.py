@@ -71,7 +71,8 @@ import Multiprocess
 import re
 import statistics
 import shutil
-
+import seaborn as sns
+from HYPERPARAM import phonewoprosody, Label
 def GetBetweenPhoneDistance(df_top_dict,\
                             subtract_columns=['mean', 'min', '25%', '50%', '75%', 'max'],\
                             people_index=['2016_10_12_01_219_1','2017_07_08_01_317']):
@@ -112,9 +113,9 @@ def get_args():
                         help='path of the base directory', dest='base_path')
     parser.add_argument('--base_path_phf', default='/homes/ssd1/jackchen/gop_prediction/data',
                         help='path of the base directory')
-    parser.add_argument('--filepath', default='/homes/ssd1/jackchen/DisVoice/data/Segmented_ADOS_TD_normalized',
+    parser.add_argument('--filepath', default='/homes/ssd1/jackchen/DisVoice/data/Segmented_ADOS_normalized',
                         help='/homes/ssd1/jackchen/DisVoice/data/{Segmented_ADOS_normalized|Segmented_ADOS_emotion_normalized|Segmented_ADOS_TD_normalized}')
-    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/kid_TD/ADOS_tdnn_fold_transfer',
+    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/kid88/ADOS_tdnn_fold_transfer',
                         help='/mnt/sdd/jackchen/egs/formosa/s6/{Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/{kid88|kid_TD}/ADOS_tdnn_fold_transfer | Alignment_human/kid/Audacity_phone|')
     parser.add_argument('--outpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
@@ -195,6 +196,9 @@ flat_keys=[item for sublist in keys for item in sublist]
 assert len(flat_keys) == len(files)
 
 multi=Multiprocess.Multi(filepath, MaxnumForm=5, AVERAGEMETHOD=AVERAGEMETHOD)
+multi._updatePhonedict(phonewoprosody.Phoneme_sets)
+multi._updateLeftSymbMapp(phonewoprosody.LeftSymbMapp)
+
 # final_results=pool.starmap(process_audio, [([file_block,silence,trnpath,PoolFormantWindow]) for file_block in tqdm(keys)])
 final_results=pool.starmap(multi.process_audio, [([file_block,silence,trnpath,PoolFormantWindow]) for file_block in tqdm(keys)])
 
@@ -282,8 +286,6 @@ shutil.copy(peoplepath, people_outpath)
     Check data distribution of Vowel Of Interest
 
 ''' 
-import seaborn as sns
-from HYPERPARAM import phonewoprosody, Label
 PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
 PhoneOI=PhoneMapp_dict.keys()
 # =============================================================================

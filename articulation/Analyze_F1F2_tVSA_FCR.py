@@ -26,7 +26,6 @@ from HYPERPARAM import phonewoprosody, Label
 import matplotlib.pyplot as plt
 from itertools import combinations
 
-import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from statsmodels.multivariate.manova import MANOVA
 from scipy import stats
@@ -322,6 +321,12 @@ pickle.dump(Vowels_AUI,open(outpklpath+"Vowels_AUI_{}.pkl".format(role),"wb"))
 articulation=Articulation()
 df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest)
 
+
+for i in range(len(df_formant_statistic)):
+    name=df_formant_statistic.iloc[i].name
+    df_formant_statistic.loc[name,'ADOS_cate']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate'].values
+
+
 Eval_med=Evaluation_method()
 df_formant_statistic=Eval_med._Postprocess_dfformantstatistic(df_formant_statistic)
 pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
@@ -343,20 +348,25 @@ pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pk
 # =============================================================================
 
 ''' Calculate correlations '''
-# columns=['FCR','VSA1','F_vals_f1(u:,i:,A:)', 'F_vals_f2(u:,i:,A:)',
-#        'F_val_mix(u:,i:,A:)', 'F_vals_f1(u:,i:)', 'F_vals_f2(u:,i:)',
-#        'F_val_mix(u:,i:)', 'F_vals_f1(u:,A:)', 'F_vals_f2(u:,A:)',
-#        'F_val_mix(u:,A:)', 'F_vals_f1(i:,A:)', 'F_vals_f2(i:,A:)',
-#        'F_val_mix(i:,A:)'] 
 
-columns=['F_vals_f1(A:,i:,u:)', 'F_vals_f2(A:,i:,u:)',
+# columns=['FCR','VSA1','F_vals_f1(A:,i:,u:)', 'F_vals_f2(A:,i:,u:)',
+#        'F_val_mix(A:,i:,u:)', 'MSB_f1(A:,i:,u:)', 'MSB_f2(A:,i:,u:)',
+#        'MSB_mix', 'F_vals_f1(A:,u:)', 'F_vals_f2(A:,u:)', 'F_val_mix(A:,u:)',
+#        'MSB_f1(A:,u:)', 'MSB_f2(A:,u:)', 'F_vals_f1(A:,i:)',
+#        'F_vals_f2(A:,i:)', 'F_val_mix(A:,i:)', 'MSB_f1(A:,i:)',
+#        'MSB_f2(A:,i:)', 'F_vals_f1(i:,u:)', 'F_vals_f2(i:,u:)',
+#        'F_val_mix(i:,u:)', 'MSB_f1(i:,u:)', 'MSB_f2(i:,u:)']
+columns=['FCR',
+       'VSA1', 'F_vals_f1(A:,i:,u:)', 'F_vals_f2(A:,i:,u:)',
        'F_val_mix(A:,i:,u:)', 'MSB_f1(A:,i:,u:)', 'MSB_f2(A:,i:,u:)',
-       'MSB_mix', 'F_vals_f1(A:,u:)', 'F_vals_f2(A:,u:)', 'F_val_mix(A:,u:)',
-       'MSB_f1(A:,u:)', 'MSB_f2(A:,u:)', 'F_vals_f1(A:,i:)',
-       'F_vals_f2(A:,i:)', 'F_val_mix(A:,i:)', 'MSB_f1(A:,i:)',
-       'MSB_f2(A:,i:)', 'F_vals_f1(i:,u:)', 'F_vals_f2(i:,u:)',
-       'F_val_mix(i:,u:)', 'MSB_f1(i:,u:)', 'MSB_f2(i:,u:)']
-
+       'MSB_mix', 'BWratio(A:,i:,u:)', 'BV(A:,i:,u:)_l2', 'WV(A:,i:,u:)_l2',
+       'F_vals_f1(i:,u:)', 'F_vals_f2(i:,u:)', 'F_val_mix(i:,u:)',
+       'MSB_f1(i:,u:)', 'MSB_f2(i:,u:)', 'BWratio(i:,u:)', 'BV(i:,u:)_l2',
+       'WV(i:,u:)_l2', 'F_vals_f1(A:,u:)', 'F_vals_f2(A:,u:)',
+       'F_val_mix(A:,u:)', 'MSB_f1(A:,u:)', 'MSB_f2(A:,u:)', 'BWratio(A:,u:)',
+       'BV(A:,u:)_l2', 'WV(A:,u:)_l2', 'F_vals_f1(A:,i:)', 'F_vals_f2(A:,i:)',
+       'F_val_mix(A:,i:)', 'MSB_f1(A:,i:)', 'MSB_f2(A:,i:)', 'BWratio(A:,i:)',
+       'BV(A:,i:)_l2', 'WV(A:,i:)_l2']
 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
                                             df_formant_statistic['i_num'] +\
                                             df_formant_statistic['a_num']
@@ -411,7 +421,7 @@ df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
 # for N in range(10):
 #     df_pearsonr_table=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1)
 
-N=1
+
 ManualCondition=Dict()
 suffix='.xlsx'
 condfiles=glob.glob('Inspect/condition/*'+suffix)
@@ -420,9 +430,10 @@ for file in condfiles:
     name=os.path.basename(file).replace(suffix,"")
     ManualCondition[name]=df_cond['Unnamed: 0'][df_cond['50%']==True]
 
-
-Aaadf_pearsonr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1,evictNamelst=ManualCondition[ 'unreasonable_all'])
-Aaadf_pearsonr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1)
+N=2
+Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1,evictNamelst=ManualCondition[ 'unreasonable_all'])
+Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1)
+Aaadf_regressionr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1,correlation_type='linearregression')
 
 # Aaadf_pearsonr_table_NoLimitWithADOScat=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,corr_label='ADOS_cate',constrain_sex=-1, constrain_module=-1)
 # Aaadf_pearsonr_table_normal=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_assessment=0)
@@ -521,7 +532,7 @@ aaa=ccc
 Plotting area
 
 '''
-phoneme_color_map={'a':'tab:blue','u':'tab:orange','i':'tab:green',\
+phoneme_color_map={'a':'tab:blue','u:':'tab:orange','i:':'tab:green',\
                    'A:':'tab:blue','A:1':'tab:orange','A:2':'tab:green','A:3':'tab:red','A:4':'tab:purple','A:5':'tab:gray'}
 # =============================================================================
 
@@ -540,7 +551,7 @@ def plot(Vowels_AUI,outname=Plotout_path+'{0}_ADOS{1}'):
         ASDlab=Label.label_raw[label_choose][Label.label_raw['name']==people].values
         fig, ax = plt.subplots()
         for phone, values in Vowels_AUI[people].items():
-            x,y=np.vstack(values)[:,0],np.vstack(values)[:,1]
+            x,y=values.loc[:,'F1'],values.loc[:,'F2']
     
             area=np.repeat(1,len(x))
             cms=np.repeat(phoneme_color_map[phone],len(x))

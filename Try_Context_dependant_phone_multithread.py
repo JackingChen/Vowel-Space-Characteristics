@@ -50,7 +50,7 @@ class Try_Combination:
         self.constrain_sex=constrain_sex
         self.constrain_module=constrain_sex
         self.num_people_min=num_people_min
-        self.N=1
+        self.N=N
         self.label_choose_lst=label_choose_lst
         self.columns=columns
         self.PhoneOfInterest=PhoneOfInterest
@@ -90,20 +90,24 @@ class Try_Combination:
                     for phone in Main_dict.keys():
                         Vowels_AUI[people][phone]=Main_dict[phone][people]
                 
-                try: 
-                # print(comb)
+                # try: 
+                try:
+                    # print(comb)
                     df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=self.PhoneOfInterest)
-                    df_formant_statistic=Eval_med._Postprocess_dfformantstatistic(df_formant_statistic)
-                    df_result_table=Eval_med.Calculate_correlation(label_choose_lst=self.label_choose_lst,df_formant_statistic=df_formant_statistic,N=self.N,columns=self.columns,\
-                                                                   corr_label=self.corr_label,constrain_sex=self.constrain_sex,constrain_module=self.constrain_module,constrain_assessment=self.constrain_assessment,\
-                                                                   evictNamelst=self.evictNamelst,correlation_type=self.correlation_type)
-                    
-                    infocode='N{0}_feat{1}_{2}'.format(N,feat,'__'.join(comb))
-                    Result_table_dict[infocode]=df_result_table
+                except np.linalg.LinAlgError:
+                    print("LinAlgError: at comb", comb)
+                    raise np.linalg.LinAlgError
+                df_formant_statistic=Eval_med._Postprocess_dfformantstatistic(df_formant_statistic)
+                df_result_table=Eval_med.Calculate_correlation(label_choose_lst=self.label_choose_lst,df_formant_statistic=df_formant_statistic,N=self.N,columns=self.columns,\
+                                                               corr_label=self.corr_label,constrain_sex=self.constrain_sex,constrain_module=self.constrain_module,constrain_assessment=self.constrain_assessment,\
+                                                               evictNamelst=self.evictNamelst,correlation_type=self.correlation_type)
+                
+                infocode='N{0}_feat{1}_{2}'.format(N,feat,'__'.join(comb))
+                Result_table_dict[infocode]=df_result_table
                 # print(df_result_table)
-                except:
-                    print("combination",comb, "has failed")
-                    pass
+                # except:
+                #     print("combination",comb, "has failed")
+                #     pass
         return Result_table_dict
 
 
@@ -195,13 +199,16 @@ PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
 PhoneOfInterest=list(PhoneMapp_dict.keys())
 articulation=articulation.articulation.Articulation()
 Eval_med=Evaluation_method()
-columns=['F_vals_f1(A:,i:,u:)', 'F_vals_f2(A:,i:,u:)',
-       'F_val_mix(A:,i:,u:)', 'MSB_f1(A:,i:,u:)', 'MSB_f2(A:,i:,u:)',
-       'MSB_mix', 'F_vals_f1(A:,u:)', 'F_vals_f2(A:,u:)', 'F_val_mix(A:,u:)',
-       'MSB_f1(A:,u:)', 'MSB_f2(A:,u:)', 'F_vals_f1(A:,i:)',
-       'F_vals_f2(A:,i:)', 'F_val_mix(A:,i:)', 'MSB_f1(A:,i:)',
-       'MSB_f2(A:,i:)', 'F_vals_f1(i:,u:)', 'F_vals_f2(i:,u:)',
-       'F_val_mix(i:,u:)', 'MSB_f1(i:,u:)', 'MSB_f2(i:,u:)']
+columns=[
+       'F_vals_f1(A:,i:,u:)', 'F_vals_f2(A:,i:,u:)',
+       'MSB_f1(A:,i:,u:)', 'MSB_f2(A:,i:,u:)',
+       'MSB_mix', 'BWratio(A:,i:,u:)', 'BV(A:,i:,u:)_l2', 'WV(A:,i:,u:)_l2',
+       'BWratio(i:,u:)', 'BV(i:,u:)_l2',
+       'WV(i:,u:)_l2',
+       'BWratio(A:,u:)',
+       'BV(A:,u:)_l2', 'WV(A:,u:)_l2',
+       'BWratio(A:,i:)',
+       'BV(A:,i:)_l2', 'WV(A:,i:)_l2']
 num_people_min=5
 N=2 # The least number of critical phones (A:, u:, i:)
 try_combination=Try_Combination(PhoneOfInterest,\
@@ -239,8 +246,10 @@ for file in condfiles:
     name=os.path.basename(file).replace(suffix,"")
     ManualCondition[name]=df_cond['Unnamed: 0'][df_cond['50%']==True]
 
-for CtxPhone_types in tqdm(['Manner_simp1','Manner_simp2','Place_simp1','Place_simp2']):
-    Feature_dicts=pickle.load(open(outpath+"/AUI_ContextDepPhonesMerge_{0}_ij.pkl".format(CtxPhone_types),"rb"))
+for CtxPhone_types in tqdm(['Manner_simp1','Manner_simp2','Place_simp1','Place_simp2','']):
+# for CtxPhone_types in tqdm(['']):
+    Feature_dicts=pickle.load(open(outpath+"/AUI_ContextDepPhonesMerge_{0}_uwij.pkl".format(CtxPhone_types),"rb"))
+    # Feature_dicts=pickle.load(open(outpath+"/AUI_ContextDepPhonesMerge_uwij.pkl","rb"))
     
     # =============================================================================
     '''
@@ -275,11 +284,40 @@ for CtxPhone_types in tqdm(['Manner_simp1','Manner_simp2','Place_simp1','Place_s
     
     interval=20
     # pool = Pool(int(1))
-    pool = Pool(int(12))
+    pool = Pool(os.cpu_count())
     # pool = Pool(os.cpu_count())
     df_result_FeatComb_table=Dict()
+    # for feat in tqdm(['RightDepVowel_AUI', 'LeftDepVowel_AUI', 'CtxDepVowel_AUI']):
     for feat in tqdm(list(Feature_dicts.keys())):
         CtxDepVowel_AUI_dict=Feature_dicts[feat]
+        
+        # if args.check:  #Check if certainphone like 'w' in the CtxPhones    
+        #     for CtxP in CtxDepVowel_AUI_dict.keys():
+        #         for people in CtxDepVowel_AUI_dict[CtxP].keys():
+        #             for CtxPhone in CtxDepVowel_AUI_dict[CtxP][people].index:
+        #                 left_P=CtxPhone[:CtxPhone.find('-')]
+        #                 right_P=CtxPhone[CtxPhone.find('+')+1:]
+        #                 critical_P=CtxPhone[CtxPhone.find('-')+1:CtxPhone.find('+')]
+                        
+        #                 if critical_P == 'w':
+        #                     aaa=ccc
+        #                 else:
+        #                     print(critical_P)
+            # for people in PeopleLeftDepPhoneFunctional_dict.keys():
+            #     for CtxPhone in PeopleLeftDepPhoneFunctional_dict[people].keys():
+            #         left_P=CtxPhone[:CtxPhone.find('-')]
+            #         critical_P=CtxPhone[CtxPhone.find('-')+1:]
+            #         if critical_P == 'w':
+            #             aaa=ccc
+            # for CtxP in CtxDepVowel_AUI_dict.keys():
+            #     for people in CtxDepVowel_AUI_dict[CtxP].keys():
+            #         for CtxPhone in CtxDepVowel_AUI_dict[CtxPhone][people].index:
+            #             critical_P=CtxPhone[:CtxPhone.find('+')]
+            #             right_P=CtxPhone[CtxPhone.find('+')+1:]
+            #             if critical_P == 'w':
+            #                 aaa=ccc
+        
+        # print("Stop here and the Ctxphones don't have the w")
         combs_tup=Combinations_Depvowel_dict[feat]
         keys=[]
         for i in range(0,len(combs_tup),interval):

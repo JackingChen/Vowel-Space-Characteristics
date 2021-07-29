@@ -12,6 +12,57 @@ import numpy as np
 from utils_wer.wer import  wer as WER
 from utils_jack  import  Get_aligned_sequences
 from scipy.stats import spearmanr,pearsonr 
+from sklearn.linear_model import LinearRegression
+from scipy.stats import t, norm
+from math import atanh, pow
+from numpy import tanh
+
+def rz_ci(r, n, conf_level = 0.95):
+    zr_se = pow(1/(n - 3), .5)
+    moe = norm.ppf(1 - (1 - conf_level)/float(2)) * zr_se
+    zu = atanh(r) + moe
+    zl = atanh(r) - moe
+    return tanh((zl, zu))
+
+def independent_corr(xy, ab, n, n2 = None, twotailed=True, conf_level=0.95, method='fisher', corr_med='pearsonr'):
+    """
+    Calculates the statistic significance between two independent correlation coefficients
+    @param xy: correlation coefficient between x and y
+    @param xz: correlation coefficient between a and b
+    @param n: number of elements in xy
+    @param n2: number of elements in ab (if distinct from n)
+    @param twotailed: whether to calculate a one or two tailed test, only works for 'fisher' method
+    @param conf_level: confidence level, only works for 'zou' method
+    @param method: defines the method uses, 'fisher' or 'zou'
+    @return: z and p-val
+    """
+    se_diff_r_coef=1 if corr_med=='pearsonr' else 'spearmanr'
+    
+    if method == 'fisher':
+        xy_z = 0.5 * np.log((1 + xy)/(1 - xy))
+        ab_z = 0.5 * np.log((1 + ab)/(1 - ab))
+        if n2 is None:
+            n2 = n
+
+        se_diff_r = np.sqrt(se_diff_r_coef/(n - 3) + se_diff_r_coef/(n2 - 3))
+        diff = xy_z - ab_z
+        z = abs(diff / se_diff_r)
+        p = (1 - norm.cdf(z))
+        if twotailed:
+            p *= 2
+
+        return z, p
+    elif method == 'zou':
+        L1 = rz_ci(xy, n, conf_level=conf_level)[0]
+        U1 = rz_ci(xy, n, conf_level=conf_level)[1]
+        L2 = rz_ci(ab, n2, conf_level=conf_level)[0]
+        U2 = rz_ci(ab, n2, conf_level=conf_level)[1]
+        lower = xy - ab - pow((pow((xy - L1), 2) + pow((U2 - ab), 2)), 0.5)
+        upper = xy - ab + pow((pow((U1 - xy), 2) + pow((ab - L2), 2)), 0.5)
+        return lower, upper
+    else:
+        raise Exception('Wrong method!')
+
 
 def CalculateAliDist(Phone_utt_human,Phone_utt_alignment,feature_sel=['F1','F2']):
     '''
@@ -122,13 +173,7 @@ class Evaluation_method:
         ''' Remove person that has unsufficient data '''
         df_formant_statistic_bool=(df_formant_statistic['u_num']!=0) & (df_formant_statistic['a_num']!=0) & (df_formant_statistic['i_num']!=0)
         df_formant_statistic=df_formant_statistic[df_formant_statistic_bool]
-        
-        ''' ADD ADOS category '''
-        df_formant_statistic['ADOS_cate']=np.array([0]*len(df_formant_statistic))
-        df_formant_statistic.loc[df_formant_statistic['ADOS']<2,'ADOS_cate']=0
-        df_formant_statistic.loc[df_formant_statistic['ADOS']<2,'ADOS_cate']=0
-        df_formant_statistic.loc[(df_formant_statistic['ADOS']<3) & (df_formant_statistic['ADOS']>=2),'ADOS_cate']=1
-        df_formant_statistic.loc[df_formant_statistic['ADOS']>=3,'ADOS_cate']=2
+                
         return df_formant_statistic 
     def _Postprocess_dfformantstatistic_N_notnanADOS(self, df_formant_statistic,N=1,evictNamelst=[]):
         ''' Remove person that has unsufficient data '''
@@ -143,8 +188,9 @@ class Evaluation_method:
         return df_formant_qualified
     
     def Calculate_correlation(self, label_choose_lst,df_formant_statistic,N,columns,\
-                          corr_label='ADOS', constrain_sex=-1, constrain_module=-1, constrain_assessment=-1,\
-                          evictNamelst=[],correlation_type='spearmanr'):
+                          corr_label='ADOS', constrain_sex=-1, constrain_module=-1, constrain_assessment=-1, constrain_ASDTD=-1,\
+                          Num_df_qualified=5,\
+                          evictNamelst=[],correlation_type='linearregression'):
         '''
             constrain_sex: 1 for boy, 2 for girl
             constrain_module: 3 for M3, 4 for M4
@@ -169,22 +215,28 @@ class Evaluation_method:
                     filter_bool=np.logical_and(filter_bool,filter_ASD)
                 elif constrain_assessment == 2:
                     filter_bool=np.logical_and(filter_bool,filter_autism)
+            if constrain_ASDTD != -1:
+                filter_bool=np.logical_and(filter_bool,df_formant_statistic['ASDTD']==constrain_ASDTD)
             if len(evictNamelst)>0:
                 for name in evictNamelst:
                     filter_bool.loc[name]=False
                 
             df_formant_qualified=df_formant_statistic[filter_bool]
             for col in columns:
-                if len(df_formant_qualified) >2:
-                    spear,spear_p=spearmanr(df_formant_qualified[col],df_formant_qualified[corr_label])
-                    pear,pear_p=pearsonr(df_formant_qualified[col],df_formant_qualified[corr_label])
-        
+                if len(df_formant_qualified) > Num_df_qualified:
                     if correlation_type == 'pearsonr':
+                        pear,pear_p=pearsonr(df_formant_qualified[col],df_formant_qualified[corr_label])
                         df_pearsonr_table.loc[col]=[pear,pear_p,len(df_formant_qualified[col])]
                         # pear,pear_p=pearsonr(df_denan["{}_LPP_{}".format(ps,ps)],df_formant_qualified['ADOS'])
                         # df_pearsonr_table_GOP.loc[ps]=[pear,pear_p,len(df_denan)]
                     elif correlation_type == 'spearmanr':
+                        spear,spear_p=spearmanr(df_formant_qualified[col],df_formant_qualified[corr_label])
                         df_pearsonr_table.loc[col]=[spear,spear_p,len(df_formant_qualified[col])]
+                    elif correlation_type == 'linearregression':
+                        X,y=df_formant_qualified[col].values.reshape(-1,1), df_formant_qualified[corr_label].values.reshape(-1,1)
+                        reg = LinearRegression().fit(X,y)
+                        r2=reg.score(X,y)
+                        df_pearsonr_table.loc[col]=[r2,np.nan,len(df_formant_qualified[col])]
             # print("Setting N={0}, the correlation metric is: ".format(N))
             # print("Using evaluation metric: {}".format(correlation_type))
         return df_pearsonr_table

@@ -25,8 +25,11 @@ from sklearn.metrics import r2_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import GridSearchCV, cross_val_score, cross_val_predict
 from sklearn.linear_model import ElasticNet
-from sklearn.svm import SVR
+import sklearn.svm
 import torch
+import re
+import matplotlib.pyplot as plt
+
 
 # path_app = os.path.dirname(os.path.abspath(__file__))
 # sys.path.append(path_app+"/utils")
@@ -60,8 +63,13 @@ def get_args():
                         help='what kind of data you want to get')
     parser.add_argument('--FS_method_str', default=None,
                         help='Feature selection')
+    parser.add_argument('--UseManualCtxFeat', default=True,
+                        help='')
+    parser.add_argument('--Plot', default=True,
+                        help='')
     args = parser.parse_args()
     return args
+
 
 args = get_args()
 start_point=args.start_point
@@ -70,7 +78,8 @@ experiment=args.experiment
 # =============================================================================
 # Feature
 Session_level_all=Dict()
-featuresOfInterest=[['MSB_f1(A:,i:,u:)', 'MSB_f2(A:,i:,u:)']]
+# featuresOfInterest=[['BWratio(A:,i:,u:)','F_val_mix(A:,i:,u:)'],['BWratio(A:,i:,u:)','BV(A:,i:,u:)_l2']]
+featuresOfInterest=[['BWratio(A:,i:,u:)']]
 # featuresOfInterest=[['u_num', 'a_num', 'i_num']]
 # featuresOfInterest=[['u_num', 'a_num', 'i_num','a+b+c']]
 # featuresOfInterest=[['F_vals_f1(u:,i:,A:)','F_vals_f2(u:,i:,A:)', 'F_val_mix(u:,i:,A:)'] ,
@@ -115,12 +124,13 @@ featuresOfInterest=[['MSB_f1(A:,i:,u:)', 'MSB_f2(A:,i:,u:)']]
 class ADOSdataset():
     def __init__(self,):
         self.featurepath='Features'            
+        self.N=2
     def Get_FormantAUI_feat(self,label_choose,pickle_path,featuresOfInterest=['MSB_f1','MSB_f2','MSB_mix']):
         self.featuresOfInterest=featuresOfInterest
 
         df_tmp=pickle.load(open(pickle_path,"rb"))
         arti=articulation.articulation.Articulation()
-        df_tmp=arti.BasicFilter_byNum(df_tmp,N=1)
+        df_tmp=arti.BasicFilter_byNum(df_tmp,N=self.N)
         
         # experiment!! remove soon
         df_tmp['a+b+c']=df_tmp[['u_num', 'a_num', 'i_num']].sum(axis=1)
@@ -136,17 +146,41 @@ class ADOSdataset():
         return feature_array, y_array
 
 
-label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
+# label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
+label_choose=['ADOS_C']
 ados_ds=ADOSdataset()
 
 
+manual_sel_feat_path='Manual_sel_faetures_raw'
+# manual_sel_feat_path='Manual_sel_features_raw'
+if not os.path.exists(manual_sel_feat_path):
+    raise FileNotFoundError
+
+
+if args.UseManualCtxFeat:
+    Manual_choosen_feature=[]
+    with open(manual_sel_feat_path,'r') as f:
+        content=f.read()
+        for line in content.split("\n"):
+            if len(line) > 0:
+                Manual_choosen_feature.append(line[:re.search('__ADOS_C',line).end()])
+            
+def FilterFile_withinManualName(files,Manual_choosen_feature):
+    files_manualChoosen=[f  for f in files if os.path.basename(f).split(".")[0]  in Manual_choosen_feature]
+    return files_manualChoosen
+
+Pseudo_CtxDepPhone_path='artuculation_AUI/Pseudo_CtxDepVowels'
 CtxDepPhone_path='artuculation_AUI/CtxDepVowels'
 Vowel_path='artuculation_AUI/Vowels'
-# for feature_paths in [Vowel_path, CtxDepPhone_path]:
-for feature_paths in [Vowel_path]:
+for feature_paths in [Vowel_path, CtxDepPhone_path, Pseudo_CtxDepPhone_path]:
+# for feature_paths in [Vowel_path]:
     files = glob.glob(ados_ds.featurepath +'/'+ feature_paths+'/*.pkl')
+    
+    if args.UseManualCtxFeat and len(Manual_choosen_feature)>0 and feature_paths == CtxDepPhone_path:
+        files = FilterFile_withinManualName(files, Manual_choosen_feature)
+    
     for file in files: #iterate over features
-        feat_=os.path.basename(file).split(".")[0]
+        feat_=os.path.basename(file).split(".")[0]        
         for feat_col in featuresOfInterest:
             # if len(feat_col)==1:
             #     feat_col_ = list([feat_col]) # ex: ['MSB_f1']
@@ -158,7 +192,7 @@ for feature_paths in [Vowel_path]:
                 Session_level_all[Item_name].X, \
                     Session_level_all[Item_name].y= X,y
 
-        
+
 
 
 # =============================================================================
@@ -178,16 +212,20 @@ Classifier={}
 #                   'parameters':{'alpha':np.arange(0,1,0.25),\
 #                                 'l1_ratio': np.arange(0,1,0.25)}} #Just a initial value will be changed by parameter tuning
                                                     # l1_ratio = 1 is the lasso penalty
-Classifier['SVR']={'model':SVR(),\
-                  'parameters':{'C':C_variable,\
-                                }} #Just a initial value will be changed by parameter tuning
+# Classifier['SVR']={'model':sklearn.svm.SVR(),\
+#                   'parameters':{'C':C_variable,\
+#                                 'gamma': ['auto'],\
+#                                 'kernel': ['linear'] 
+#                                 }} #Just a initial value will be changed by parameter tuning
                                                    # l1_ratio = 1 is the lasso penalty
 
     
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#               'parameters':{'alpha':[0.75],\
-#                             'l1_ratio': [0.75]}} #Just a initial value will be changed by parameter tuning
+Classifier['EN']={'model':ElasticNet(random_state=0),\
+              'parameters':{'alpha':[1],\
+                            'l1_ratio': [0.5]}} #Just a initial value will be changed by parameter tuning
                                                   # l1_ratio = 1 is the lasso penalty
+
+
 
 
 loo=LeaveOneOut()
@@ -214,6 +252,7 @@ final_result_file="ADOS.xlsx"
 
 count=0
 OutFeature_dict=Dict()
+Best_param_dict=Dict()
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
     writer_clf = pd.ExcelWriter(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_"+final_result_file, engine = 'xlsxwriter')
     for feature_lab_str, features in Session_level_all.items():
@@ -232,14 +271,39 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         best_parameters=Gclf.best_params_
         best_score=Gclf.best_score_
         best_parameters.update({'best_score':best_score})
+        Best_param_dict[feature_lab_str]=best_parameters
         cv_results_info=Gclf.cv_results_
 
         CVpredict=cross_val_predict(Gclf, features.X, features.y, cv=loo)
-        regression=r2_score(features.y,CVpredict )
+        r2=r2_score(features.y,CVpredict )
+        n,p=features.X.shape
+        r2_adj=1-(1-r2)*(n-1)/(n-p-1)
         pearson_result, pearson_p=pearsonr(features.y,CVpredict )
         spear_result, spearman_p=spearmanr(features.y,CVpredict )
         print('Feature {0}, label {1} ,spear_result {2}, Cross_score {3}'.format(feature_keys, label_keys,spear_result,Score.mean()))
-#
+#   
+        
+        if args.Plot and p <2:
+            fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(15, 10), sharey=True)
+            kernel_label = [clf_keys]
+            model_color = ['m']
+            axes.plot(features.X, Gclf.best_estimator_.fit(features.X,features.y).predict(features.X), color=model_color[0],
+                          label='{}'.format(feature_lab_str))
+            axes.scatter(features.X, CVpredict, 
+                         facecolor="none", edgecolor="k", s=50,
+                         label='CV Predict')
+            axes.scatter(features.X, features.y, 
+                         facecolor="none", edgecolor="r", s=50,
+                         label='Real Y')
+            axes.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1),
+                    ncol=1, fancybox=True, shadow=True)
+            
+            Plot_path='./Plot/LinearRegress/'
+            if not os.path.exists(Plot_path):
+                os.makedirs(Plot_path)
+            plot_file=Plot_path+"/{0}_{1}.png".format(clf_keys,feature_lab_str)
+            plt.savefig(plot_file, dpi=200) 
+        
         # =============================================================================
         '''
             Inspect the best result
@@ -256,14 +320,14 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         writer.save()
                                 
         # ================================================      =============================
-            
-        df_best_result_r2.loc[feature_keys,label_keys]=regression
+
+        df_best_result_r2.loc[feature_keys,label_keys]=r2_adj
         df_best_result_pear.loc[feature_keys,label_keys]=pearson_result
         df_best_result_spear.loc[feature_keys,label_keys]='{0}/{1}'.format(np.round(spear_result,3),np.round(spearman_p,6))
         df_best_result_spear.loc[feature_keys,'de-zero_num']=len(features.X)
         df_best_cross_score.loc[feature_keys,label_keys]=Score.mean()
 
-df_best_result_r2.to_excel(writer_clf,sheet_name="R2")
+df_best_result_r2.to_excel(writer_clf,sheet_name="R2_adj")
 df_best_result_pear.to_excel(writer_clf,sheet_name="pear")
 df_best_result_spear.to_excel(writer_clf,sheet_name="spear")
 df_best_result_spear.to_csv(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_spearman.csv")
