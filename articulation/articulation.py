@@ -225,24 +225,28 @@ class Articulation:
                 
                 # eigen_values, eigen_vectors = np.linalg.eig()
                 linear_discriminant=np.linalg.inv(within_class_scatter_matrix / dfwn).dot(between_class_scatter_matrix / dfbn)
+                # linear_discriminant=np.linalg.inv(within_class_scatter_matrix ).dot(between_class_scatter_matrix / dfbn)
                 B_W_varianceRatio_l2=np.trace(linear_discriminant)
+                B_W_varianceRatio_l2_norm= B_W_varianceRatio_l2 / n_samples
                 Total_between_variance_l2=np.trace(between_class_scatter_matrix) / dfbn
-                Total_within_variance_l2=np.trace(within_class_scatter_matrix) / dfwn
+                Total_between_variance_l2_norm = Total_between_variance_l2 / n_samples
+                Total_within_variance_l2=np.trace(within_class_scatter_matrix) /dfwn
                 # B_W_varianceRatio_l2=Total_between_variance_l2/Total_within_variance_l2
                 # return B_W_varianceRatio, B_W_varianceRatio_l2, Total_between_variance_l2, Total_within_variance_l2
-                return B_W_varianceRatio_l2, Total_between_variance_l2, Total_within_variance_l2
+                return B_W_varianceRatio_l2_norm, B_W_varianceRatio_l2, Total_between_variance_l2, Total_between_variance_l2_norm, Total_within_variance_l2
                 
             
             
             def Store_FeatVals(RESULT_dict,df_vowel,Inspect_features=['F1','F2'], cluster_str='u:,i:,A:'):
                 F_vals, _, msb, _, ssbn=f_classif(df_vowel[Inspect_features].values,df_vowel['target'].values)
-                B_W_v,bvl2, wvl2=LDA_scatter_matrix(df_vowel[Inspect_features+['vowel']])
+                B_W_v_n,B_W_v,bvl2, bvl2_n, wvl2=LDA_scatter_matrix(df_vowel[Inspect_features+['vowel']])
                 RESULT_dict['F_vals_f1({0})'.format(cluster_str)], RESULT_dict['F_vals_f2({0})'.format(cluster_str)]=F_vals
                 RESULT_dict['F_val_mix({0})'.format(cluster_str)]=RESULT_dict['F_vals_f1({0})'.format(cluster_str)] + RESULT_dict['F_vals_f2({0})'.format(cluster_str)]
                 RESULT_dict['MSB_f1({0})'.format(cluster_str)],RESULT_dict['MSB_f2({0})'.format(cluster_str)]=msb
                 RESULT_dict['MSB_mix']=RESULT_dict['MSB_f1({0})'.format(cluster_str)]+ RESULT_dict['MSB_f2({0})'.format(cluster_str)]
                 RESULT_dict['BWratio({0})'.format(cluster_str)]=B_W_v
-                RESULT_dict['BV({0})_l2'.format(cluster_str)], RESULT_dict['WV({0})_l2'.format(cluster_str)]=bvl2, wvl2
+                RESULT_dict['BWratio({0})_norm'.format(cluster_str)]=B_W_v_n
+                RESULT_dict['BV({0})_l2'.format(cluster_str)], RESULT_dict['BV({0})_l2_norm'.format(cluster_str)], RESULT_dict['WV({0})_l2'.format(cluster_str)]=bvl2, bvl2_n, wvl2
                 return RESULT_dict
             
             

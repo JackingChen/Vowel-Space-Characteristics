@@ -127,10 +127,10 @@ N=2
 
 
 comb=[['df_formant_statistic_TD','df_formant_statistic_77'],]
-Parameters=['FCR',
+Parameters=['FCR','totalword',
    'VSA1', 'F_vals_f1(A:,i:,u:)', 'F_vals_f2(A:,i:,u:)',
    'F_val_mix(A:,i:,u:)', 'MSB_f1(A:,i:,u:)', 'MSB_f2(A:,i:,u:)',
-   'MSB_mix', 'BWratio(A:,i:,u:)', 'BV(A:,i:,u:)_l2', 'WV(A:,i:,u:)_l2',
+   'MSB_mix', 'BWratio(A:,i:,u:)_norm', 'BWratio(A:,i:,u:)', 'BV(A:,i:,u:)_l2', 'WV(A:,i:,u:)_l2',
    'F_vals_f1(i:,u:)', 'F_vals_f2(i:,u:)', 'F_val_mix(i:,u:)',
    'MSB_f1(i:,u:)', 'MSB_f2(i:,u:)', 'BWratio(i:,u:)', 'BV(i:,u:)_l2',
    'WV(i:,u:)_l2', 'F_vals_f1(A:,u:)', 'F_vals_f2(A:,u:)',
@@ -289,7 +289,7 @@ def forward_selected(data, response):
     return model
 
 punc=":,()"
-df_formant_statistic_all_remaned=df_formant_statistic_77.rename(columns=lambda s: re.sub(u"[{}]+".format(punc),"",s))
+df_formant_statistic_all_remaned=df_formant_statistic_TD.rename(columns=lambda s: re.sub(u"[{}]+".format(punc),"",s))
 df_formant_statistic_all_remaned['Module']=df_formant_statistic_all_remaned['Module'].astype(str)
 df_formant_statistic_all_remaned.loc[df_formant_statistic_all_remaned['Module']==3,'Module']=1
 df_formant_statistic_all_remaned.loc[df_formant_statistic_all_remaned['Module']==4,'Module']=2
@@ -317,7 +317,7 @@ formula='BWratio(A:,i:,u:) ~'
 formula=re.sub(u"[{}]+".format(punc),"",formula)
 # formula+=' + ADOS '
 # formula+=' + C(sex) '
-formula+=' + C(Module) '
+# formula+=' + C(Module) '
 formula+=' + age '
 # formula+=' ADOS * age '
 # formula+=' + C(ASDTD) '
@@ -370,7 +370,7 @@ for comb in combination:
 
 # =============================================================================
 ''' Single Variable correlation ''' 
-inspect_cols=['BWratio(A:,i:,u:)','BV(A:,i:,u:)_l2', 'WV(A:,i:,u:)_l2']
+inspect_cols=['BWratio(A:,i:,u:)_norm','BV(A:,i:,u:)_l2', 'WV(A:,i:,u:)_l2']
 Mapping_dict={'girl':2,'boy':1,'M3':3,'M4':4,'None':-1, 'ASD':1,'TD':2}
 # =============================================================================
 Regess_result_dict=Dict()
@@ -390,19 +390,21 @@ for correlation_type in ['spearmanr','pearsonr']:
         df_correlation=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic_all,N,Parameters,\
                                                       constrain_sex=sex, constrain_module=module, constrain_ASDTD=ASDTD,\
                                                       correlation_type=correlation_type)
-        df_correlation=df_correlation.loc[inspect_cols].round(3)
-        df_collector=pd.DataFrame([],index=df_correlation.index)
-        Namer=Dict()
-        for col in df_correlation:
-            Namer[col]=df_correlation[col].astype(str).values
-        r_value_str=Namer[list(Namer.keys())[0]].astype(str)
-        p_value_str=Namer[list(Namer.keys())[1]].astype(str)
-        p_value_str=np.core.defchararray.add(["("]*len(r_value_str), p_value_str)
-        p_value_str=np.core.defchararray.add(p_value_str,[")"]*len(r_value_str))
-        corr_result_str=np.core.defchararray.add(r_value_str,p_value_str)
-        df_collector['{sex}_{module}_{ASDTD}'.format(sex=sex_str,module=module_str,ASDTD=ASDTD_str).replace('None','')]\
-                                                =corr_result_str
-        df_collector_top=pd.concat([df_collector_top,df_collector],axis=1)
+        if len(df_correlation)>0:
+            df_correlation=df_correlation.loc[inspect_cols].round(3)
+        
+            df_collector=pd.DataFrame([],index=df_correlation.index)
+            Namer=Dict()
+            for col in df_correlation:
+                Namer[col]=df_correlation[col].astype(str).values
+            r_value_str=Namer[list(Namer.keys())[0]].astype(str)
+            p_value_str=Namer[list(Namer.keys())[1]].astype(str)
+            p_value_str=np.core.defchararray.add(["("]*len(r_value_str), p_value_str)
+            p_value_str=np.core.defchararray.add(p_value_str,[")"]*len(r_value_str))
+            corr_result_str=np.core.defchararray.add(r_value_str,p_value_str)
+            df_collector['{sex}_{module}_{ASDTD}'.format(sex=sex_str,module=module_str,ASDTD=ASDTD_str).replace('None','')]\
+                                                    =corr_result_str
+            df_collector_top=pd.concat([df_collector_top,df_collector],axis=1)
     Regess_result_dict['/'.join(df_correlation.columns[:2])]=df_collector_top
 
 
@@ -467,8 +469,9 @@ TopTop_data_lst.append(['df_formant_statistic_77_M4girl','df_formant_statistic_T
 # inspect_cols=['BWratio(A:,i:,u:)']
 # inspect_cols=['speed']
 for Top_data_lst in TopTop_data_lst:
-    inspect_cols=['BV(A:,i:,u:)_l2']
+    # inspect_cols=['BV(A:,i:,u:)_l2']
     # inspect_cols=['BWratio(A:,i:,u:)']
+    inspect_cols=['age']
     
     # inspect_cols=['VSA1']
     # Top_data_lst=['M3','M4']

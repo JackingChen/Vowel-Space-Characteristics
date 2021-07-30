@@ -29,7 +29,7 @@ import sklearn.svm
 import torch
 import re
 import matplotlib.pyplot as plt
-
+from sklearn import preprocessing
 
 # path_app = os.path.dirname(os.path.abspath(__file__))
 # sys.path.append(path_app+"/utils")
@@ -79,14 +79,16 @@ experiment=args.experiment
 # Feature
 Session_level_all=Dict()
 # featuresOfInterest=[['BWratio(A:,i:,u:)','F_val_mix(A:,i:,u:)'],['BWratio(A:,i:,u:)','BV(A:,i:,u:)_l2']]
-featuresOfInterest=[['BWratio(A:,i:,u:)']]
+featuresOfInterest=[['BWratio(A:,i:,u:)'],['a+b+c']]
 # featuresOfInterest=[['u_num', 'a_num', 'i_num']]
 # featuresOfInterest=[['u_num', 'a_num', 'i_num','a+b+c']]
 # featuresOfInterest=[['F_vals_f1(u:,i:,A:)','F_vals_f2(u:,i:,A:)', 'F_val_mix(u:,i:,A:)'] ,
 #         ['F_vals_f1(u:,i:)', 'F_vals_f2(u:,i:)', 'F_val_mix(u:,i:)'], 
 #         ['F_vals_f1(u:,A:)','F_vals_f2(u:,A:)','F_val_mix(u:,A:)'],
 #         ['F_vals_f1(i:,A:)','F_vals_f2(i:,A:)','F_val_mix(i:,A:)']]
-# featuresOfInterest=[['F_vals_f1(u:,i:,A:)',
+# featuresOfInterest=[['F_vals_f1(u:,i:,A:)',''' Read Ctx Dep feature '''
+df_formant_statistics_CtxPhone_collect_dict=Dict()
+
 #  'F_vals_f2(u:,i:,A:)',
 #  'F_val_mix(u:,i:,A:)',
 #  'F_vals_f1(u:,i:)',
@@ -170,10 +172,11 @@ def FilterFile_withinManualName(files,Manual_choosen_feature):
     return files_manualChoosen
 
 Pseudo_CtxDepPhone_path='artuculation_AUI/Pseudo_CtxDepVowels'
-CtxDepPhone_path='artuculation_AUI/CtxDepVowels'
+CtxDepPhone_path='artuculation_AUI/CtxDepVowels/bkup0729'
 Vowel_path='artuculation_AUI/Vowels'
 for feature_paths in [Vowel_path, CtxDepPhone_path, Pseudo_CtxDepPhone_path]:
 # for feature_paths in [Vowel_path]:
+# for feature_paths in [Vowel_path, CtxDepPhone_path]:
     files = glob.glob(ados_ds.featurepath +'/'+ feature_paths+'/*.pkl')
     
     if args.UseManualCtxFeat and len(Manual_choosen_feature)>0 and feature_paths == CtxDepPhone_path:
@@ -198,7 +201,7 @@ for feature_paths in [Vowel_path, CtxDepPhone_path, Pseudo_CtxDepPhone_path]:
 # =============================================================================
 # Model parameters
 # =============================================================================
-C_variable=np.array([0.1,0.25,0.5,1.0,5.0,10.0])
+C_variable=np.array([0.1,0.5,1.0,10.0, 50.0, 100.0])
 n_estimator=[2, 4, 8, 16, 32, 64]
 Scoring=['neg_mean_absolute_error','neg_mean_squared_error']
 
@@ -214,8 +217,8 @@ Classifier={}
                                                     # l1_ratio = 1 is the lasso penalty
 # Classifier['SVR']={'model':sklearn.svm.SVR(),\
 #                   'parameters':{'C':C_variable,\
-#                                 'gamma': ['auto'],\
-#                                 'kernel': ['linear'] 
+#                     'kernel': ['poly'],\
+#                     'degree': [2]
 #                                 }} #Just a initial value will be changed by parameter tuning
                                                    # l1_ratio = 1 is the lasso penalty
 
@@ -249,7 +252,8 @@ if not os.path.exists(Result_path):
     os.makedirs(Result_path)
 final_result_file="ADOS.xlsx"
 
-
+import warnings
+warnings.filterwarnings("ignore")
 count=0
 OutFeature_dict=Dict()
 Best_param_dict=Dict()
@@ -287,12 +291,12 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(15, 10), sharey=True)
             kernel_label = [clf_keys]
             model_color = ['m']
-            axes.plot(features.X, Gclf.best_estimator_.fit(features.X,features.y).predict(features.X), color=model_color[0],
+            axes.plot((features.X - min(features.X) )/ max(features.X), Gclf.best_estimator_.fit(features.X,features.y).predict(features.X), color=model_color[0],
                           label='{}'.format(feature_lab_str))
-            axes.scatter(features.X, CVpredict, 
+            axes.scatter((features.X - min(features.X) )/ max(features.X), CVpredict, 
                          facecolor="none", edgecolor="k", s=50,
                          label='CV Predict')
-            axes.scatter(features.X, features.y, 
+            axes.scatter((features.X - min(features.X) )/ max(features.X), features.y, 
                          facecolor="none", edgecolor="r", s=50,
                          label='Real Y')
             axes.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1),
@@ -321,11 +325,13 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
                                 
         # ================================================      =============================
 
-        df_best_result_r2.loc[feature_keys,label_keys]=r2_adj
-        df_best_result_pear.loc[feature_keys,label_keys]=pearson_result
+        df_best_result_r2.loc[feature_keys,label_keys]='{0}/{1}'.format(np.round(r2_adj,3),np.round(np.nan,6))
+        df_best_result_pear.loc[feature_keys,label_keys]='{0}/{1}'.format(np.round(pearson_result,3),np.round(pearson_p,6))
         df_best_result_spear.loc[feature_keys,label_keys]='{0}/{1}'.format(np.round(spear_result,3),np.round(spearman_p,6))
         df_best_result_spear.loc[feature_keys,'de-zero_num']=len(features.X)
         df_best_cross_score.loc[feature_keys,label_keys]=Score.mean()
+
+
 
 df_best_result_r2.to_excel(writer_clf,sheet_name="R2_adj")
 df_best_result_pear.to_excel(writer_clf,sheet_name="pear")

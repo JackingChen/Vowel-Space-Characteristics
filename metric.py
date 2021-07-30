@@ -190,12 +190,15 @@ class Evaluation_method:
     def Calculate_correlation(self, label_choose_lst,df_formant_statistic,N,columns,\
                           corr_label='ADOS', constrain_sex=-1, constrain_module=-1, constrain_assessment=-1, constrain_ASDTD=-1,\
                           Num_df_qualified=5,\
-                          evictNamelst=[],correlation_type='linearregression'):
+                          evictNamelst=[],correlation_type='spearmanr'):
         '''
             constrain_sex: 1 for boy, 2 for girl
             constrain_module: 3 for M3, 4 for M4
         '''
-        df_pearsonr_table=pd.DataFrame([],columns=[correlation_type,'{}_pvalue'.format(correlation_type[:5]),'de-zero_num'])
+        # df_pearsonr_table=pd.DataFrame([],columns=[correlation_type,'{}_pvalue'.format(correlation_type[:5]),'de-zero_num'])
+        df_pearsonr_table=pd.DataFrame([],columns=['pearsonr','pearson_p',\
+                                                   'spearmanr','spearman_p',\
+                                                   'R2','de-zero_num'])
         for lab_choose in label_choose_lst:
             filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
             filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
@@ -224,19 +227,24 @@ class Evaluation_method:
             df_formant_qualified=df_formant_statistic[filter_bool]
             for col in columns:
                 if len(df_formant_qualified) > Num_df_qualified:
-                    if correlation_type == 'pearsonr':
-                        pear,pear_p=pearsonr(df_formant_qualified[col],df_formant_qualified[corr_label])
-                        df_pearsonr_table.loc[col]=[pear,pear_p,len(df_formant_qualified[col])]
-                        # pear,pear_p=pearsonr(df_denan["{}_LPP_{}".format(ps,ps)],df_formant_qualified['ADOS'])
-                        # df_pearsonr_table_GOP.loc[ps]=[pear,pear_p,len(df_denan)]
-                    elif correlation_type == 'spearmanr':
-                        spear,spear_p=spearmanr(df_formant_qualified[col],df_formant_qualified[corr_label])
-                        df_pearsonr_table.loc[col]=[spear,spear_p,len(df_formant_qualified[col])]
-                    elif correlation_type == 'linearregression':
-                        X,y=df_formant_qualified[col].values.reshape(-1,1), df_formant_qualified[corr_label].values.reshape(-1,1)
-                        reg = LinearRegression().fit(X,y)
-                        r2=reg.score(X,y)
-                        df_pearsonr_table.loc[col]=[r2,np.nan,len(df_formant_qualified[col])]
+                    pear,pear_p=pearsonr(df_formant_qualified[col],df_formant_qualified[corr_label])
+                    spear,spear_p=spearmanr(df_formant_qualified[col],df_formant_qualified[corr_label])
+                    X,y=df_formant_qualified[col].values.reshape(-1,1), df_formant_qualified[corr_label].values.reshape(-1,1)
+                    reg = LinearRegression().fit(X,y)
+                    r2=reg.score(X,y)
+                    df_pearsonr_table.loc[col]=[pear,pear_p, spear,spear_p, r2,\
+                                                len(df_formant_qualified[col])]
+                    # if correlation_type == 'pearsonr':
+                        
+                    #     df_pearsonr_table.loc[col]=[pear,pear_p,len(df_formant_qualified[col])]
+                    #     # pear,pear_p=pearsonr(df_denan["{}_LPP_{}".format(ps,ps)],df_formant_qualified['ADOS'])
+                    #     # df_pearsonr_table_GOP.loc[ps]=[pear,pear_p,len(df_denan)]
+                    # elif correlation_type == 'spearmanr':
+                        
+                    #     df_pearsonr_table.loc[col]=[spear,spear_p,len(df_formant_qualified[col])]
+                    # elif correlation_type == 'linearregression':
+                        
+                    #     df_pearsonr_table.loc[col]=[r2,np.nan,len(df_formant_qualified[col])]
             # print("Setting N={0}, the correlation metric is: ".format(N))
             # print("Using evaluation metric: {}".format(correlation_type))
         return df_pearsonr_table

@@ -291,18 +291,17 @@ for CtxPhone_types in tqdm(['Manner_simp1','Manner_simp2','Place_simp1','Place_s
     for feat in tqdm(list(Feature_dicts.keys())):
         CtxDepVowel_AUI_dict=Feature_dicts[feat]
         
-        # if args.check:  #Check if certainphone like 'w' in the CtxPhones    
-        #     for CtxP in CtxDepVowel_AUI_dict.keys():
-        #         for people in CtxDepVowel_AUI_dict[CtxP].keys():
-        #             for CtxPhone in CtxDepVowel_AUI_dict[CtxP][people].index:
-        #                 left_P=CtxPhone[:CtxPhone.find('-')]
-        #                 right_P=CtxPhone[CtxPhone.find('+')+1:]
-        #                 critical_P=CtxPhone[CtxPhone.find('-')+1:CtxPhone.find('+')]
+        if args.check:  #Check if certainphone like 'w' in the CtxPhones    
+            for CtxP in CtxDepVowel_AUI_dict.keys():
+                for people in CtxDepVowel_AUI_dict[CtxP].keys():
+                    for CtxPhone in CtxDepVowel_AUI_dict[CtxP][people].index:
+                        left_P=CtxPhone[:CtxPhone.find('-')]
+                        right_P=CtxPhone[CtxPhone.find('+')+1:]
+                        critical_P=CtxPhone[CtxPhone.find('-')+1:CtxPhone.find('+')]
                         
-        #                 if critical_P == 'w':
-        #                     aaa=ccc
-        #                 else:
-        #                     print(critical_P)
+                        if critical_P == 'w':
+                            raise Exception()
+
             # for people in PeopleLeftDepPhoneFunctional_dict.keys():
             #     for CtxPhone in PeopleLeftDepPhoneFunctional_dict[people].keys():
             #         left_P=CtxPhone[:CtxPhone.find('-')]

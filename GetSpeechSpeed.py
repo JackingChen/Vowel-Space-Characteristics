@@ -56,6 +56,7 @@ def GetSpeechSpeed(df_TD_info_kid, namestr_end_position="_emotion"):
         df_speed.loc[name,'dur']=dur.mean()
         df_speed.loc[name,'strlen']=Strlength.mean()
         df_speed.loc[name,'speed']=speed.mean()
+        df_speed.loc[name,'totalword']=Strlength.sum()
     return df_speed
 
 df_speed_TDkid= GetSpeechSpeed(df_TD_info_kid, namestr_end_position="_[D|K]")

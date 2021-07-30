@@ -19,10 +19,56 @@ from utils_jack  import  Formant_utt2people_reshape, Gather_info_certainphones
 from articulation.HYPERPARAM import phonewoprosody, Label
 
 
+# =============================================================================
+'''
+
+    Dig Result file
+    
+    find the Ctx Dep phones that fits several criteria:
+        better than a+b+c
+        effect higher enough
+        significant
+
+'''
+# =============================================================================
+label_col=['ADOS_C']
+Results_excel_path='RESULTS/'
+filepath=Results_excel_path + '{}.xlsx'.format('EN_Customized_feature_ADOS')
+sheetnames=['R2_adj','pear','spear']
+
+Sel_feature_dict=Dict()
+for sheet_n in sheetnames:
+    Regession_info=pd.read_excel(filepath,sheet_n).convert_dtypes()
+    Regession_info_abc=Regession_info[Regession_info['Unnamed: 0'].astype(str).str.contains('a\+b\+c')]
+    Regession_info_feat=Regession_info[~Regession_info['Unnamed: 0'].astype(str).str.contains('a\+b\+c')]
+    df_sel_feature=pd.DataFrame()
+    for label in label_col:
+        for idx_feat,idx_abc in zip(Regession_info_feat.index,Regession_info_abc.index):
+            feat_name='-'.join(Regession_info_feat.loc[idx_feat,'Unnamed: 0'].split('-')[:-1])
+            abc_name='-'.join(Regession_info_abc.loc[idx_abc,'Unnamed: 0'].split('-')[:-1])
+            assert feat_name == abc_name
+            result_raw=Regession_info_feat.loc[idx_feat,label]
+            result_abc_raw=Regession_info_abc.loc[idx_abc,label]
+            
+            if sheet_n == 'spear':
+                r=np.float(result_raw.split("/")[0])
+                p=np.float(result_raw.split("/")[1])
+                
+                abc_r=np.float(result_abc_raw.split("/")[0])
+                abc_p=np.float(result_abc_raw.split("/")[1])
+            else:
+                r=np.float(result_raw)
+                abc_r=np.float(result_abc_raw)
+            
+            
+            if r > abc_r:
+                df_sel_feature=df_sel_feature.append(Regession_info_feat.loc[idx_feat])
+    Sel_feature_dict[sheet_n]=df_sel_feature
+
 
 featurepath_base='Features/artuculation_AUI'
 Feature_Vowelpath=featurepath_base+'/Vowels/'
-Feature_CtxVowelpath=featurepath_base+'/CtxDepVowels/'
+Feature_CtxVowelpath=featurepath_base+'/CtxDepVowels/bkup0729/'
 
 manual_sel_feat_path='Manual_sel_faetures_raw'
 Manual_choosen_feature=[]
@@ -39,6 +85,7 @@ df_formant_statistics_ASDkid=arti.BasicFilter_byNum(df_formant_statistics_ASDkid
 
 
 ''' Read Ctx Dep feature '''
+df_formant_statistics_CtxPhone_collect_dict=Dict()
 for CtxDepFeat in Manual_choosen_feature:
     filepath=Feature_CtxVowelpath+'{}.pkl'.format(CtxDepFeat)   
     df_formant_statistics_CtxPhone=pickle.load(open(filepath ,"rb"))
@@ -47,6 +94,8 @@ for CtxDepFeat in Manual_choosen_feature:
     dfout=df_formant_statistics_ASDkid.copy()
     dfout=dfout.loc[np.array(df_formant_statistics_CtxPhone.index)]
     
+    df_formant_statistics_CtxPhone_collect_dict[CtxDepFeat]=df_formant_statistics_CtxPhone
+    
     outpath = featurepath_base + '/Pseudo_CtxDepVowels/'
     if not os.path.exists(outpath):
         os.makedirs(outpath)
@@ -54,9 +103,15 @@ for CtxDepFeat in Manual_choosen_feature:
     pickle.dump(dfout,open(outpath + 'PeopleMatch_{}.pkl'.format(CtxDepFeat)   ,"wb"))
 
 
+aaa=ccc
 
+# =============================================================================
+''' 
 
+    Scatter distrib plot area
 
+'''
+# =============================================================================
 # =============================================================================
 # Plot boxplots
 # PeopleOfInterest=['2016_06_27_02_017_1', '2016_07_30_01_148', '2016_08_26_01_168_1',
@@ -97,6 +152,7 @@ articulatn=articulation.articulation.Articulation()
 for CtxPhone_types in ['Manner_simp1']:
     Feature_dicts=pickle.load(open(AUI_feature_path+"/AUI_ContextDepPhonesMerge_{0}_uwij.pkl".format(CtxPhone_types),"rb"))
     for feat_type, phone_str in zip(feat_type_lst,comb_strs_lst):
+        print(phone_str)
         CtxPhone={}
         CtxPhone['A:'], CtxPhone['u:'], CtxPhone['i:'], label=phone_str.split("__") # dtype: strings
         
@@ -143,8 +199,10 @@ for CtxPhone_types in ['Manner_simp1']:
         # =============================================================================
         # Joint plot those people of data
         # =============================================================================
-        plot_outpath='Plot/CtxPhoneAUI/'
-        
+        plot_outpath='Plot/CtxPhoneAUI/'+phone_str + '/'
+        if not os.path.exists(plot_outpath):
+            os.makedirs(plot_outpath)
+        print(plot_outpath)
         
         
         
@@ -169,8 +227,7 @@ for CtxPhone_types in ['Manner_simp1']:
         
             
             
-            if not os.path.exists(plot_outpath):
-                os.makedirs(plot_outpath)
+            
             info_str="""CtxDepPhone: {0}""".format(phone_str)
             title='{0}_{1}'.format(people, symb)
             axes[0].set_title( title )

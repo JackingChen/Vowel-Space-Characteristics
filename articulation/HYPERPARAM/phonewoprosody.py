@@ -245,7 +245,7 @@ Manner_sets_simple2['Vowel']=Phoneme_sets['A_'] + Phoneme_sets['O_'] + Phoneme_s
 '''             
 # =============================================================================
 
-PhoneMapp_dict={'u:':Phoneme_sets['u_']+['w'],\
+PhoneMapp_dict={'u:':Phoneme_sets['u_'],\
                 'i:':Phoneme_sets['i_']+['j'],\
                 'A:':Phoneme_sets['A_']}
 # PhoneMapp_dict={'u:':Phoneme_sets['u_'],\

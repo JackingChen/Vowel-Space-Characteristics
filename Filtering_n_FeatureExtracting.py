@@ -29,7 +29,7 @@ def Collector(df_result_FeatComb_table_collect,correlation_type='spearmanr'):
                 if df_result['de-zero_num'].mean() > 20:
                     df_significant_collection[combstr]=df_result
     return df_significant_collection
-# df_result=pd.DataFrame([],columns=['spearmanr', 'spear_pvalue', 'de-zero_num'])
+# df_result=pd.DataFrame([],columns=['spearmanr', 'spearman_p', 'de-zero_num'])
 # cond=vars()['df_result']['de-zero_num'].mean() >5
 
 
@@ -51,11 +51,11 @@ def Selector_independent_corr(df_significant_collection,col='spearmanr',rows=['B
 def Selector_Pval(df_significant_collection, significant_val=0.001):
     df_significant_collection_stage2=Dict()
     for combstr, df_result in df_significant_collection.items():
-        if df_result['spear_pvalue'].min() < significant_val:
+        if df_result['spearman_p'].min() < significant_val:
             df_significant_collection_stage2[combstr]=df_result
     return df_significant_collection_stage2
 
-def Selector_Pval_colrow(df_significant_collection,col='spear_pvalue',rows=['MSB_f1(A:,i:,u:)','MSB_f2(A:,i:,u:)'], significant_val=0.001):
+def Selector_Pval_colrow(df_significant_collection,col='spearman_p',rows=['MSB_f1(A:,i:,u:)','MSB_f2(A:,i:,u:)'], significant_val=0.001):
     df_significant_collection_stage2=Dict()
     for combstr, df_result in df_significant_collection.items():
         cond=False
@@ -66,12 +66,25 @@ def Selector_Pval_colrow(df_significant_collection,col='spear_pvalue',rows=['MSB
             
     return df_significant_collection_stage2
 
-def Selector_Rval_colrow(df_significant_collection,col='spearmanr',rows=['MSB_f1(A:,i:,u:)','MSB_f2(A:,i:,u:)'], r_val=0.6):
+def Selector_Rval_colrow(df_significant_collection,cols=['spearmanr'],rows=['MSB_f1(A:,i:,u:)','MSB_f2(A:,i:,u:)'], r_val={'spearmanr':0.6}):
     df_significant_collection_stage2=Dict()
     for combstr, df_result in df_significant_collection.items():
         cond=False
         for row in rows:
-            cond = cond or (df_result.loc[row,col] > np.abs(r_val))
+            for col in cols:
+                cond = cond or (df_result.loc[row,col] > np.abs(r_val[col]))
+        if cond:
+            df_significant_collection_stage2[combstr]=df_result
+            
+    return df_significant_collection_stage2
+
+def Selector_IntersecRval(df_significant_collection,cols=['spearmanr'],row='BWratio(A:,i:,u:)', r_val={'spearmanr':0.6}):
+    df_significant_collection_stage2=Dict()
+    for combstr, df_result in df_significant_collection.items():
+        cond=True
+        for col in cols:
+            cond = cond and (np.abs(df_result.loc[row,col]) > np.abs(r_val[col]))
+            print("boo ya")
         if cond:
             df_significant_collection_stage2[combstr]=df_result
             
