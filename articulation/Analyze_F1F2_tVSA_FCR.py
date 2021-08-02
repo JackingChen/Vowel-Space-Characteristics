@@ -120,7 +120,7 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--Inspect', default=False,
                             help='path of the base directory')
-    parser.add_argument('--reFilter', default=True,
+    parser.add_argument('--reFilter', default=False,
                             help='')
     parser.add_argument('--correlation_type', default='spearmanr',
                             help='spearmanr|pearsonr')
@@ -132,7 +132,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--poolWindowSize', default=3,
                             help='path of the base directory')
-    parser.add_argument('--role', default='ASDTD',
+    parser.add_argument('--role', default='ASDkid',
                             help='path of the base directory')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
@@ -356,17 +356,11 @@ pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pk
 #        'F_vals_f2(A:,i:)', 'F_val_mix(A:,i:)', 'MSB_f1(A:,i:)',
 #        'MSB_f2(A:,i:)', 'F_vals_f1(i:,u:)', 'F_vals_f2(i:,u:)',
 #        'F_val_mix(i:,u:)', 'MSB_f1(i:,u:)', 'MSB_f2(i:,u:)']
-columns=['FCR','u_num+i_num+a_num',
-       'VSA1', 'F_vals_f1(A:,i:,u:)', 'F_vals_f2(A:,i:,u:)',
-       'F_val_mix(A:,i:,u:)', 'MSB_f1(A:,i:,u:)', 'MSB_f2(A:,i:,u:)',
-       'MSB_mix', 'BWratio(A:,i:,u:)_norm', 'BWratio(A:,i:,u:)', 'BV(A:,i:,u:)_l2', 'BV(A:,i:,u:)_l2_norm', 'WV(A:,i:,u:)_l2',
-       'F_vals_f1(i:,u:)', 'F_vals_f2(i:,u:)', 'F_val_mix(i:,u:)',
-       'MSB_f1(i:,u:)', 'MSB_f2(i:,u:)', 'BWratio(i:,u:)', 'BV(i:,u:)_l2',
-       'WV(i:,u:)_l2', 'F_vals_f1(A:,u:)', 'F_vals_f2(A:,u:)',
-       'F_val_mix(A:,u:)', 'MSB_f1(A:,u:)', 'MSB_f2(A:,u:)', 'BWratio(A:,u:)',
-       'BV(A:,u:)_l2', 'WV(A:,u:)_l2', 'F_vals_f1(A:,i:)', 'F_vals_f2(A:,i:)',
-       'F_val_mix(A:,i:)', 'MSB_f1(A:,i:)', 'MSB_f2(A:,i:)', 'BWratio(A:,i:)',
-       'BV(A:,i:)_l2', 'WV(A:,i:)_l2']
+columns=['VSA1','FCR','u_num+i_num+a_num',
+       'BW_sam_wilks(A:,i:,u:)', 'BW_pillai(A:,i:,u:)',
+       'BW_hotelling(A:,i:,u:)', 'BW_roys_root(A:,i:,u:)',
+       'between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)',
+       'within_covariance(A:,i:,u:)', 'within_variance(A:,i:,u:)']
 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
                                             df_formant_statistic['i_num'] +\
                                             df_formant_statistic['a_num']
@@ -436,7 +430,6 @@ N=2
 # for N in range(1,20,1):
 Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1,evictNamelst=ManualCondition[ 'unreasonable_all'])
 Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1)
-Aaadf_regressionr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1,correlation_type='linearregression')
 
     # target=Aaadf_spearmanr_table_NoLimit
     # diff_r=(np.abs(target.loc['BWratio(A:,i:,u:)']) - np.abs(target.loc['u_num+i_num+a_num'])).iloc[0]

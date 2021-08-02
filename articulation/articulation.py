@@ -154,6 +154,207 @@ class Articulation:
             numerator=u[1] + a[1] + i[0] + u[0]
             demominator=i[1] + a[0]
             RESULT_dict['FCR']=np.float(numerator/demominator)
+
+            
+            RESULT_dict['VSA1']=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
+            # =============================================================================
+            ''' F-statistics, between class variance Valid Formant measure '''
+            
+            # =============================================================================
+            # Get data
+            F12_raw_dict=Vowels_AUI[people]
+            u=F12_raw_dict['u:']
+            a=F12_raw_dict['A:']
+            i=F12_raw_dict['i:']
+            def Get_DfVowels(F12_raw_dict,Inspect_features=['F1','F2']):
+                df_vowel = pd.DataFrame()
+                for keys in F12_raw_dict.keys():
+                    if len(df_vowel) == 0:
+                        df_vowel=F12_raw_dict[keys]
+                        df_vowel['vowel']=keys
+                    else:
+                        df_=F12_raw_dict[keys]
+                        df_['vowel']=keys
+                        df_vowel=df_vowel.append(df_)
+                df_vowel['target']=pd.Categorical(df_vowel['vowel'])
+                df_vowel['target']=df_vowel['target'].cat.codes
+                return df_vowel
+            
+            def LDA_scatter_matrix(df_vowel):
+                '''    Calculate class variance by LDA '''  
+
+                class_feature_means = pd.DataFrame(columns=list(set(df_vowel['vowel'])))
+                n_classes = len(class_feature_means.columns)
+                n_samples = len(df_vowel)
+                dfbn = n_classes - 1
+                dfwn = n_samples - n_classes
+                for c, rows in df_vowel.groupby('vowel'):
+                    class_feature_means[c] = rows[self.Inspect_features].mean()
+                
+                groups_num=len(class_feature_means.index)
+                # Total_within_variance_l2=0.0
+                within_class_scatter_matrix = np.zeros((groups_num,groups_num))
+                for c, rows in df_vowel.groupby('vowel'):
+                    rows = rows[self.Inspect_features]
+                    s = np.zeros((groups_num,groups_num))
+                    # WCV= 0.0
+                    for index, row in rows.iterrows():
+                        x, mc = row.values.reshape(groups_num,1), class_feature_means[c].values.reshape(groups_num,1)
+                        class_variance=(x - mc).dot((x - mc).T).astype(float)
+                        s += class_variance
+                        # WCV+=np.linalg.norm(class_variance.diagonal(),2)
+                    within_class_scatter_matrix += s
+                    # Total_within_variance_l2 +=WCV
+                    
+                    
+                
+                feature_means = df_vowel.mean()
+                # Total_between_variance_l2=0.0
+                between_class_scatter_matrix = np.zeros((groups_num,groups_num))
+                for c in class_feature_means:    
+                    n = len(df_vowel.loc[df_vowel['vowel'] == c].index)
+                    
+                    mc, m = class_feature_means[c].values.reshape(groups_num,1), feature_means[self.Inspect_features].values.reshape(groups_num,1)
+                    
+                    between_class_variance = n * (mc - m).dot((mc - m).T)
+                    
+                    between_class_scatter_matrix += between_class_variance
+                    # Total_between_variance_l2+=np.linalg.norm(between_class_variance.diagonal(),2)
+                
+                # eigen_values, eigen_vectors = np.linalg.eig()
+                linear_discriminant=np.linalg.inv(within_class_scatter_matrix / dfwn).dot(between_class_scatter_matrix / dfbn)
+                eigen_values_lin, eigen_vectors_lin = np.linalg.eig(linear_discriminant)
+                eigen_values_B, eigen_vectors_B = np.linalg.eig(between_class_scatter_matrix)
+                eigen_values_W, eigen_vectors_W = np.linalg.eig(within_class_scatter_matrix)
+                
+                sam_wilks=1
+                pillai=0
+                hotelling=0
+                for eigen_v in eigen_values_lin:
+                    wild_element=1.0/np.float(1+eigen_v)
+                    sam_wilks*=wild_element
+                    pillai+=wild_element
+                    hotelling+=eigen_v
+                roys_root=np.max(eigen_values_lin)
+                
+                between_covariance = np.prod(eigen_values_B) # product of every element
+                between_variance = np.sum(eigen_values_B) # product of every element
+                within_covariance = np.prod(eigen_values_B) # product of every element
+                within_variance = np.sum(eigen_values_B) # product of every element
+                linear_discriminant_covariance=between_covariance/within_variance
+                
+                # linear_discriminant=np.linalg.inv(within_class_scatter_matrix ).dot(between_class_scatter_matrix / dfbn)
+                # B_W_varianceRatio_l2=np.trace(linear_discriminant)
+                # Total_between_variance_l2=np.trace(between_class_scatter_matrix) / dfbn
+                # Total_between_variance_l2_norm = Total_between_variance_l2 / n_samples
+                # Total_within_variance_l2=np.trace(within_class_scatter_matrix) /dfwn
+                # B_W_varianceRatio_l2=Total_between_variance_l2/Total_within_variance_l2
+                # return B_W_varianceRatio, B_W_varianceRatio_l2, Total_between_variance_l2, Total_within_variance_l2
+                return [sam_wilks, pillai, hotelling, roys_root], [linear_discriminant_covariance,between_covariance, between_variance, within_covariance, within_variance]
+                
+            
+            
+            def Store_FeatVals(RESULT_dict,df_vowel,Inspect_features=['F1','F2'], cluster_str='u:,i:,A:'):
+                # F_vals, _, msb, _, ssbn=f_classif(df_vowel[Inspect_features].values,df_vowel['target'].values)
+                [sam_wilks, pillai, hotelling, roys_root], [linear_discriminant_covariance,between_covariance, between_variance, within_covariance, within_variance]=LDA_scatter_matrix(df_vowel[Inspect_features+['vowel']])
+                # RESULT_dict['F_vals_f1({0})'.format(cluster_str)], RESULT_dict['F_vals_f2({0})'.format(cluster_str)]=F_vals
+                # RESULT_dict['F_val_mix({0})'.format(cluster_str)]=RESULT_dict['F_vals_f1({0})'.format(cluster_str)] + RESULT_dict['F_vals_f2({0})'.format(cluster_str)]
+                # RESULT_dict['MSB_f1({0})'.format(cluster_str)],RESULT_dict['MSB_f2({0})'.format(cluster_str)]=msb
+                # RESULT_dict['MSB_mix']=RESULT_dict['MSB_f1({0})'.format(cluster_str)]+ RESULT_dict['MSB_f2({0})'.format(cluster_str)]
+                RESULT_dict['BW_sam_wilks({0})'.format(cluster_str)]=sam_wilks
+                RESULT_dict['BW_pillai({0})'.format(cluster_str)]=pillai
+                RESULT_dict['BW_hotelling({0})'.format(cluster_str)]=hotelling
+                RESULT_dict['BW_roys_root({0})'.format(cluster_str)]=roys_root
+                
+                RESULT_dict['between_covariance({0})'.format(cluster_str)]=between_covariance
+                RESULT_dict['between_variance({0})'.format(cluster_str)]=between_variance
+                RESULT_dict['within_covariance({0})'.format(cluster_str)]=within_covariance
+                RESULT_dict['within_variance({0})'.format(cluster_str)]=within_variance
+                RESULT_dict['linear_discriminant_covariance({0})'.format(cluster_str)]=linear_discriminant_covariance
+                
+                return RESULT_dict
+            
+            
+            
+            df_vowel=Get_DfVowels(F12_raw_dict,self.Inspect_features)
+            cluster_str=','.join(sorted(F12_raw_dict.keys()))
+            # print(cluster_str)
+            RESULT_dict=Store_FeatVals(RESULT_dict,df_vowel,self.Inspect_features, cluster_str=cluster_str)    
+            
+            
+            # Get partial msb 
+            # comb2 = combinations(F12_raw_dict.keys(), 2)
+            comb3 = combinations(F12_raw_dict.keys(), 3)
+            # cluster_vars=list(comb2) + list(comb3)
+            cluster_vars=list(comb3)
+            for cluster_lsts in cluster_vars:
+                F12_tmp={cluster:F12_raw_dict[cluster] for cluster in cluster_lsts}
+                df_vowel=Get_DfVowels(F12_tmp,self.Inspect_features)
+                cluster_str=','.join(sorted(F12_tmp.keys()))
+                RESULT_dict=Store_FeatVals(RESULT_dict,df_vowel,self.Inspect_features, cluster_str=cluster_str)  
+            
+            
+
+            
+            ''' End of feature calculation '''
+            # =============================================================================
+            df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
+            df_RESULT_list.index=[people]
+            df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
+        return df_formant_statistic
+    def BasicFilter_byNum(self,df_formant_statistic,N=1):
+        filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS'].isna()!=True)
+        df_formant_statistic_limited=df_formant_statistic[filter_bool]
+        return df_formant_statistic_limited
+    
+    def calculate_features_20210730(self,Vowels_AUI,Label,PhoneOfInterest):
+        # =============================================================================
+        # Code calculate vowel features
+        Statistic_method={'mean':np.mean,'median':np.median,'mode':stats.mode}
+        label_choose='ADOS_C'
+        # =============================================================================
+        df_formant_statistic=pd.DataFrame()
+        for people in Vowels_AUI.keys(): #update 2021/05/27 fixed 
+            RESULT_dict={}
+            F12_raw_dict=Vowels_AUI[people]
+            F12_val_dict={k:[] for k in PhoneOfInterest}
+            for k,v in F12_raw_dict.items():
+                if self.Stat_med_str_VSA == 'mode':
+                    F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v,axis=0)[0].ravel()
+                else:
+                    F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v,axis=0)
+            RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=\
+                len(Vowels_AUI[people]['u:']),len(Vowels_AUI[people]['A:']),len(Vowels_AUI[people]['i:'])
+            
+            RESULT_dict['ADOS']=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
+            RESULT_dict['sex']=Label.label_raw['sex'][Label.label_raw['name']==people].values[0]
+            RESULT_dict['age']=Label.label_raw['age_year'][Label.label_raw['name']==people].values[0]
+            RESULT_dict['Module']=Label.label_raw['Module'][Label.label_raw['name']==people].values[0]
+            
+            u=F12_val_dict['u:']
+            a=F12_val_dict['A:']
+            i=F12_val_dict['i:']
+        
+            
+            if RESULT_dict['u_num']<self.N or RESULT_dict['a_num']<self.N or RESULT_dict['i_num']<self.N:
+                u_num= RESULT_dict['u_num'] if type(RESULT_dict['u_num'])==int else 0
+                i_num= RESULT_dict['i_num'] if type(RESULT_dict['i_num'])==int else 0
+                a_num= RESULT_dict['a_num'] if type(RESULT_dict['a_num'])==int else 0
+                df_RESULT_list=pd.DataFrame(np.zeros([1,len(df_formant_statistic.columns)]),columns=df_formant_statistic.columns)
+                df_RESULT_list.index=[people]
+                df_RESULT_list.loc[people,'u_num']=u_num
+                df_RESULT_list.loc[people,'a_num']=a_num
+                df_RESULT_list.loc[people,'i_num']=i_num
+                df_RESULT_list['FCR']=10
+                df_RESULT_list['ADOS']=RESULT_dict['ADOS'][0]
+                df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
+                continue
+            
+            numerator=u[1] + a[1] + i[0] + u[0]
+            demominator=i[1] + a[0]
+            RESULT_dict['FCR']=np.float(numerator/demominator)
             # RESULT_dict['F2i_u']= u[1]/i[1]
             # RESULT_dict['F1a_u']= u[0]/a[0]
             # assert FCR <=2
@@ -300,157 +501,6 @@ class Articulation:
             
             ''' End of feature calculation '''
             # =============================================================================
-            df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
-            df_RESULT_list.index=[people]
-            df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
-        return df_formant_statistic
-    def BasicFilter_byNum(self,df_formant_statistic,N=1):
-        filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
-        filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
-        filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS'].isna()!=True)
-        df_formant_statistic_limited=df_formant_statistic[filter_bool]
-        return df_formant_statistic_limited
-    
-    def calculate_features_20210630(self,Vowels_AUI,Label,PhoneOfInterest):
-        # =============================================================================
-        # Code calculate vowel features
-        Statistic_method={'mean':np.mean,'median':np.median,'mode':stats.mode}
-        label_choose='ADOS_C'
-        # =============================================================================
-        df_formant_statistic=pd.DataFrame()
-        for people in Vowels_AUI.keys(): #update 2021/05/27 fixed 
-            RESULT_dict={}
-            F12_raw_dict=Vowels_AUI[people]
-            F12_val_dict={k:[] for k in PhoneOfInterest}
-            for k,v in F12_raw_dict.items():
-                if self.Stat_med_str_VSA == 'mode':
-                    F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v,axis=0)[0].ravel()
-                else:
-                    F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v,axis=0)
-            RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=\
-                len(Vowels_AUI[people]['u:']),len(Vowels_AUI[people]['A:']),len(Vowels_AUI[people]['i:'])
-            
-            RESULT_dict['ADOS']=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
-            RESULT_dict['sex']=Label.label_raw['sex'][Label.label_raw['name']==people].values[0]
-            RESULT_dict['age']=Label.label_raw['age_year'][Label.label_raw['name']==people].values[0]
-            RESULT_dict['Module']=Label.label_raw['Module'][Label.label_raw['name']==people].values[0]
-            
-            u=F12_val_dict['u:']
-            a=F12_val_dict['A:']
-            i=F12_val_dict['i:']
-        
-            
-            if len(u)==0 or len(a)==0 or len(i)==0:
-                u_num= RESULT_dict['u_num'] if type(RESULT_dict['u_num'])==int else 0
-                i_num= RESULT_dict['i_num'] if type(RESULT_dict['i_num'])==int else 0
-                a_num= RESULT_dict['a_num'] if type(RESULT_dict['a_num'])==int else 0
-                df_RESULT_list=pd.DataFrame(np.zeros([1,len(df_formant_statistic.columns)]),columns=df_formant_statistic.columns)
-                df_RESULT_list.index=[people]
-                df_RESULT_list.loc[people,'u_num']=u_num
-                df_RESULT_list.loc[people,'a_num']=a_num
-                df_RESULT_list.loc[people,'i_num']=i_num
-                df_RESULT_list['FCR']=10
-                df_RESULT_list['ADOS']=RESULT_dict['ADOS'][0]
-                df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
-                continue
-            
-            numerator=u[1] + a[1] + i[0] + u[0]
-            demominator=i[1] + a[0]
-            RESULT_dict['FCR']=np.float(numerator/demominator)
-            RESULT_dict['F2i_u']= u[1]/i[1]
-            RESULT_dict['F1a_u']= u[0]/a[0]
-            # assert FCR <=2
-            
-            RESULT_dict['VSA1']=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
-            
-            RESULT_dict['LnVSA']=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
-            
-            EDiu=np.sqrt((u[1]-i[1])**2+(u[0]-i[0])**2)
-            EDia=np.sqrt((a[1]-i[1])**2+(a[0]-i[0])**2)
-            EDau=np.sqrt((u[1]-a[1])**2+(u[0]-a[0])**2)
-            S=(EDiu+EDia+EDau)/2
-            RESULT_dict['VSA2']=np.sqrt(S*(S-EDiu)*(S-EDia)*(S-EDau))
-            
-            RESULT_dict['LnVSA']=np.sqrt(np.log(S)*(np.log(S)-np.log(EDiu))*(np.log(S)-np.log(EDia))*(np.log(S)-np.log(EDau)))
-            
-            ''' a u i distance '''
-            RESULT_dict['dau1'] = np.abs(a[0] - u[0])
-            RESULT_dict['dai1'] = np.abs(a[0] - i[0])
-            RESULT_dict['diu1'] = np.abs(i[0] - u[0])
-            RESULT_dict['daudai1'] = RESULT_dict['dau1'] + RESULT_dict['dai1']
-            RESULT_dict['daudiu1'] = RESULT_dict['dau1'] + RESULT_dict['diu1']
-            RESULT_dict['daidiu1'] = RESULT_dict['dai1'] + RESULT_dict['diu1']
-            RESULT_dict['daidiudau1'] = RESULT_dict['dai1'] + RESULT_dict['diu1']+ RESULT_dict['dau1']
-            
-            RESULT_dict['dau2'] = np.abs(a[1] - u[1])
-            RESULT_dict['dai2'] = np.abs(a[1] - i[1])
-            RESULT_dict['diu2'] = np.abs(i[1] - u[1])
-            RESULT_dict['daudai2'] = RESULT_dict['dau2'] + RESULT_dict['dai2']
-            RESULT_dict['daudiu2'] = RESULT_dict['dau2'] + RESULT_dict['diu2']
-            RESULT_dict['daidiu2'] = RESULT_dict['dai2'] + RESULT_dict['diu2']
-            RESULT_dict['daidiudau2'] = RESULT_dict['dai2'] + RESULT_dict['diu2']+ RESULT_dict['dau2']
-            
-            # =============================================================================
-            ''' F-value, Valid Formant measure '''
-            
-            # =============================================================================
-            # Get data
-            F12_raw_dict=Vowels_AUI[people]
-            u=F12_raw_dict['u:']
-            a=F12_raw_dict['A:']
-            i=F12_raw_dict['i:']
-            df_vowel = pd.DataFrame(np.vstack([u,a,i]),columns=self.Inspect_features)
-            df_vowel['vowel'] = np.hstack([np.repeat('u:',len(u)),np.repeat('A:',len(a)),np.repeat('i:',len(i))])
-            df_vowel['target']=pd.Categorical(df_vowel['vowel'])
-            df_vowel['target']=df_vowel['target'].cat.codes
-            # F-test
-            print("utt number of group u = {0}, utt number of group i = {1}, utt number of group A = {2}".format(\
-                len(u),len(a),len(i)))
-            F_vals=f_classif(df_vowel[self.Inspect_features].values,df_vowel['target'].values)[0]
-            RESULT_dict['F_vals_f1']=F_vals[0]
-            RESULT_dict['F_vals_f2']=F_vals[1]
-            RESULT_dict['F_val_mix']=RESULT_dict['F_vals_f1'] + RESULT_dict['F_vals_f2']
-            
-            msb=f_classif(df_vowel[self.Inspect_features].values,df_vowel['target'].values)[2]
-            msw=f_classif(df_vowel[self.Inspect_features].values,df_vowel['target'].values)[3]
-            ssbn=f_classif(df_vowel[self.Inspect_features].values,df_vowel['target'].values)[4]
-            
-            
-            
-            RESULT_dict['MSB_f1']=msb[0]
-            RESULT_dict['MSB_f2']=msb[1]
-            MSB_f1 , MSB_f2 = RESULT_dict['MSB_f1'], RESULT_dict['MSB_f2']
-            RESULT_dict['MSB_mix']=MSB_f1 + MSB_f2
-            RESULT_dict['MSW_f1']=msw[0]
-            RESULT_dict['MSW_f2']=msw[1]
-            MSW_f1 , MSW_f2 = RESULT_dict['MSW_f1'], RESULT_dict['MSW_f2']
-            RESULT_dict['MSW_mix']=MSW_f1 + MSW_f2
-            RESULT_dict['SSBN_f1']=ssbn[0]
-            RESULT_dict['SSBN_f2']=ssbn[1]
-            
-            # =============================================================================
-            # criterion
-            # F1u < F1a
-            # F2u < F2a
-            # F2u < F2i
-            # F1i < F1a
-            # F2a < F2i
-            # =============================================================================
-            u_mean=F12_val_dict['u:']
-            a_mean=F12_val_dict['A:']
-            i_mean=F12_val_dict['i:']
-            
-            F1u, F2u=u_mean[0], u_mean[1]
-            F1a, F2a=a_mean[0], a_mean[1]
-            F1i, F2i=i_mean[0], i_mean[1]
-            
-            filt1 = [1 if F1u < F1a else 0]
-            filt2 = [1 if F2u < F2a else 0]
-            filt3 = [1 if F2u < F2i else 0]
-            filt4 = [1 if F1i < F1a else 0]
-            filt5 = [1 if F2a < F2i else 0]
-            RESULT_dict['criterion_score']=np.sum([filt1,filt2,filt3,filt4,filt5])
-        
             df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
             df_RESULT_list.index=[people]
             df_formant_statistic=df_formant_statistic.append(df_RESULT_list)

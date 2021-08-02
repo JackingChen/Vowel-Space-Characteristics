@@ -135,7 +135,7 @@ for feature in Arranged_resultdict.keys():
             print(df_)
             print("r: ",ab, ' p: ',p)
 
-aaa=ccc
+
 
 
 for CtxPhone_types in tqdm(['Manner_simp1','Manner_simp2','Place_simp1','Place_simp2']):
