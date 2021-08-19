@@ -29,9 +29,88 @@ import praat.praat_functions as praat_functions
 from script_mananger import script_manager
 import torch
 from tqdm import tqdm
-
-
+from itertools import combinations
 class Phonation:
+    def __init__(self, Inspect_features):
+        self.Inspect_features=Inspect_features
+        self.N=1
+        self.vowel_min_num=1
+        self.ISSegment_feature=False
+    def _updateISSegmentFeature(self,bool):
+        self.ISSegment_feature=bool
+    def calculate_features(self,Vowels_AUI,Label,PhoneOfInterest,label_choose_lst=['ADOS_C']):
+        # =============================================================================
+        # Code calculate vowel features
+        # =============================================================================
+        df_formant_statistic=pd.DataFrame()
+        for people in Vowels_AUI.keys(): #update 2021/05/27 fixed 
+            RESULT_dict={}
+            RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=\
+                len(Vowels_AUI[people]['u:']),len(Vowels_AUI[people]['A:']),len(Vowels_AUI[people]['i:'])
+            
+            for label_choose in label_choose_lst:
+                RESULT_dict[label_choose]=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
+            RESULT_dict['sex']=Label.label_raw['sex'][Label.label_raw['name']==people].values[0]
+            RESULT_dict['age']=Label.label_raw['age_year'][Label.label_raw['name']==people].values[0]
+            RESULT_dict['Module']=Label.label_raw['Module'][Label.label_raw['name']==people].values[0]
+            # Get data
+            F12_raw_dict=Vowels_AUI[people]
+
+            def Get_DfVowels(F12_raw_dict,Inspect_features=['F1','F2']):
+                df_vowel = pd.DataFrame()
+                for keys in F12_raw_dict.keys(): #Shoulb be bounded by PhoneOfInterest
+                    if len(df_vowel) == 0:
+                        df_vowel=F12_raw_dict[keys]
+                        df_vowel['vowel']=keys
+                    else:
+                        df_=F12_raw_dict[keys]
+                        df_['vowel']=keys
+                        df_vowel=df_vowel.append(df_)
+                df_vowel['target']=pd.Categorical(df_vowel['vowel'])
+                df_vowel['target']=df_vowel['target'].cat.codes
+                return df_vowel
+            # df_vowel=Get_DfVowels(F12_raw_dict,self.Inspect_features)
+            # cluster_str=','.join(sorted(F12_raw_dict.keys()))
+            
+            def MeanVar_features(df_vowel, Sessional_pools=['mean','var']):
+                df_mean=df_vowel[self.Inspect_features].mean(axis=0)
+                df_var=df_vowel[self.Inspect_features].var(axis=0)
+                
+                df_Sessional_feat=pd.concat([df_mean,df_var],axis=0).T
+                columns=['{0}_{1}'.format(c,Sp)  for Sp in Sessional_pools for c in df_vowel[self.Inspect_features].columns]
+                df_Sessional_feat.index=columns
+                return df_Sessional_feat.to_dict()
+            
+            def Store_FeatVals(RESULT_dict,df_vowel,Inspect_features=['stdevF0','localJitter', 'localabsoluteJitter','localShimmer'],\
+                               cluster_str='u:,i:,A:'):
+                df_Sessional_feat = MeanVar_features(df_vowel, Sessional_pools=['mean','var'])
+                
+                for keys, values in df_Sessional_feat.items():
+                    RESULT_dict[keys+'({0})'.format(cluster_str)]=values
+                return RESULT_dict
+            
+            
+            comb = combinations(PhoneOfInterest, 1)
+            comb3 = combinations(PhoneOfInterest, len(PhoneOfInterest))
+            if self.ISSegment_feature == True:
+                cluster_vars=list(comb3)
+            else:
+                cluster_vars=list(comb) + list(comb3)
+                cluster_vars=list(set(cluster_vars)) # to avoid 
+            for cluster_lsts in cluster_vars:
+                F12_tmp={cluster:F12_raw_dict[cluster] for cluster in cluster_lsts}
+                df_vowel=Get_DfVowels(F12_tmp,self.Inspect_features)
+                cluster_str=','.join(sorted(F12_tmp.keys()))
+
+                RESULT_dict=Store_FeatVals(RESULT_dict,df_vowel,self.Inspect_features, cluster_str=cluster_str) 
+                
+            ''' End of feature calculation '''
+            # =============================================================================
+            df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
+            df_RESULT_list.index=[people]
+            df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
+        return df_formant_statistic
+class Phonation_disvoice:
     """
     Compute phonation features from sustained vowels and continuous speech.
 

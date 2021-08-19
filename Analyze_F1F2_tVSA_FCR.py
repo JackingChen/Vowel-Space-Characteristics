@@ -22,7 +22,7 @@ import argparse
 from addict import Dict
 import numpy as np
 import pandas as pd
-from HYPERPARAM import phonewoprosody, Label
+from articulation.HYPERPARAM import phonewoprosody, Label
 import matplotlib.pyplot as plt
 from itertools import combinations
 
@@ -37,10 +37,35 @@ from varname import nameof
 from tqdm import tqdm
 import re
 from multiprocessing import Pool, current_process
-from articulation import Articulation
-import Multiprocess
+from articulation.articulation import Articulation
+import articulation.Multiprocess as Multiprocess
 from datetime import datetime as dt
 import pathlib
+
+def criterion_filter(df_formant_statistic,N=10,\
+                     constrain_sex=-1, constrain_module=-1,constrain_agemax=-1,constrain_ADOScate=-1,constrain_agemin=-1,\
+                     evictNamelst=[]):
+    filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
+    # filter_bool=np.logical_and(df_formant_statistic['a_num']>N)
+    filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
+    if constrain_sex != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['sex']==constrain_sex)
+    if constrain_module != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['Module']==constrain_module)
+    if constrain_agemax != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['age']<=constrain_agemax)
+    if constrain_agemin != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['age']>=constrain_agemin)
+    if constrain_ADOScate != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS_cate']==constrain_ADOScate)
+        
+    if len(evictNamelst)>0:
+        for name in evictNamelst:
+            filter_bool.loc[name]=False
+    # get rid of nan values
+    filter_bool=np.logical_and(filter_bool,~df_formant_statistic.isna().T.any())
+    return df_formant_statistic[filter_bool]
+
 
 
 def NameMatchAssertion(Formants_people_symb,name):
@@ -87,6 +112,7 @@ def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule, outpath='/h
     
     pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]Formants_utt_symb_limited.pkl","wb"))
     print('Formants_utt_symb saved to ',outpath+"/[Analyzing]Formants_utt_symb_limited.pkl")
+    
 '''
 
 Calculating FCR
@@ -120,7 +146,7 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--Inspect', default=False,
                             help='path of the base directory')
-    parser.add_argument('--reFilter', default=False,
+    parser.add_argument('--reFilter', default=True,
                             help='')
     parser.add_argument('--correlation_type', default='spearmanr',
                             help='spearmanr|pearsonr')
@@ -132,10 +158,11 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--poolWindowSize', default=3,
                             help='path of the base directory')
-    parser.add_argument('--role', default='ASDkid',
-                            help='path of the base directory')
+    parser.add_argument('--dataset_role', default='kid88',
+                            help='kid_TD| kid88')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
+
     
     args = parser.parse_args()
     return args
@@ -148,7 +175,7 @@ base_path=args.base_path
 # sys.path.append(path_app)
 from utils_jack  import  Formant_utt2people_reshape, Gather_info_certainphones, \
                          FilterUttDictsByCriterion, GetValuelimit_IQR, \
-                         Get_aligned_sequences, WER 
+                         Get_aligned_sequences, WER, Get_Vowels_AUI
 from metric import Evaluation_method     
 
 
@@ -166,7 +193,7 @@ pklpath=args.inpklpath
 INSPECT=args.Inspect
 windowsize=args.poolWindowSize
 label_choose_lst=args.label_choose_lst # labels are too biased
-role=args.role
+role=args.dataset_role
 Stat_med_str=args.Stat_med_str_VSA
 outpklpath=args.inpklpath+"/Session_formants_people_vowel_feat/"
 if not os.path.exists(outpklpath):
@@ -201,7 +228,6 @@ label_choose='ADOS_C'
     Filter out data using by 1.5*IQR
 
 '''
-from HYPERPARAM import phonewoprosody, Label
 PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
 
 # PhoneMapp_dict={'u:':phonewoprosody.Phoneme_sets['u_'],\
@@ -211,6 +237,7 @@ PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
 
 
 PhoneOfInterest=list(PhoneMapp_dict.keys())
+
 # =============================================================================
 
 
@@ -264,62 +291,27 @@ AUI_info=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,Pho
 
 '''
 # =============================================================================
-def Calculate_each_vowel_formant_duration(AUI_info):
-    Dict_phoneDuration=Dict()
-    Dict_phoneDuration_mean=pd.DataFrame([])
-    for phone in PhoneOfInterest:
-        Dict_phoneDuration[phone]=pd.DataFrame([],columns=['dur'])
-        for people in AUI_info.keys():
-            df_data=AUI_info[people][phone]            
-            Dict_phoneDuration[phone].loc[people,'dur']=(df_data['end']-df_data['start']).mean()
-        Dict_phoneDuration_mean.loc[phone,'mean']=Dict_phoneDuration[phone].mean().values
-    return Dict_phoneDuration, Dict_phoneDuration_mean
-Dict_phoneDuration, Dict_phoneDuration_mean = Calculate_each_vowel_formant_duration(AUI_info)
+# def Calculate_each_vowel_formant_duration(AUI_info):
+#     Dict_phoneDuration=Dict()
+#     Dict_phoneDuration_mean=pd.DataFrame([])
+#     for phone in PhoneOfInterest:
+#         Dict_phoneDuration[phone]=pd.DataFrame([],columns=['dur'])
+#         for people in AUI_info.keys():
+#             df_data=AUI_info[people][phone]            
+#             Dict_phoneDuration[phone].loc[people,'dur']=(df_data['end']-df_data['start']).mean()
+#         Dict_phoneDuration_mean.loc[phone,'mean']=Dict_phoneDuration[phone].mean().values
+#     return Dict_phoneDuration, Dict_phoneDuration_mean
+# Dict_phoneDuration, Dict_phoneDuration_mean = Calculate_each_vowel_formant_duration(AUI_info)
 # =============================================================================
     
-    
+        
+''' Calculate spectral variance features '''
+Vowels_AUI=Get_Vowels_AUI(AUI_info, args.Inspect_features,VUIsource="From__Formant_people_information")
+# pickle.dump(Vowels_AUI,open(outpklpath+"Vowels_AUI_{}.pkl".format(role),"wb"))
 
-def Get_Vowels_AUI(AUI_info,VUIsource="From__Formant_people_information"):
-    if VUIsource=="From__Formant_people_information": # Mainly use this
-        Vowels_AUI=Dict()
-        for people in AUI_info.keys():
-            for phone, values in AUI_info[people].items():
-                Vowels_AUI[people][phone]=AUI_info[people][phone][AUI_info[people][phone]['cmps']=='ori'][args.Inspect_features]
-    
-    
-    elif VUIsource=="From__Formants_people_symb":
-        Formants_people_symb=pickle.load(open(pklpath+"/Formants_people_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,windowsize,role),"rb"))
-        ''' assert if the names don't matches' '''
-        NameMatchAssertion(Formants_people_symb,Label.label_raw['name'].values)
-        Vowels_AUI=Dict()
-        # for people in Label.label_raw.sort_values(by='ADOS_C')['name']:
-        for people in Formants_people_symb.keys():    
-            for phone, values in Formants_people_symb[people].items():
-                if phone not in [e for _, phoneme in PhoneMapp_dict.items() for e in phoneme]: # update fixed 2021/05/27
-                    continue
-                else:
-                    for p_key, p_val in PhoneMapp_dict.items():
-                        if phone in p_val:
-                            Phone_represent=p_key
-                    if people not in Vowels_AUI.keys():
-                        if Phone_represent not in Vowels_AUI[people].keys():
-                            Vowels_AUI[people][Phone_represent]=values
-                        else:
-                            Vowels_AUI[people][Phone_represent].extend(values)
-                    else:
-                        if Phone_represent not in Vowels_AUI[people].keys():
-                            Vowels_AUI[people][Phone_represent]=values
-                        else:
-                            Vowels_AUI[people][Phone_represent].extend(values)
-    return Vowels_AUI
-# =============================================================================
-    
-
-Vowels_AUI=Get_Vowels_AUI(AUI_info)
-pickle.dump(Vowels_AUI,open(outpklpath+"Vowels_AUI_{}.pkl".format(role),"wb"))
-
+label_generate_choose_lst=['ADOS_C','dia_num']
 articulation=Articulation()
-df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest)
+df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst)
 
 
 for i in range(len(df_formant_statistic)):
@@ -329,16 +321,18 @@ for i in range(len(df_formant_statistic)):
 
 Eval_med=Evaluation_method()
 df_formant_statistic=Eval_med._Postprocess_dfformantstatistic(df_formant_statistic)
+
+sex=-1
+module=-1
+agemax=-1
+agemin=-1
+ADOScate=-1
+N=2
+df_formant_statistic_77=criterion_filter(df_formant_statistic,\
+                                        constrain_sex=sex,constrain_module=module,N=N,constrain_agemax=agemax,constrain_agemin=agemin,constrain_ADOScate=ADOScate,\
+                                        evictNamelst=[])
+
 pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
-
-
-# kidM3=df_formant_statistic[df_formant_statistic['Module']==3]
-# kidM4=df_formant_statistic[df_formant_statistic['Module']==4]
-# pickle.dump(kidM4,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format('ASDkidM4'),"wb"))
-# pickle.dump(kidM3,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format('ASDkidM3'),"wb"))
-
-
-
 # =============================================================================
 '''
 
@@ -347,73 +341,27 @@ pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pk
 '''
 # =============================================================================
 
-''' Calculate correlations '''
-
-# columns=['FCR','VSA1','F_vals_f1(A:,i:,u:)', 'F_vals_f2(A:,i:,u:)',
-#        'F_val_mix(A:,i:,u:)', 'MSB_f1(A:,i:,u:)', 'MSB_f2(A:,i:,u:)',
-#        'MSB_mix', 'F_vals_f1(A:,u:)', 'F_vals_f2(A:,u:)', 'F_val_mix(A:,u:)',
-#        'MSB_f1(A:,u:)', 'MSB_f2(A:,u:)', 'F_vals_f1(A:,i:)',
-#        'F_vals_f2(A:,i:)', 'F_val_mix(A:,i:)', 'MSB_f1(A:,i:)',
-#        'MSB_f2(A:,i:)', 'F_vals_f1(i:,u:)', 'F_vals_f2(i:,u:)',
-#        'F_val_mix(i:,u:)', 'MSB_f1(i:,u:)', 'MSB_f2(i:,u:)']
-columns=['VSA1','FCR','u_num+i_num+a_num',
-       'BW_sam_wilks(A:,i:,u:)', 'BW_pillai(A:,i:,u:)',
-       'BW_hotelling(A:,i:,u:)', 'BW_roys_root(A:,i:,u:)',
-       'between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)',
-       'within_covariance(A:,i:,u:)', 'within_variance(A:,i:,u:)']
+''' Calculate correlations for Formant fetures'''
+# columns=[
+#         'FCR', 'VSA1', 'between_variance_f1(A:,i:,u:)',
+#        'within_variance_f1(A:,i:,u:)', 'between_variance_f1_norm(A:,i:,u:)',
+#        'within_variance_f1_norm(A:,i:,u:)', 'between_variance_f2(A:,i:,u:)',
+#        'within_variance_f2(A:,i:,u:)', 'between_variance_f2_norm(A:,i:,u:)',
+#        'within_variance_f2_norm(A:,i:,u:)',
+#        'between_covariance_norm(A:,i:,u:)', 'between_variance_norm(A:,i:,u:)',
+#        'between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)',
+#        'within_covariance_norm(A:,i:,u:)', 'within_variance_norm(A:,i:,u:)',
+#        'within_covariance(A:,i:,u:)', 'within_variance(A:,i:,u:)',
+#        'total_covariance_norm(A:,i:,u:)', 'total_variance_norm(A:,i:,u:)',
+#        'total_covariance(A:,i:,u:)', 'total_variance(A:,i:,u:)',
+#        'sam_wilks_lin(A:,i:,u:)', 'pillai_lin(A:,i:,u:)',
+#        'hotelling_lin(A:,i:,u:)', 'roys_root_lin(A:,i:,u:)', 'ADOS_cate',
+#        'u_num+i_num+a_num'
+#         ]
+columns=df_formant_statistic.columns
 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
                                             df_formant_statistic['i_num'] +\
                                             df_formant_statistic['a_num']
-# columns=['FCR','VSA1','F_vals_f1', 'F_vals_f2', 'F_val_mix','MSB_f1','MSB_f2',\
-#          'dau1','dai1','diu1','daudai1','daudiu1','daidiu1','daidiudau1',\
-#          'dau2','dai2','diu2','daudai2','daudiu2','daidiu2','daidiudau2',\
-#          'F2i_u','F1a_u']
-# def Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns, corr_label='ADOS', constrain_sex=-1, constrain_module=-1, constrain_assessment=-1,evictNamelst=[]):
-#     '''
-#         constrain_sex: 1 for boy, 2 for girl
-#         constrain_module: 3 for M3, 4 for M4
-#     '''
-#     df_pearsonr_table=pd.DataFrame([],columns=[args.correlation_type,'{}_pvalue'.format(args.correlation_type[:5]),'de-zero_num'])
-#     for lab_choose in label_choose_lst:
-#         filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
-#         filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
-#         filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS'].isna()!=True)
-#         if constrain_sex != -1:
-#             filter_bool=np.logical_and(filter_bool,df_formant_statistic['sex']==constrain_sex)
-#         if constrain_module != -1:
-#             filter_bool=np.logical_and(filter_bool,df_formant_statistic['Module']==constrain_module)
-#         if constrain_assessment != -1:
-#             filter_normal=df_formant_statistic['ADOS']<2
-#             filter_ASD=(df_formant_statistic['ADOS']<3) & (df_formant_statistic['ADOS']>=2)
-#             filter_autism=df_formant_statistic['ADOS']>=3
-            
-#             if constrain_assessment == 0:
-#                 filter_bool=np.logical_and(filter_bool,filter_normal)
-#             elif constrain_assessment == 1:
-#                 filter_bool=np.logical_and(filter_bool,filter_ASD)
-#             elif constrain_assessment == 2:
-#                 filter_bool=np.logical_and(filter_bool,filter_autism)
-#         if len(evictNamelst)>0:
-#             for name in evictNamelst:
-#                 filter_bool.loc[name]=False
-            
-#         df_formant_qualified=df_formant_statistic[filter_bool]
-#         for col in columns:
-#             spear,spear_p=spearmanr(df_formant_qualified[col],df_formant_qualified[corr_label])
-#             pear,pear_p=pearsonr(df_formant_qualified[col],df_formant_qualified[corr_label])
-
-#             if args.correlation_type == 'pearsonr':
-#                 df_pearsonr_table.loc[col]=[pear,pear_p,len(df_formant_qualified[col])]
-#                 # pear,pear_p=pearsonr(df_denan["{}_LPP_{}".format(ps,ps)],df_formant_qualified['ADOS'])
-#                 # df_pearsonr_table_GOP.loc[ps]=[pear,pear_p,len(df_denan)]
-#             elif args.correlation_type == 'spearmanr':
-#                 df_pearsonr_table.loc[col]=[spear,spear_p,len(df_formant_qualified[col])]
-#         print("Setting N={0}, the correlation metric is: ".format(N))
-#         print("Using evaluation metric: {}".format(args.correlation_type))
-#         print(df_pearsonr_table)
-#     return df_pearsonr_table
-# for N in range(10):
-#     df_pearsonr_table=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1)
 
 
 ManualCondition=Dict()
@@ -424,38 +372,53 @@ for file in condfiles:
     name=os.path.basename(file).replace(suffix,"")
     ManualCondition[name]=df_cond['Unnamed: 0'][df_cond['50%']==True]
 
+label_correlation_choose_lst=['ADOS_C',]
+# ==========
+# debug
+df_formant_statistic77_path=outpklpath+'{name}_{role}.pkl'.format(name='Formant_AUI_tVSAFCRFvals',role='kid88')
+df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
+Aaa_df_feature_ASD=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic_77,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
+# ==========
+
+
 N=2
+Eval_med=Evaluation_method()
+Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_formant_statistic_77,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
+# df_formant_statistic['between_covariance_norm(A:,i:,u:)']
+# df_formant_statistic['between_covariance(A:,i:,u:)']
 
-# tmp_dct={}
-# for N in range(1,20,1):
-Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1,evictNamelst=ManualCondition[ 'unreasonable_all'])
-Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1)
 
-    # target=Aaadf_spearmanr_table_NoLimit
-    # diff_r=(np.abs(target.loc['BWratio(A:,i:,u:)']) - np.abs(target.loc['u_num+i_num+a_num'])).iloc[0]
-    # tmp_dct[N]=diff_r
 
-# Aaadf_pearsonr_table_NoLimitWithADOScat=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,corr_label='ADOS_cate',constrain_sex=-1, constrain_module=-1)
-# Aaadf_pearsonr_table_normal=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_assessment=0)
-# Aaadf_pearsonr_table_ASD=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_assessment=1)
-# Aaadf_pearsonr_table_autism=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_assessment=2)
 
-# Aaadf_pearsonr_table_boy_M3=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=1, constrain_module=3)
-# Aaadf_pearsonr_table_girl_M3=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=2, constrain_module=3)
-# Aaadf_pearsonr_table_boy_M4=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=1, constrain_module=4)
-# Aaadf_pearsonr_table_girl_M4=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=2, constrain_module=4)
-# Aaadf_pearsonr_table_M3=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=3)
-# Aaadf_pearsonr_table_M4=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=4)
-# Aaadf_pearsonr_table_boy=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=1, constrain_module=-1)
-# Aaadf_pearsonr_table_girl=Calculate_correlation(label_choose_lst,df_formant_statistic,N,columns,constrain_sex=2, constrain_module=-1)
-# Aaadf_pearsonr_table_N7=Calculate_correlation(df_formant_statistic,7,columns)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 # =============================================================================
 '''
 
-    3. t-test area
+    3. t-test area  (Not using this section anymore)
 
 '''
 # =============================================================================
@@ -475,7 +438,7 @@ filter_girl_M4 = filter_girl & filter_M4
 from itertools import combinations
 Filter_list=['filter_boy','filter_girl','filter_M3','filter_M4','filter_boy_M3',\
              'filter_boy_M4','filter_boy_M4','filter_girl_M3','filter_girl_M4']
-feature_list=['ADOS','F_vals_f1','F_vals_f2','F_val_mix','VSA1','FCR','MSB_f1','MSB_f2']
+feature_list=['F_vals_f1','F_vals_f2','F_val_mix','VSA1','FCR','MSB_f1','MSB_f2']
 comb=combinations(Filter_list,2)
 Filter_pair_list=[[x1,x2] for x1, x2 in comb]
 

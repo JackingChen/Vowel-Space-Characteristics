@@ -5,6 +5,8 @@ import sys
 import pysptk
 from parselmouth.praat import call
 import parselmouth 
+import pandas as pd
+
 def bark(f):
 	x=(f*0.00076)
 	x2=(f/7500)**2
@@ -160,3 +162,28 @@ def measureFormants(sound, f0min,f0max, time_step=0.0025,MaxnumForm=5,Maxformant
     f4_list = [f4 for f4 in f4_list if str(f4) != 'nan']
 
     return f1_list, f2_list
+
+def measurePitch(voiceID, f0min, f0max, unit):
+    columns=['duration', 'meanF0', 'stdevF0', 'hnr', 'localJitter', 'localabsoluteJitter', 'rapJitter', 'ppq5Jitter', 'ddpJitter', 'localShimmer', 'localdbShimmer', 'apq3Shimmer', 'aqpq5Shimmer', 'apq11Shimmer', 'ddaShimmer']
+    sound = parselmouth.Sound(voiceID) # read the sound
+    duration = call(sound, "Get total duration") # duration
+    pitch = call(sound, "To Pitch", 0.0, f0min, f0max) #create a praat pitch object
+    meanF0 = call(pitch, "Get mean", 0, 0, unit) # get mean pitch
+    stdevF0 = call(pitch, "Get standard deviation", 0 ,0, unit) # get standard deviation
+    harmonicity = call(sound, "To Harmonicity (cc)", 0.01, f0min, 0.1, 1.0)
+    hnr = call(harmonicity, "Get mean", 0, 0)
+    pointProcess = call(sound, "To PointProcess (periodic, cc)", f0min, f0max)
+    localJitter = call(pointProcess, "Get jitter (local)", 0, 0, 0.0001, 0.02, 1.3)
+    localabsoluteJitter = call(pointProcess, "Get jitter (local, absolute)", 0, 0, 0.0001, 0.02, 1.3)
+    rapJitter = call(pointProcess, "Get jitter (rap)", 0, 0, 0.0001, 0.02, 1.3)
+    ppq5Jitter = call(pointProcess, "Get jitter (ppq5)", 0, 0, 0.0001, 0.02, 1.3)
+    ddpJitter = call(pointProcess, "Get jitter (ddp)", 0, 0, 0.0001, 0.02, 1.3)
+    localShimmer =  call([sound, pointProcess], "Get shimmer (local)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+    localdbShimmer = call([sound, pointProcess], "Get shimmer (local_dB)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+    apq3Shimmer = call([sound, pointProcess], "Get shimmer (apq3)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+    aqpq5Shimmer = call([sound, pointProcess], "Get shimmer (apq5)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+    apq11Shimmer =  call([sound, pointProcess], "Get shimmer (apq11)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+    ddaShimmer = call([sound, pointProcess], "Get shimmer (dda)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+    
+    df=pd.DataFrame(np.array([duration, meanF0, stdevF0, hnr, localJitter, localabsoluteJitter, rapJitter, ppq5Jitter, ddpJitter, localShimmer, localdbShimmer, apq3Shimmer, aqpq5Shimmer, apq11Shimmer, ddaShimmer]),index=columns)
+    return df.T

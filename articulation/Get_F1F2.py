@@ -21,7 +21,7 @@ ex:
     2016_12_04_01_188_1_K_40_angry: utt in Utt_phf_dict 70 Not Match utt in Formants_utt_symb 71
     2016_12_24_01_226_K_17_angry: utt in Utt_phf_dict 33 Not Match utt in Formants_utt_symb 35
     ...
-Here I put an log to report the unmatched files:
+Here I put an log to report the unmatched files:Divergence[between_variance_f2_norm(A:,i:,u:)]
     len(Utt_phf_dict[utt][Utt_phf_dict[utt].index != 'SIL']) != len(Formants_utt_symb[utt][Formants_utt_symb[utt].index != "SIL"]):
     at line 343
 
@@ -114,9 +114,9 @@ def get_args():
     parser.add_argument('--base_path_phf', default='/homes/ssd1/jackchen/gop_prediction/data',
                         help='path of the base directory')
     parser.add_argument('--filepath', default='/homes/ssd1/jackchen/DisVoice/data/Segmented_ADOS_normalized',
-                        help='/homes/ssd1/jackchen/DisVoice/data/{Segmented_ADOS_normalized|Segmented_ADOS_emotion_normalized|Segmented_ADOS_TD_normalized}')
-    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/kid88/ADOS_tdnn_fold_transfer',
-                        help='/mnt/sdd/jackchen/egs/formosa/s6/{Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/{kid88|kid_TD}/ADOS_tdnn_fold_transfer | Alignment_human/kid/Audacity_phone|')
+                        help='/homes/ssd1/jackchen/DisVoice/data/{Segmented_ADOS_ASD_emotion_normalized|Segmented_ADOS_emotion_normalized|Segmented_ADOS_TD_normalized|Segmented_ADOS_TD_emotion_normalized}')
+    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/ASD_DOCKID/ADOS_tdnn_fold_transfer',
+                        help='/mnt/sdd/jackchen/egs/formosa/s6/{Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/{kid88|kid_TD|ASD_DOCKID|ASD_DOCKID_emotion|TD_DOCKID_emotion}/ADOS_tdnn_fold_transfer | Alignment_human/kid/Audacity_phone|')
     parser.add_argument('--outpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--plot_outpath', default='Plot/',
@@ -171,7 +171,12 @@ Formants_people_symb[spkr_name][phone] = [F1, F2] record F1, F2's of each people
 '''
 # =============================================================================
 role_str=trnpath.split("/")[-2]
-role= '_D_' if role_str == 'doc' else '_K_'
+if role_str == 'doc':
+    role= '_D_'
+elif 'DOCKID' in role_str:
+    role= '' 
+else :
+    role= '_K_'
 
 files=glob.glob(trnpath+"/*{}*.txt".format(role))
 
@@ -198,12 +203,13 @@ assert len(flat_keys) == len(files)
 multi=Multiprocess.Multi(filepath, MaxnumForm=5, AVERAGEMETHOD=AVERAGEMETHOD)
 multi._updatePhonedict(phonewoprosody.Phoneme_sets)
 multi._updateLeftSymbMapp(phonewoprosody.LeftSymbMapp)
-
+# multi.MEASURE_PHONATION=True
+multi._measurephonation()
 # final_results=pool.starmap(process_audio, [([file_block,silence,trnpath,PoolFormantWindow]) for file_block in tqdm(keys)])
 final_results=pool.starmap(multi.process_audio, [([file_block,silence,trnpath,PoolFormantWindow]) for file_block in tqdm(keys)])
 
 Formants_people_symb=Dict()
-for _, load_file_tmp in final_results:        
+for _, load_file_tmp, _ in final_results:        
     for spkr_name, phone_dict in load_file_tmp.items():
         for phone, values in phone_dict.items():
             symb=phone
@@ -221,23 +227,30 @@ for _, load_file_tmp in final_results:
 
 count=0
 Formants_utt_symb=Dict()
-for load_file_tmp ,_ in final_results:
-    for utt, df_phone in load_file_tmp.items():
-        Formants_utt_symb[utt]=df_phone
+Phonation_utt_symb=Dict()
+for load_file_tmp ,_,  load_file_tmp_p in final_results:
+    for utt in load_file_tmp.keys():
+        Formants_utt_symb[utt]=load_file_tmp[utt]
+        Phonation_utt_symb[utt]=load_file_tmp_p[utt]
 if not os.path.exists(outpath):
     os.makedirs(outpath)
 
 
-filedir=os.path.basename(filepath)
-role_rawstr=filedir[re.search("Segmented_",filedir).end():re.search("_normalized",filedir).start()]
-if 'TD' in role_rawstr:
-    role='ASDTD'
-else:
-    role='ASDkid'
+# filedir=os.path.basename(filepath)
+# role_rawstr=filedir[re.search("Segmented_",filedir).end():re.search("_normalized",filedir).start()]
+# role=role_str
+# if 'TD' in role_rawstr:
+#     role='ASDTD'
+# else:
+#     role='ASDkid'
 
 pickle.dump(Formants_utt_symb,open(outpath+"/Formants_utt_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow),"wb"))
 
 print("Finished creating Formants_utt_symb in", outpath+"/Formants_utt_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow))
+
+pickle.dump(Phonation_utt_symb,open(outpath+"/Phonation_utt_symb.pkl".format(),"wb"))
+
+print("Finished creating Formants_people_symb in", outpath+"/Phonation_utt_symb.pkl".format())
 
 pickle.dump(Formants_people_symb,open(outpath+"/Formants_people_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow),"wb"))
 
@@ -246,19 +259,25 @@ print("Finished creating Formants_people_symb in", outpath+"/Formants_people_sym
 
 
 
+
 uttpath=outpath+"/Formants_utt_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow)
 utt_outpath=outpath+"/Formants_utt_symb_by{avgmed}_window{wind}_{role}.pkl".format(avgmed=AVERAGEMETHOD,\
                                                                                    wind=PoolFormantWindow,\
-                                                                                   role=role)
+                                                                                   role=role_str)
+uttPhonation=outpath+"/Phonation_utt_symb.pkl".format()
+uttPhonation_outpath=outpath+"/Phonation_utt_symb_{role}.pkl".format(role=role_str)
+    
 peoplepath=outpath+"/Formants_people_symb_by{avgmed}_window{wind}.pkl".format(avgmed=AVERAGEMETHOD,wind=PoolFormantWindow)
 people_outpath=outpath+"/Formants_people_symb_by{avgmed}_window{wind}_{role}.pkl".format(avgmed=AVERAGEMETHOD,\
                                                                                    wind=PoolFormantWindow,\
-                                                                                   role=role)
+                                                                                   role=role_str)
 
 
     
 shutil.copy(uttpath, utt_outpath)
+shutil.copy(uttPhonation, uttPhonation_outpath)
 shutil.copy(peoplepath, people_outpath)
+
 
 
  

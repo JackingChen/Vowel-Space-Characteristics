@@ -352,10 +352,12 @@ def FilterUttDictsByCriterion(Formants_utt_symb,Formants_utt_symb_cmp,limit_peop
 def GetValuelimit_IQR(AUI_info,PhoneMapp_dict,Inspect_features,maxFreq=5500,minFreq=0):
     limit_people_rule=Dict()
     for people in AUI_info.keys():
-        for phoneRepresent in AUI_info[people].keys():
+        # for phoneRepresent in AUI_info[people].keys():
+        for phoneRepresent in PhoneMapp_dict.keys():
             df_values = AUI_info[people][phoneRepresent][AUI_info[people][phoneRepresent]['cmps'] == 'ori']
             for feat in Inspect_features:
-                data=df_values[[feat]][df_values[feat]>0]
+                data=df_values[[feat]][df_values[feat]>0] # remove the data that values are -1
+                                                          # but only for phoneRepresent
                 q25, q75 = data.quantile(q=0.25).values[0], data.quantile(q=0.75).values[0]
                 iqr=q75 - q25
                 cut_off = iqr * 1.5
@@ -381,6 +383,41 @@ def Postprocess_dfformantstatistic(df_formant_statistic):
     df_formant_statistic['ADOS_cate'][(df_formant_statistic['ADOS']<3) & (df_formant_statistic['ADOS']>=2)]=1
     df_formant_statistic['ADOS_cate'][df_formant_statistic['ADOS']>=3]=2
     return df_formant_statistic
+
+
+def Get_Vowels_AUI(AUI_info, Inspect_features,VUIsource="From__Formant_people_information"):
+    if VUIsource=="From__Formant_people_information": # Mainly use this
+        Vowels_AUI=Dict()
+        for people in AUI_info.keys():
+            for phone, values in AUI_info[people].items():
+                Vowels_AUI[people][phone]=AUI_info[people][phone][AUI_info[people][phone]['cmps']=='ori'][Inspect_features].dropna(axis=0)
+    
+    
+    elif VUIsource=="From__Formants_people_symb":
+        Formants_people_symb=pickle.load(open(pklpath+"/Formants_people_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,windowsize,role),"rb"))
+        ''' assert if the names don't matches' '''
+        NameMatchAssertion(Formants_people_symb,Label.label_raw['name'].values)
+        Vowels_AUI=Dict()
+        # for people in Label.label_raw.sort_values(by='ADOS_C')['name']:
+        for people in Formants_people_symb.keys():    
+            for phone, values in Formants_people_symb[people].items():
+                if phone not in [e for _, phoneme in PhoneMapp_dict.items() for e in phoneme]: # update fixed 2021/05/27
+                    continue
+                else:
+                    for p_key, p_val in PhoneMapp_dict.items():
+                        if phone in p_val:
+                            Phone_represent=p_key
+                    if people not in Vowels_AUI.keys():
+                        if Phone_represent not in Vowels_AUI[people].keys():
+                            Vowels_AUI[people][Phone_represent]=values
+                        else:
+                            Vowels_AUI[people][Phone_represent].extend(values)
+                    else:
+                        if Phone_represent not in Vowels_AUI[people].keys():
+                            Vowels_AUI[people][Phone_represent]=values
+                        else:
+                            Vowels_AUI[people][Phone_represent].extend(values)
+    return Vowels_AUI
 # =============================================================================
 '''
 

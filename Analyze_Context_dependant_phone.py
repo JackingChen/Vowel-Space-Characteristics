@@ -70,7 +70,7 @@ N=2 # The least number of critical phones (A:, u:, i:)
 from Filtering_n_FeatureExtracting import Collector, Selector_Pval, Selector_Pval_colrow, Calculate_dfStatistics, Selector_Rval_colrow,\
                                           Selector_independent_corr  , Selector_IntersecRval
 Result_dict=Dict()
-rows=['BWratio(A:,i:,u:)']
+rows=['between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)']
 # ['pearsonr', 'pearson_p', 'spearmanr', 'spearman_p', 'R2',
 #        'de-zero_num']
 cols=['R2','spearmanr']
@@ -88,7 +88,7 @@ Criteria_dict['BV(A:,i:,u:)_l2'].N = 77
 # Criteria_dict['BV(A:,i:,u:)_l2'].r = 0.43
 # Criteria_dict['BV(A:,i:,u:)_l2'].N = 77
 
-significant_val=0.01
+significant_val=0.05
 r_val=0.
 for CtxPhone_types in tqdm(['Manner_simp1','Manner_simp2','Place_simp1','Place_simp2','']):
 # for CtxPhone_types in tqdm(['']):    
@@ -98,14 +98,14 @@ for CtxPhone_types in tqdm(['Manner_simp1','Manner_simp2','Place_simp1','Place_s
     
     df_significant_collection=Collector(df_result_FeatComb_table_collect)
     # df_significant_collection_stage2=Selector_Pval(df_significant_collection, significant_val=significant_val)
-    # df_significant_collection_stage2_msbf1f2=Selector_Pval_colrow(df_significant_collection,col='spear_pvalue', rows=rows, significant_val=significant_val)
+    df_significant_collection_stage2_msbf1f2=Selector_Pval_colrow(df_significant_collection,col='spearman_p', rows=rows, significant_val=significant_val)
     # df_significant_collection_stage2_msbf1f2=Selector_Rval_colrow(df_significant_collection,cols=cols, rows=rows[0], r_val=Criteria_dict[rows[0]])
-    df_significant_collection_stage2_bwrio=Selector_IntersecRval(df_significant_collection,cols=cols, row=rows[0], r_val=Criteria_dict[rows[0]])
+    # df_significant_collection_stage2_bwrio=Selector_IntersecRval(df_significant_collection,cols=cols, row=rows[0], r_val=Criteria_dict[rows[0]])
     # df_significant_collection_stage2_spearrsig=Selector_independent_corr(df_significant_collection,col='spearmanr',rows=rows,\
     #                            Criteria_dict=Criteria_dict,\
     #                            significant_val=0.95)  #Try to find the r value larger than non context dependent versions
     # Result_dict['min< thresh'].update(df_significant_collection_stage2)
-    Result_dict['R significant'].update(df_significant_collection_stage2_bwrio)
+    Result_dict['R significant'].update(df_significant_collection_stage2_msbf1f2)
 
 def arrange_Resultdict(Result_dict,rows):
     Result_feature_dict=Dict()

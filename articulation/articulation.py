@@ -103,16 +103,15 @@ class Extract_F1F2:
         return [F1, F2]
 
 class Articulation:
-    def __init__(self, Stat_med_str_VSA='mean'):
+    def __init__(self, Stat_med_str_VSA='mean', Inspect_features=['F1','F2']):
         
         self.Stat_med_str_VSA=Stat_med_str_VSA
-        self.Inspect_features=['F1','F2']
+        self.Inspect_features=Inspect_features
         self.N=3
-    def calculate_features(self,Vowels_AUI,Label,PhoneOfInterest):
+    def calculate_features(self,Vowels_AUI,Label,PhoneOfInterest,label_choose_lst=['ADOS_C']):
         # =============================================================================
         # Code calculate vowel features
         Statistic_method={'mean':np.mean,'median':np.median,'mode':stats.mode}
-        label_choose='ADOS_C'
         # =============================================================================
         df_formant_statistic=pd.DataFrame()
         for people in Vowels_AUI.keys(): #update 2021/05/27 fixed 
@@ -127,7 +126,8 @@ class Articulation:
             RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=\
                 len(Vowels_AUI[people]['u:']),len(Vowels_AUI[people]['A:']),len(Vowels_AUI[people]['i:'])
             
-            RESULT_dict['ADOS']=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
+            for label_choose in label_choose_lst:
+                RESULT_dict[label_choose]=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
             RESULT_dict['sex']=Label.label_raw['sex'][Label.label_raw['name']==people].values[0]
             RESULT_dict['age']=Label.label_raw['age_year'][Label.label_raw['name']==people].values[0]
             RESULT_dict['Module']=Label.label_raw['Module'][Label.label_raw['name']==people].values[0]
@@ -147,7 +147,8 @@ class Articulation:
                 df_RESULT_list.loc[people,'a_num']=a_num
                 df_RESULT_list.loc[people,'i_num']=i_num
                 df_RESULT_list['FCR']=10
-                df_RESULT_list['ADOS']=RESULT_dict['ADOS'][0]
+                for label_choose in label_choose_lst:
+                    df_RESULT_list[label_choose]=RESULT_dict[label_choose][0]
                 df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
                 continue
             
@@ -180,6 +181,19 @@ class Articulation:
                 df_vowel['target']=df_vowel['target'].cat.codes
                 return df_vowel
             
+            def SortbyEigenValue(eigen_values,eigen_vectors):
+                # pairs = [(eigen_value),array(eigen_vector)], e.g (1.4485527363308637, array([-0.70778505, -0.70642786]))
+                # the first value is the highest eigen pair
+                pairs = [(np.abs(eigen_values[i]), eigen_vectors[:,i]) for i in range(len(eigen_values))]
+                pairs = sorted(pairs, key=lambda x: x[0], reverse=True)
+                return pairs
+            
+            def AngleToXaxis(var_vector, unit_vector_x):
+                unit_vector_var = var_vector / np.linalg.norm(var_vector)
+                dot_product = np.dot(unit_vector_x, unit_vector_var)
+                angle = np.arccos(dot_product)
+                return angle
+            
             def LDA_scatter_matrix(df_vowel):
                 '''    Calculate class variance by LDA '''  
 
@@ -197,19 +211,18 @@ class Articulation:
                 for c, rows in df_vowel.groupby('vowel'):
                     rows = rows[self.Inspect_features]
                     s = np.zeros((groups_num,groups_num))
-                    # WCV= 0.0
+                    
                     for index, row in rows.iterrows():
                         x, mc = row.values.reshape(groups_num,1), class_feature_means[c].values.reshape(groups_num,1)
                         class_variance=(x - mc).dot((x - mc).T).astype(float)
                         s += class_variance
-                        # WCV+=np.linalg.norm(class_variance.diagonal(),2)
+                        
                     within_class_scatter_matrix += s
-                    # Total_within_variance_l2 +=WCV
                     
+                within_class_scatter_matrix_norm = within_class_scatter_matrix / n_samples
                     
                 
                 feature_means = df_vowel.mean()
-                # Total_between_variance_l2=0.0
                 between_class_scatter_matrix = np.zeros((groups_num,groups_num))
                 for c in class_feature_means:    
                     n = len(df_vowel.loc[df_vowel['vowel'] == c].index)
@@ -219,59 +232,139 @@ class Articulation:
                     between_class_variance = n * (mc - m).dot((mc - m).T)
                     
                     between_class_scatter_matrix += between_class_variance
-                    # Total_between_variance_l2+=np.linalg.norm(between_class_variance.diagonal(),2)
+                    
+                between_class_scatter_matrix_norm = between_class_scatter_matrix / n_samples
+                Total_scatter_matrix=within_class_scatter_matrix + between_class_scatter_matrix
+                Total_scatter_matrix_norm=Total_scatter_matrix / n_samples
                 
-                # eigen_values, eigen_vectors = np.linalg.eig()
-                linear_discriminant=np.linalg.inv(within_class_scatter_matrix / dfwn).dot(between_class_scatter_matrix / dfbn)
+                linear_discriminant=np.linalg.inv(within_class_scatter_matrix ).dot(between_class_scatter_matrix )
                 eigen_values_lin, eigen_vectors_lin = np.linalg.eig(linear_discriminant)
                 eigen_values_B, eigen_vectors_B = np.linalg.eig(between_class_scatter_matrix)
+                eigen_values_B_norm, eigen_vectors_B_norm = np.linalg.eig(between_class_scatter_matrix_norm)
                 eigen_values_W, eigen_vectors_W = np.linalg.eig(within_class_scatter_matrix)
+                eigen_values_W_norm, eigen_vectors_W_norm = np.linalg.eig(within_class_scatter_matrix_norm)
+                eigen_values_T, eigen_vectors_T = np.linalg.eig(Total_scatter_matrix)
+                eigen_values_T_norm, eigen_vectors_T_norm = np.linalg.eig(Total_scatter_matrix_norm)
                 
-                sam_wilks=1
-                pillai=0
-                hotelling=0
-                for eigen_v in eigen_values_lin:
-                    wild_element=1.0/np.float(1+eigen_v)
-                    sam_wilks*=wild_element
-                    pillai+=wild_element
-                    hotelling+=eigen_v
-                roys_root=np.max(eigen_values_lin)
+                Eigenpair_lin=SortbyEigenValue(eigen_values_lin, eigen_vectors_lin)
+                # Eigenpair_B=SortbyEigenValue(eigen_values_B, eigen_vectors_B)
+                Eigenpair_B_norm=SortbyEigenValue(eigen_values_B_norm, eigen_vectors_B_norm)
+                Eigenpair_W=SortbyEigenValue(eigen_values_W, eigen_vectors_W)
                 
-                between_covariance = np.prod(eigen_values_B) # product of every element
-                between_variance = np.sum(eigen_values_B) # product of every element
-                within_covariance = np.prod(eigen_values_B) # product of every element
-                within_variance = np.sum(eigen_values_B) # product of every element
-                linear_discriminant_covariance=between_covariance/within_variance
+                def Covariance_representations(eigen_values):
+                    sam_wilks=1
+                    pillai=0
+                    hotelling=0
+                    for eigen_v in eigen_values:
+                        wild_element=1.0/np.float(1+eigen_v)
+                        sam_wilks*=wild_element
+                        pillai+=wild_element
+                        hotelling+=eigen_v
+                    roys_root=np.max(eigen_values_lin)
+                    return sam_wilks, pillai, hotelling, roys_root
+                Covariances={}
+                Covariances['sam_wilks_lin'], Covariances['pillai_lin'], Covariances['hotelling_lin'], Covariances['roys_root_lin'] = Covariance_representations(eigen_values_lin)
+                # Covariances['sam_wilks_B'], Covariances['pillai_B'], Covariances['hotelling_B'], Covariances['roys_root_B'] = Covariance_representations(eigen_values_B)
+                # Covariances['sam_wilks_Bnorm'], Covariances['pillai_Bnorm'], Covariances['hotelling_Bnorm'], Covariances['roys_root_Bnorm'] = Covariance_representations(eigen_values_B_norm)
+                # Covariances['sam_wilks_W'], Covariances['pillai_W'], Covariances['hotelling_W'], Covariances['roys_root_W'] = Covariance_representations(eigen_values_W)
+
+                # between_covariance = np.linalg.det(between_class_scatter_matrix_norm)
+                # between_variance = np.trace(between_class_scatter_matrix_norm)
+                # within_covariance = np.linalg.det(within_class_scatter_matrix)
+                # within_variance = np.trace(within_class_scatter_matrix)
                 
-                # linear_discriminant=np.linalg.inv(within_class_scatter_matrix ).dot(between_class_scatter_matrix / dfbn)
-                # B_W_varianceRatio_l2=np.trace(linear_discriminant)
-                # Total_between_variance_l2=np.trace(between_class_scatter_matrix) / dfbn
-                # Total_between_variance_l2_norm = Total_between_variance_l2 / n_samples
-                # Total_within_variance_l2=np.trace(within_class_scatter_matrix) /dfwn
-                # B_W_varianceRatio_l2=Total_between_variance_l2/Total_within_variance_l2
-                # return B_W_varianceRatio, B_W_varianceRatio_l2, Total_between_variance_l2, Total_within_variance_l2
-                return [sam_wilks, pillai, hotelling, roys_root], [linear_discriminant_covariance,between_covariance, between_variance, within_covariance, within_variance]
+                Multi_Variances={}
+                Multi_Variances['between_covariance_norm'] = np.prod(eigen_values_B_norm)# product of every element
+                Multi_Variances['between_variance_norm'] = np.sum(eigen_values_B_norm)
+                Multi_Variances['between_covariance'] = np.prod(eigen_values_B)# product of every element
+                Multi_Variances['between_variance'] = np.sum(eigen_values_B)
+                Multi_Variances['within_covariance_norm'] = np.prod(eigen_values_W_norm)
+                Multi_Variances['within_variance_norm'] = np.sum(eigen_values_W_norm)
+                Multi_Variances['within_covariance'] = np.prod(eigen_values_W)
+                Multi_Variances['within_variance'] = np.sum(eigen_values_W)
+                Multi_Variances['total_covariance_norm'] = np.prod(eigen_values_T_norm)
+                Multi_Variances['total_variance_norm'] = np.sum(eigen_values_T_norm)
+                Multi_Variances['total_covariance'] = np.prod(eigen_values_T)
+                Multi_Variances['total_variance'] = np.sum(eigen_values_T)
+                
+                
+                # Variances in certain projection
+                # Variances in f1 , f2, Major, Minor, Ratio:major/minor, and the angles of Major and Minor vectors
+                Single_Variances={}
+                between_variance_f, within_variance_f={}, {}
+                between_variance_f_norm, within_variance_f_norm={}, {}
+                for i in range(between_class_scatter_matrix_norm.shape[0]):
+                    between_variance_f[i+1]=between_class_scatter_matrix[i,i]
+                    within_variance_f[i+1]=within_class_scatter_matrix[i,i]
+                    between_variance_f_norm[i+1]=between_class_scatter_matrix_norm[i,i]
+                    within_variance_f_norm[i+1]=within_class_scatter_matrix_norm[i,i]
+                for keys  in between_variance_f.keys():
+                    Single_Variances['between_variance_f'+str(keys)]=between_variance_f[keys]
+                    Single_Variances['within_variance_f'+str(keys)]=within_variance_f[keys]
+                    Single_Variances['between_variance_f'+str(keys)+'_norm']=between_variance_f_norm[keys]
+                    Single_Variances['within_variance_f'+str(keys)+'_norm']=within_variance_f_norm[keys]
+                
+                # Single_Variances['Major_variance_lin']=Eigenpair_lin[0][0]
+                # Single_Variances['Major_variance_B_norm']=Eigenpair_B_norm[0][0]
+                # Single_Variances['Major_variance_W']=Eigenpair_W[0][0]
+                # Single_Variances['Minor_variance_lin']=Eigenpair_lin[1][0]
+                # Single_Variances['Minor_variance_B_norm']=Eigenpair_B_norm[1][0]
+                # Single_Variances['Minor_variance_W']=Eigenpair_W[1][0]
+                # Single_Variances['Ratio_mjr_mnr_lin']=Single_Variances['Major_variance_lin']/Single_Variances['Minor_variance_lin']
+                # Single_Variances['Ratio_mjr_mnr_B']=Single_Variances['Major_variance_B_norm']/Single_Variances['Minor_variance_B_norm']
+                # Single_Variances['Ratio_mjr_mnr_W']=Single_Variances['Major_variance_W']/Single_Variances['Minor_variance_W']
+                
+                # Major_vector_lin=Eigenpair_lin[0][1]
+                # Major_vector_B_norm=Eigenpair_B_norm[0][1]
+                # Major_vector_W=Eigenpair_W[0][1]
+                # Minor_vector_lin=Eigenpair_lin[1][1]
+                # Minor_vector_B_norm=Eigenpair_B_norm[1][1]
+                # Minor_vector_W=Eigenpair_W[1][1]
+                # xaxis = [1, 0]
+                # unit_vector_x = xaxis / np.linalg.norm(xaxis)
+                
+                
+                # Angles={}
+                # for var_vector in ['Major_vector_lin', 'Major_vector_B_norm', 'Major_vector_W',\
+                #                    'Minor_vector_lin', 'Minor_vector_B_norm', 'Minor_vector_W']:
+                #     angle=AngleToXaxis(vars()[var_vector], unit_vector_x)
+                #     Angles[var_vector]=angle
+                    
+                
+                
+                # between_covariance = np.prod(eigen_values_B) / n_samples # product of every element
+                # between_variance = np.sum(eigen_values_B) / n_samples 
+                # within_covariance = np.prod(eigen_values_W) / n_samples 
+                # within_variance = np.sum(eigen_values_W) / n_samples 
+                
+                
+                
+                
+ 
+                # return Covariances, Multi_Variances, Single_Variances, Angles
+                return Covariances, Multi_Variances, Single_Variances
                 
             
             
             def Store_FeatVals(RESULT_dict,df_vowel,Inspect_features=['F1','F2'], cluster_str='u:,i:,A:'):
                 # F_vals, _, msb, _, ssbn=f_classif(df_vowel[Inspect_features].values,df_vowel['target'].values)
-                [sam_wilks, pillai, hotelling, roys_root], [linear_discriminant_covariance,between_covariance, between_variance, within_covariance, within_variance]=LDA_scatter_matrix(df_vowel[Inspect_features+['vowel']])
-                # RESULT_dict['F_vals_f1({0})'.format(cluster_str)], RESULT_dict['F_vals_f2({0})'.format(cluster_str)]=F_vals
-                # RESULT_dict['F_val_mix({0})'.format(cluster_str)]=RESULT_dict['F_vals_f1({0})'.format(cluster_str)] + RESULT_dict['F_vals_f2({0})'.format(cluster_str)]
-                # RESULT_dict['MSB_f1({0})'.format(cluster_str)],RESULT_dict['MSB_f2({0})'.format(cluster_str)]=msb
-                # RESULT_dict['MSB_mix']=RESULT_dict['MSB_f1({0})'.format(cluster_str)]+ RESULT_dict['MSB_f2({0})'.format(cluster_str)]
-                RESULT_dict['BW_sam_wilks({0})'.format(cluster_str)]=sam_wilks
-                RESULT_dict['BW_pillai({0})'.format(cluster_str)]=pillai
-                RESULT_dict['BW_hotelling({0})'.format(cluster_str)]=hotelling
-                RESULT_dict['BW_roys_root({0})'.format(cluster_str)]=roys_root
+                Covariances, Multi_Variances, Single_Variances,\
+                    =LDA_scatter_matrix(df_vowel[Inspect_features+['vowel']])
+
+                # RESULT_dict['between_covariance({0})'.format(cluster_str)]=between_covariance
+                # RESULT_dict['between_variance({0})'.format(cluster_str)]=between_variance
+                # RESULT_dict['between_covariance_norm({0})'.format(cluster_str)]=between_covariance_norm
+                # RESULT_dict['between_variance_norm({0})'.format(cluster_str)]=between_variance_norm
+                # RESULT_dict['within_covariance({0})'.format(cluster_str)]=within_covariance
+                # RESULT_dict['within_variance({0})'.format(cluster_str)]=within_variance
+                # RESULT_dict['linear_discriminant_covariance({0})'.format(cluster_str)]=linear_discriminant_covariance
                 
-                RESULT_dict['between_covariance({0})'.format(cluster_str)]=between_covariance
-                RESULT_dict['between_variance({0})'.format(cluster_str)]=between_variance
-                RESULT_dict['within_covariance({0})'.format(cluster_str)]=within_covariance
-                RESULT_dict['within_variance({0})'.format(cluster_str)]=within_variance
-                RESULT_dict['linear_discriminant_covariance({0})'.format(cluster_str)]=linear_discriminant_covariance
-                
+                for keys, values in Single_Variances.items():
+                    RESULT_dict[keys+'({0})'.format(cluster_str)]=values
+                for keys, values in Multi_Variances.items():
+                    RESULT_dict[keys+'({0})'.format(cluster_str)]=values
+                for keys, values in Covariances.items():
+                    RESULT_dict[keys+'({0})'.format(cluster_str)]=values
                 return RESULT_dict
             
             

@@ -188,36 +188,40 @@ class Evaluation_method:
         return df_formant_qualified
     
     def Calculate_correlation(self, label_choose_lst,df_formant_statistic,N,columns,\
-                          corr_label='ADOS', constrain_sex=-1, constrain_module=-1, constrain_assessment=-1, constrain_ASDTD=-1,\
+                          constrain_sex=-1, constrain_module=-1, constrain_assessment=-1, constrain_ASDTD=-1,\
                           Num_df_qualified=5,\
-                          evictNamelst=[],correlation_type='spearmanr'):
+                          evictNamelst=[],feature_type='Session_formant'):
         '''
             constrain_sex: 1 for boy, 2 for girl
             constrain_module: 3 for M3, 4 for M4
+            feature_type: {Session_formant |  Syncrony_formant}
         '''
         # df_pearsonr_table=pd.DataFrame([],columns=[correlation_type,'{}_pvalue'.format(correlation_type[:5]),'de-zero_num'])
         df_pearsonr_table=pd.DataFrame([],columns=['pearsonr','pearson_p',\
                                                    'spearmanr','spearman_p',\
                                                    'R2','de-zero_num'])
         for lab_choose in label_choose_lst:
-            filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
-            filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
-            filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS'].isna()!=True)
+            if feature_type == 'Session_formant':
+                filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
+                filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
+            elif feature_type == 'Syncrony_formant':
+                filter_bool=df_formant_statistic['timeSeries_len']>N
+            filter_bool=np.logical_and(filter_bool,df_formant_statistic[lab_choose].isna()!=True)
             if constrain_sex != -1:
                 filter_bool=np.logical_and(filter_bool,df_formant_statistic['sex']==constrain_sex)
             if constrain_module != -1:
                 filter_bool=np.logical_and(filter_bool,df_formant_statistic['Module']==constrain_module)
-            if constrain_assessment != -1:
-                filter_normal=df_formant_statistic['ADOS']<2
-                filter_ASD=(df_formant_statistic['ADOS']<3) & (df_formant_statistic['ADOS']>=2)
-                filter_autism=df_formant_statistic['ADOS']>=3
+            # if constrain_assessment != -1:
+            #     filter_normal=df_formant_statistic[corr_label]<2
+            #     filter_ASD=(df_formant_statistic[corr_label]<3) & (df_formant_statistic[corr_label]>=2)
+            #     filter_autism=df_formant_statistic[corr_label]>=3
                 
-                if constrain_assessment == 0:
-                    filter_bool=np.logical_and(filter_bool,filter_normal)
-                elif constrain_assessment == 1:
-                    filter_bool=np.logical_and(filter_bool,filter_ASD)
-                elif constrain_assessment == 2:
-                    filter_bool=np.logical_and(filter_bool,filter_autism)
+            #     if constrain_assessment == 0:
+            #         filter_bool=np.logical_and(filter_bool,filter_normal)
+            #     elif constrain_assessment == 1:
+            #         filter_bool=np.logical_and(filter_bool,filter_ASD)
+            #     elif constrain_assessment == 2:
+            #         filter_bool=np.logical_and(filter_bool,filter_autism)
             if constrain_ASDTD != -1:
                 filter_bool=np.logical_and(filter_bool,df_formant_statistic['ASDTD']==constrain_ASDTD)
             if len(evictNamelst)>0:
@@ -227,9 +231,9 @@ class Evaluation_method:
             df_formant_qualified=df_formant_statistic[filter_bool]
             for col in columns:
                 if len(df_formant_qualified) > Num_df_qualified:
-                    pear,pear_p=pearsonr(df_formant_qualified[col],df_formant_qualified[corr_label])
-                    spear,spear_p=spearmanr(df_formant_qualified[col],df_formant_qualified[corr_label])
-                    X,y=df_formant_qualified[col].values.reshape(-1,1), df_formant_qualified[corr_label].values.reshape(-1,1)
+                    pear,pear_p=pearsonr(df_formant_qualified[col],df_formant_qualified[lab_choose])
+                    spear,spear_p=spearmanr(df_formant_qualified[col],df_formant_qualified[lab_choose])
+                    X,y=df_formant_qualified[col].values.reshape(-1,1), df_formant_qualified[lab_choose].values.reshape(-1,1)
                     reg = LinearRegression().fit(X,y)
                     r2=reg.score(X,y)
                     df_pearsonr_table.loc[col]=[pear,pear_p, spear,spear_p, r2,\

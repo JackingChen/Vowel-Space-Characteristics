@@ -99,7 +99,7 @@ class Try_Combination:
                     raise np.linalg.LinAlgError
                 df_formant_statistic=Eval_med._Postprocess_dfformantstatistic(df_formant_statistic)
                 df_result_table=Eval_med.Calculate_correlation(label_choose_lst=self.label_choose_lst,df_formant_statistic=df_formant_statistic,N=self.N,columns=self.columns,\
-                                                               corr_label=self.corr_label,constrain_sex=self.constrain_sex,constrain_module=self.constrain_module,constrain_assessment=self.constrain_assessment,\
+                                                               constrain_sex=self.constrain_sex,constrain_module=self.constrain_module,constrain_assessment=self.constrain_assessment,\
                                                                evictNamelst=self.evictNamelst,correlation_type=self.correlation_type)
                 
                 infocode='N{0}_feat{1}_{2}'.format(N,feat,'__'.join(comb))
@@ -199,16 +199,14 @@ PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
 PhoneOfInterest=list(PhoneMapp_dict.keys())
 articulation=articulation.articulation.Articulation()
 Eval_med=Evaluation_method()
-columns=[
-       'F_vals_f1(A:,i:,u:)', 'F_vals_f2(A:,i:,u:)',
-       'MSB_f1(A:,i:,u:)', 'MSB_f2(A:,i:,u:)',
-       'MSB_mix', 'BWratio(A:,i:,u:)', 'BV(A:,i:,u:)_l2', 'WV(A:,i:,u:)_l2',
-       'BWratio(i:,u:)', 'BV(i:,u:)_l2',
-       'WV(i:,u:)_l2',
-       'BWratio(A:,u:)',
-       'BV(A:,u:)_l2', 'WV(A:,u:)_l2',
-       'BWratio(A:,i:)',
-       'BV(A:,i:)_l2', 'WV(A:,i:)_l2']
+# columns=[
+#        'BW_sam_wilks(A:,i:,u:)', 'BW_pillai(A:,i:,u:)',
+#        'BW_hotelling(A:,i:,u:)', 'BW_roys_root(A:,i:,u:)',
+#        'between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)',
+#        'within_covariance(A:,i:,u:)', 'within_variance(A:,i:,u:)',
+#        'linear_discriminant_covariance(A:,i:,u:)'
+#         ]
+columns=['between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)']
 num_people_min=5
 N=2 # The least number of critical phones (A:, u:, i:)
 try_combination=Try_Combination(PhoneOfInterest,\
@@ -291,16 +289,16 @@ for CtxPhone_types in tqdm(['Manner_simp1','Manner_simp2','Place_simp1','Place_s
     for feat in tqdm(list(Feature_dicts.keys())):
         CtxDepVowel_AUI_dict=Feature_dicts[feat]
         
-        if args.check:  #Check if certainphone like 'w' in the CtxPhones    
-            for CtxP in CtxDepVowel_AUI_dict.keys():
-                for people in CtxDepVowel_AUI_dict[CtxP].keys():
-                    for CtxPhone in CtxDepVowel_AUI_dict[CtxP][people].index:
-                        left_P=CtxPhone[:CtxPhone.find('-')]
-                        right_P=CtxPhone[CtxPhone.find('+')+1:]
-                        critical_P=CtxPhone[CtxPhone.find('-')+1:CtxPhone.find('+')]
+        # if args.check:  #Check if certainphone like 'w' in the CtxPhones    
+        #     for CtxP in CtxDepVowel_AUI_dict.keys():
+        #         for people in CtxDepVowel_AUI_dict[CtxP].keys():
+        #             for CtxPhone in CtxDepVowel_AUI_dict[CtxP][people].index:
+        #                 left_P=CtxPhone[:CtxPhone.find('-')]
+        #                 right_P=CtxPhone[CtxPhone.find('+')+1:]
+        #                 critical_P=CtxPhone[CtxPhone.find('-')+1:CtxPhone.find('+')]
                         
-                        if critical_P == 'w':
-                            raise Exception()
+        #                 if critical_P == 'w':
+        #                     raise Exception()
 
             # for people in PeopleLeftDepPhoneFunctional_dict.keys():
             #     for CtxPhone in PeopleLeftDepPhoneFunctional_dict[people].keys():

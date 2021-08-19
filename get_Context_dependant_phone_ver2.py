@@ -186,39 +186,39 @@ PhoneOfInterest=list(PhoneMapp_dict.keys())
 
 
 ''' Vowel AUI rule is using phonewoprosody '''
-# from utils_jack  import  Formant_utt2people_reshape, Gather_info_certainphones,  GetValuelimit_IQR
-# from datetime import datetime as dt
+from utils_jack  import  Formant_utt2people_reshape, Gather_info_certainphones,  GetValuelimit_IQR
+from datetime import datetime as dt
 
-# Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
-# AUI_info=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
-# limit_people_rule=GetValuelimit_IQR(AUI_info,PhoneMapp_dict,args.Inspect_features)
+Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
+AUI_info=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
+limit_people_rule=GetValuelimit_IQR(AUI_info,PhoneMapp_dict,args.Inspect_features)
 
-# ''' multi processing start '''
-# date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
-# ckpt_outpath='Features/Formants_utt_symb'
-# if not os.path.exists(ckpt_outpath) and args.reFilter==False:
-#     os.makedirs(ckpt_outpath)
-# filepath=ckpt_outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
-# # # If file last modify time is not now (precisions to the hours) than we create new one
-# if os.path.exists(filepath):
-#     fname = pathlib.Path(filepath)
-#     mtime = dt.fromtimestamp(fname.stat().st_mtime)
-#     filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
-#     if filemtime != date_now:
-#         Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,outpath=ckpt_outpath) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
-# else:
-#     Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,outpath=ckpt_outpath) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
-
-
-# Formants_utt_symb_limited=pickle.load(open(filepath,"rb"))
-# ''' multi processing end '''
-# if len(limit_people_rule) >0:
-#     Formants_utt_symb=Formants_utt_symb_limited
-
-# pickle.dump(Formants_utt_symb_limited,open(ckpt_outpath+"/[Analyzing]Formants_utt_symb_limited.pkl","wb"))
+''' multi processing start '''
+date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
+ckpt_outpath='Features/Formants_utt_symb'
+if not os.path.exists(ckpt_outpath) and args.reFilter==False:
+    os.makedirs(ckpt_outpath)
+filepath=ckpt_outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
+# # If file last modify time is not now (precisions to the hours) than we create new one
+if os.path.exists(filepath):
+    fname = pathlib.Path(filepath)
+    mtime = dt.fromtimestamp(fname.stat().st_mtime)
+    filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
+    if filemtime != date_now:
+        Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,outpath=ckpt_outpath) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
+else:
+    Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,outpath=ckpt_outpath) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
 
 
-# aaa=ccc
+Formants_utt_symb_limited=pickle.load(open(filepath,"rb"))
+''' multi processing end '''
+if len(limit_people_rule) >0:
+    Formants_utt_symb=Formants_utt_symb_limited
+
+pickle.dump(Formants_utt_symb_limited,open(ckpt_outpath+"/[Analyzing]Formants_utt_symb_limited.pkl","wb"))
+
+
+
 # =============================================================================
 '''
     Stage 1: Sliding window over all phones and save them to dict (and also all possible ctx phones)
@@ -226,48 +226,48 @@ PhoneOfInterest=list(PhoneMapp_dict.keys())
 '''
 # =============================================================================
 ''' multiprocessing start  '''
-# keys=[]
-# interval=20
-# for i in range(0,len(Formants_utt_symb),interval):
-#     # print(list(Utt_ctxdepP_dict.keys())[i:i+interval])
-#     keys.append(list(Formants_utt_symb.keys())[i:i+interval])
-# flat_keys=[item for sublist in keys for item in sublist]
-# assert len(flat_keys) == len(Formants_utt_symb)
+keys=[]
+interval=20
+for i in range(0,len(Formants_utt_symb),interval):
+    # print(list(Utt_ctxdepP_dict.keys())[i:i+interval])
+    keys.append(list(Formants_utt_symb.keys())[i:i+interval])
+flat_keys=[item for sublist in keys for item in sublist]
+assert len(flat_keys) == len(Formants_utt_symb)
 
-# pool = Pool(os.cpu_count())
-# # pool = Pool(2)
-# final_result = pool.starmap(GetCtxPhoneFromUtt_map, [(key,Formants_utt_symb) for key in keys])
+pool = Pool(os.cpu_count())
+# pool = Pool(2)
+final_result = pool.starmap(GetCtxPhoneFromUtt_map, [(key,Formants_utt_symb) for key in keys])
 
-# Utt_ctxdepP_dict=Dict()
-# df_template=pd.DataFrame([],columns=feat_column)
-# Set_lst=[]
-# for d, s_l in tqdm(final_result):
-#     for utt in d.keys():
-#         if utt not in Utt_ctxdepP_dict.keys():
-#             Utt_ctxdepP_dict[utt]=df_template
-#         Utt_ctxdepP_dict[utt]=Utt_ctxdepP_dict[utt].append(d[utt])
-#     Set_lst.extend([sl for sl in s_l])
+Utt_ctxdepP_dict=Dict()
+df_template=pd.DataFrame([],columns=feat_column)
+Set_lst=[]
+for d, s_l in tqdm(final_result):
+    for utt in d.keys():
+        if utt not in Utt_ctxdepP_dict.keys():
+            Utt_ctxdepP_dict[utt]=df_template
+        Utt_ctxdepP_dict[utt]=Utt_ctxdepP_dict[utt].append(d[utt])
+    Set_lst.extend([sl for sl in s_l])
 
-# if args.check:
-#     Triphoneset = set([item for sublist in Set_lst for item in sublist])
-#     for key in Utt_ctxdepP_dict.keys(): # check if all triphones in Triphoneset
-#         values=Utt_ctxdepP_dict[key]
-#         for phone in values.index:
-#             assert phone in Triphoneset
+if args.check:
+    Triphoneset = set([item for sublist in Set_lst for item in sublist])
+    for key in Utt_ctxdepP_dict.keys(): # check if all triphones in Triphoneset
+        values=Utt_ctxdepP_dict[key]
+        for phone in values.index:
+            assert phone in Triphoneset
 
-# ''' multiprocessing end '''
-# pickle.dump(Utt_ctxdepP_dict,open(outpath+"/Utt_ctxdepP_dict.pkl","wb"))
-# pickle.dump(Set_lst,open(outpath+"/CxtDepPhone_Setlst.pkl","wb"))
+''' multiprocessing end '''
+pickle.dump(Utt_ctxdepP_dict,open(outpath+"/Utt_ctxdepP_dict.pkl","wb"))
+pickle.dump(Set_lst,open(outpath+"/CxtDepPhone_Setlst.pkl","wb"))
 
-# Formant_people_information=Formant_utt2people_reshape(Utt_ctxdepP_dict,Utt_ctxdepP_dict,Align_OrinCmp=False)
-# AUI=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
+Formant_people_information=Formant_utt2people_reshape(Utt_ctxdepP_dict,Utt_ctxdepP_dict,Align_OrinCmp=False)
+AUI=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
 
-# if args.check:  #Check if certainphone like 'w' in the CtxPhones    
-#     for utt in Utt_ctxdepP_dict.keys():
-#         for CtxPhone in Utt_ctxdepP_dict[utt].index:
-#             left_P=CtxPhone[:CtxPhone.find('-')]
-#             right_P=CtxPhone[CtxPhone.find('+')+1:]
-#             critical_P=CtxPhone[CtxPhone.find('-')+1:CtxPhone.find('+')]
+if args.check:  #Check if certainphone like 'w' in the CtxPhones    
+    for utt in Utt_ctxdepP_dict.keys():
+        for CtxPhone in Utt_ctxdepP_dict[utt].index:
+            left_P=CtxPhone[:CtxPhone.find('-')]
+            right_P=CtxPhone[CtxPhone.find('+')+1:]
+            critical_P=CtxPhone[CtxPhone.find('-')+1:CtxPhone.find('+')]
 
 # =============================================================================
 '''
@@ -392,23 +392,23 @@ else:
 # # =============================================================================
 
     
-# filt_CtxPhone=Filter_CtxPhone2Biphone(PeopleCtxDepPhoneFunctional_dict,Triphoneset)
-# import time
-# start = time.time()
-# PeopleLeftDepPhoneFunctional_dict=filt_CtxPhone.Process_multi(filt_CtxPhone.Get_LBiphone_map)
-# PeopleRightDepPhoneFunctional_dict=filt_CtxPhone.Process_multi(filt_CtxPhone.Get_RBiphone_map)
+filt_CtxPhone=Filter_CtxPhone2Biphone(PeopleCtxDepPhoneFunctional_dict,Triphoneset)
+import time
+start = time.time()
+PeopleLeftDepPhoneFunctional_dict=filt_CtxPhone.Process_multi(filt_CtxPhone.Get_LBiphone_map)
+PeopleRightDepPhoneFunctional_dict=filt_CtxPhone.Process_multi(filt_CtxPhone.Get_RBiphone_map)
 
 
-# # Just a little unit test
-# filt_CtxPhone.check_totnum(Utt_ctxdepP_dict,PeopleLeftDepPhoneFunctional_dict)
-# filt_CtxPhone.check_totnum(Utt_ctxdepP_dict,PeopleRightDepPhoneFunctional_dict)
-# # PeopleLeftDepPhoneFunctional_dict, PeopleRightDepPhoneFunctional_dict = filt_CtxPhone.Get_Biphone()
-# end = time.time()
-# print(end - start)
+# Just a little unit test
+filt_CtxPhone.check_totnum(Utt_ctxdepP_dict,PeopleLeftDepPhoneFunctional_dict)
+filt_CtxPhone.check_totnum(Utt_ctxdepP_dict,PeopleRightDepPhoneFunctional_dict)
+# PeopleLeftDepPhoneFunctional_dict, PeopleRightDepPhoneFunctional_dict = filt_CtxPhone.Get_Biphone()
+end = time.time()
+print(end - start)
 
 
-# pickle.dump(PeopleLeftDepPhoneFunctional_dict,open(outpath+"/PeopleLeftDepPhoneFunctional_dict.pkl","wb"))
-# pickle.dump(PeopleRightDepPhoneFunctional_dict,open(outpath+"/PeopleRightDepPhoneFunctional_dict.pkl","wb"))
+pickle.dump(PeopleLeftDepPhoneFunctional_dict,open(outpath+"/PeopleLeftDepPhoneFunctional_dict.pkl","wb"))
+pickle.dump(PeopleRightDepPhoneFunctional_dict,open(outpath+"/PeopleRightDepPhoneFunctional_dict.pkl","wb"))
 
 
             
@@ -543,19 +543,19 @@ for feat in AUI_ContextDepPhones.keys():
     AUI_ContextDepPhonesMerge_uwij[feat]=DepPhonesMerge_woprosuwij_n_AllMerged
 pickle.dump(AUI_ContextDepPhonesMerge_uwij,open(outpath+"/AUI_ContextDepPhonesMerge_uwij.pkl","wb"))
 
-# if args.check:  #Check if certainphone like 'w' in the CtxPhones    
-#     for feat in AUI_ContextDepPhonesMerge_uwij.keys():
-#         CtxDepVowel_AUI_dict=AUI_ContextDepPhonesMerge_uwij[feat]
-#         for CtxP in CtxDepVowel_AUI_dict.keys():
-#             for people in CtxDepVowel_AUI_dict[CtxP].keys():
-#                 for CtxPhone in CtxDepVowel_AUI_dict[CtxP][people].index:
-#                     if feat == 'CtxDepVowel_AUI':
-#                         left_P=CtxPhone[:CtxPhone.find('-')]
-#                         right_P=CtxPhone[CtxPhone.find('+')+1:]
-#                         critical_P=CtxPhone[CtxPhone.find('-')+1:CtxPhone.find('+')]
+if args.check:  #Check if certainphone like 'w' in the CtxPhones    
+    for feat in AUI_ContextDepPhonesMerge_uwij.keys():
+        CtxDepVowel_AUI_dict=AUI_ContextDepPhonesMerge_uwij[feat]
+        for CtxP in CtxDepVowel_AUI_dict.keys():
+            for people in CtxDepVowel_AUI_dict[CtxP].keys():
+                for CtxPhone in CtxDepVowel_AUI_dict[CtxP][people].index:
+                    if feat == 'CtxDepVowel_AUI':
+                        left_P=CtxPhone[:CtxPhone.find('-')]
+                        right_P=CtxPhone[CtxPhone.find('+')+1:]
+                        critical_P=CtxPhone[CtxPhone.find('-')+1:CtxPhone.find('+')]
                         
-#                         if critical_P == 'w':
-#                             aaa=ccc
+                        if critical_P == 'w':
+                            aaa=ccc
 
 
 # =============================================================================
