@@ -155,9 +155,12 @@ class Articulation:
             numerator=u[1] + a[1] + i[0] + u[0]
             demominator=i[1] + a[0]
             RESULT_dict['FCR']=np.float(numerator/demominator)
-
+            RESULT_dict['FCR+AUINum']=RESULT_dict['FCR'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            RESULT_dict['FCR*AUINum']=RESULT_dict['FCR'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
             
             RESULT_dict['VSA1']=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
+            RESULT_dict['VSA1+AUINum']=RESULT_dict['VSA1'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            RESULT_dict['VSA1*AUINum']=RESULT_dict['VSA1'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
             # =============================================================================
             ''' F-statistics, between class variance Valid Formant measure '''
             
@@ -237,8 +240,10 @@ class Articulation:
                 Total_scatter_matrix=within_class_scatter_matrix + between_class_scatter_matrix
                 Total_scatter_matrix_norm=Total_scatter_matrix / n_samples
                 
-                linear_discriminant=np.linalg.inv(within_class_scatter_matrix ).dot(between_class_scatter_matrix )
+                linear_discriminant_norm=np.linalg.inv(within_class_scatter_matrix ).dot(between_class_scatter_matrix )
+                linear_discriminant=np.linalg.inv(within_class_scatter_matrix_norm ).dot(between_class_scatter_matrix )
                 eigen_values_lin, eigen_vectors_lin = np.linalg.eig(linear_discriminant)
+                eigen_values_lin_norm, eigen_vectors_lin_norm = np.linalg.eig(linear_discriminant_norm)
                 eigen_values_B, eigen_vectors_B = np.linalg.eig(between_class_scatter_matrix)
                 eigen_values_B_norm, eigen_vectors_B_norm = np.linalg.eig(between_class_scatter_matrix_norm)
                 eigen_values_W, eigen_vectors_W = np.linalg.eig(within_class_scatter_matrix)
@@ -260,10 +265,11 @@ class Articulation:
                         sam_wilks*=wild_element
                         pillai+=wild_element
                         hotelling+=eigen_v
-                    roys_root=np.max(eigen_values_lin)
+                    roys_root=np.max(eigen_values)
                     return sam_wilks, pillai, hotelling, roys_root
                 Covariances={}
                 Covariances['sam_wilks_lin'], Covariances['pillai_lin'], Covariances['hotelling_lin'], Covariances['roys_root_lin'] = Covariance_representations(eigen_values_lin)
+                Covariances['sam_wilks_lin_norm'], Covariances['pillai_lin_norm'], Covariances['hotelling_lin_norm'], Covariances['roys_root_lin_norm'] = Covariance_representations(eigen_values_lin_norm)
                 # Covariances['sam_wilks_B'], Covariances['pillai_B'], Covariances['hotelling_B'], Covariances['roys_root_B'] = Covariance_representations(eigen_values_B)
                 # Covariances['sam_wilks_Bnorm'], Covariances['pillai_Bnorm'], Covariances['hotelling_Bnorm'], Covariances['roys_root_Bnorm'] = Covariance_representations(eigen_values_B_norm)
                 # Covariances['sam_wilks_W'], Covariances['pillai_W'], Covariances['hotelling_W'], Covariances['roys_root_W'] = Covariance_representations(eigen_values_W)
@@ -291,19 +297,22 @@ class Articulation:
                 # Variances in certain projection
                 # Variances in f1 , f2, Major, Minor, Ratio:major/minor, and the angles of Major and Minor vectors
                 Single_Variances={}
-                between_variance_f, within_variance_f={}, {}
-                between_variance_f_norm, within_variance_f_norm={}, {}
+                between_variance_f, within_variance_f, linear_disc_f={}, {}, {}
+                between_variance_f_norm, within_variance_f_norm, linear_disc_f_norm={}, {}, {}
                 for i in range(between_class_scatter_matrix_norm.shape[0]):
                     between_variance_f[i+1]=between_class_scatter_matrix[i,i]
                     within_variance_f[i+1]=within_class_scatter_matrix[i,i]
+                    linear_disc_f[i+1]=between_variance_f[i+1]/within_variance_f[i+1]
                     between_variance_f_norm[i+1]=between_class_scatter_matrix_norm[i,i]
                     within_variance_f_norm[i+1]=within_class_scatter_matrix_norm[i,i]
+                    linear_disc_f_norm[i+1]=between_variance_f_norm[i+1]/within_variance_f_norm[i+1]
                 for keys  in between_variance_f.keys():
                     Single_Variances['between_variance_f'+str(keys)]=between_variance_f[keys]
                     Single_Variances['within_variance_f'+str(keys)]=within_variance_f[keys]
+                    Single_Variances['linear_disc_f'+str(keys)]=linear_disc_f[keys]
                     Single_Variances['between_variance_f'+str(keys)+'_norm']=between_variance_f_norm[keys]
                     Single_Variances['within_variance_f'+str(keys)+'_norm']=within_variance_f_norm[keys]
-                
+                    Single_Variances['linear_disc_f_norm'+str(keys)]=linear_disc_f_norm[keys]
                 # Single_Variances['Major_variance_lin']=Eigenpair_lin[0][0]
                 # Single_Variances['Major_variance_B_norm']=Eigenpair_B_norm[0][0]
                 # Single_Variances['Major_variance_W']=Eigenpair_W[0][0]
@@ -398,7 +407,6 @@ class Articulation:
     def BasicFilter_byNum(self,df_formant_statistic,N=1):
         filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
         filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
-        filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS'].isna()!=True)
         df_formant_statistic_limited=df_formant_statistic[filter_bool]
         return df_formant_statistic_limited
     

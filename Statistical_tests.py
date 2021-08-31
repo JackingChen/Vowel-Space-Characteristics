@@ -110,6 +110,18 @@ class Feature_Getter:
             '2017_07_25_01_172',
             '2017_08_07_01_227',
             '2017_08_15_01_413']
+        self.MildASD_age_sex_match=['2017_08_11_01_300_1',
+                '2017_08_15_01_413',
+                '2016_03_05_01_079fu',
+                '2016_07_06_01_078_1',
+                '2016_11_27_01_207_1',
+                '2016_01_22_02_083_1',
+                '2017_05_21_01_292_1',
+                '2016_10_22_01_161_fu',
+                '2017_08_07_01_227',
+                '2015_12_13_01_153',
+                '2016_10_21_01_202_1',
+                ]
     def read_Sessionfeature(self,feat='Formant_AUI_tVSAFCRFvals'):
         df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='kid88')
         self.df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
@@ -133,9 +145,15 @@ class Feature_Getter:
         self.df_dur_strlen_speed_ASD=pickle.load(open(df_dur_strlen_speed_ASD77_path,'rb'))
         self.df_dur_strlen_speed_TD=pickle.load(open(df_dur_strlen_speed_TD_path,'rb'))
         return self.df_dur_strlen_speed_ASD, self.df_dur_strlen_speed_TD
-    def read_dfPersonSegmentFeatureDict(self,feat='df_person_segment_feature_dict'):
-        df_person_segment_feature_dict_ASD77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='ASD_DOCKID')
-        df_person_segment_feature_dict_TD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='TD_DOCKID')
+    def read_dfPersonSegmentFeatureDict(self,feat='formant'):
+        df_person_segment_feature_dict_ASD77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/df_person_segment_feature_dict_{role}_{feat}.pkl'.format(feat=feat,role='ASD_DOCKID')
+        df_person_segment_feature_dict_TD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/df_person_segment_feature_dict_{role}_{feat}.pkl'.format(feat=feat,role='TD_DOCKID')
+        self.df_person_segment_feature_dict_ASD=pickle.load(open(df_person_segment_feature_dict_ASD77_path,'rb'))
+        self.df_person_segment_feature_dict_TD=pickle.load(open(df_person_segment_feature_dict_TD_path,'rb'))
+        return self.df_person_segment_feature_dict_ASD, self.df_person_segment_feature_dict_TD
+    def read_dfPersonPOISegmentFeatureDict(self,feat='phonation'):
+        df_person_segment_feature_dict_ASD77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/df_POI_person_segment_feature_dict_{role}_{feat}.pkl'.format(feat=feat,role='ASD_DOCKID')
+        df_person_segment_feature_dict_TD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/df_POI_person_segment_feature_dict_{role}_{feat}.pkl'.format(feat=feat,role='TD_DOCKID')
         self.df_person_segment_feature_dict_ASD=pickle.load(open(df_person_segment_feature_dict_ASD77_path,'rb'))
         self.df_person_segment_feature_dict_TD=pickle.load(open(df_person_segment_feature_dict_TD_path,'rb'))
         return self.df_person_segment_feature_dict_ASD, self.df_person_segment_feature_dict_TD
@@ -155,7 +173,8 @@ df_Session_formant_statistic_TD['dia_num']=100
 df_Syncrony_formant_statistic_ASD, df_Syncrony_formant_statistic_TD=feat_getter.read_Syncronyfeature('Syncrony_measure_of_variance')
 df_Syncrony_phonation_statistic_ASD, df_Syncrony_phonation_statistic_TD=feat_getter.read_Syncronyfeature('Syncrony_measure_of_variance_phonation')
 df_dur_strlen_speed_ASD, df_dur_strlen_speed_TD=feat_getter.read_durStrlenSpeedfeature('df_dur_strlen_speed')
-df_person_segment_feature_dict_ASD, df_person_segment_feature_dict_TD=feat_getter.read_dfPersonSegmentFeatureDict('df_person_segment_feature_dict')
+df_person_segment_feature_dict_ASD_formant, df_person_segment_feature_dict_TD_formant=feat_getter.read_dfPersonSegmentFeatureDict('formant')
+df_POI_person_segment_feature_dict_ASD_phonation, df_POI_person_segment_feature_dict_TD_phonation=feat_getter.read_dfPersonPOISegmentFeatureDict('phonation')
 
 df_formant_statistic_77=pd.concat([df_formant_statistic_77,df_Session_formant_statistic_ASD],axis=1)
 df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_Session_formant_statistic_TD],axis=1)
@@ -172,8 +191,22 @@ df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_Syncrony_phonation
 df_formant_statistic_77=df_formant_statistic_77.loc[:,~df_formant_statistic_77.columns.duplicated()]
 df_formant_statistic_TD=df_formant_statistic_TD.loc[:,~df_formant_statistic_TD.columns.duplicated()]
 
-SevereASD_age_sex_match=feat_getter.SevereASD_age_sex_match
 
+
+df_formant_statistic_77= df_formant_statistic_77.drop(index='2015_12_07_02_003') 
+
+def Add_numSums(df_formant_statistic):  
+    df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
+                                            df_formant_statistic['i_num'] +\
+                                            df_formant_statistic['a_num']
+    return df_formant_statistic
+
+df_formant_statistic_77=Add_numSums(df_formant_statistic_77)
+df_formant_statistic_TD=Add_numSums(df_formant_statistic_TD)
+
+
+SevereASD_age_sex_match=feat_getter.SevereASD_age_sex_match
+MildASD_age_sex_match=feat_getter.MildASD_age_sex_match
 
 def DropColsContainsNan(df_formant_statistic,PeopleOfInterest):
     df_formant_statistic_POI=df_formant_statistic.loc[PeopleOfInterest]
@@ -187,6 +220,18 @@ def DropColsContainsNan(df_formant_statistic,PeopleOfInterest):
     return df_formant_statistic
 
 df_formant_statistic_77=DropColsContainsNan(df_formant_statistic_77,SevereASD_age_sex_match)
+df_formant_statistic_77=DropColsContainsNan(df_formant_statistic_77,MildASD_age_sex_match)
+
+df_formant_statistic=df_formant_statistic_77
+def Add_label(df_formant_statistic,Label,label_choose='ADOS_S'):
+    for people in df_formant_statistic.index:
+        bool_ind=Label.label_raw['name']==people
+        df_formant_statistic.loc[people,label_choose]=Label.label_raw.loc[bool_ind,label_choose].values
+    return df_formant_statistic
+
+df_formant_statistic_77=Add_label(df_formant_statistic_77,Label,label_choose='ADOS_S')
+df_formant_statistic_77=Add_label(df_formant_statistic_77,Label,label_choose='ADOS_cate')
+df_formant_statistic_TD=Add_label(df_formant_statistic_TD,Label,label_choose='ADOS_S')
 
 ''' Load DF that describes cases not qualified (ex: one example might be defined in articulation ) '''
 ManualCondition=Dict()
@@ -233,10 +278,6 @@ base_variance_features=['sam_wilks_lin(A:,i:,u:)',
 'between_covariance(A:,i:,u:)',
 'within_covariance(A:,i:,u:)',
 'total_covariance(A:,i:,u:)',
-'localJitter_mean(A:,i:,u:)',
-'localJitter_mean(u:)',
-'localJitter_mean(i:)',
-'localJitter_mean(A:)'
 ]
 base_phonation_features=['localJitter_mean(A:,i:,u:)',
 'localJitter_mean(u:)',
@@ -249,8 +290,14 @@ base_phonation_features=['localJitter_mean(A:,i:,u:)',
 'localShimmer_mean(A:,i:,u:)',
 'localShimmer_mean(u:)',
 'localShimmer_mean(i:)',
-'localShimmer_mean(A:)'
+'localShimmer_mean(A:)',
+'stdevF0_mean(A:,i:,u:)',
+'stdevF0_mean(u:)',
+'stdevF0_mean(i:)',
+'stdevF0_mean(A:)',
     ]
+dummy_feature=['u_num+i_num+a_num']
+# base_features=base_variance_features + base_phonation_features + dummy_feature
 base_features=base_variance_features + base_phonation_features
 Syncrony_measres=['Divergence[{0}]','Divergence[{0}]_split','Divergence[{0}]_var_p1','Divergence[{0}]_var_p2']
 def CombineMeasurefeat(Syncrony_measres,base_features):
@@ -260,15 +307,76 @@ def CombineMeasurefeat(Syncrony_measres,base_features):
             lst.append(sync_M.format(basefeat))
     return lst
 Measurement_basefeature=CombineMeasurefeat(Syncrony_measres,base_features)
-Parameters=Measurement_basefeature + base_features
+# Parameters=Measurement_basefeature + base_features
+
+Divergence_phonation_columns=['Divergence[localabsoluteJitter_mean(A:,i:,u:)]',
+ 'Divergence[localabsoluteJitter_mean(u:)]',
+ 'Divergence[localabsoluteJitter_mean(i:)]',
+ 'Divergence[localabsoluteJitter_mean(A:)]',
+ 'Divergence[localShimmer_mean(A:,i:,u:)]',
+ 'Divergence[localShimmer_mean(u:)]',
+ 'Divergence[localShimmer_mean(i:)]',
+ 'Divergence[localShimmer_mean(A:)]',
+ 'Divergence[localabsoluteJitter_mean(A:,i:,u:)]_split',
+ 'Divergence[localabsoluteJitter_mean(u:)]_split',
+ 'Divergence[localabsoluteJitter_mean(i:)]_split',
+ 'Divergence[localabsoluteJitter_mean(A:)]_split',
+ 'Divergence[localShimmer_mean(A:,i:,u:)]_split',
+ 'Divergence[localShimmer_mean(u:)]_split',
+ 'Divergence[localShimmer_mean(i:)]_split',
+ 'Divergence[localShimmer_mean(A:)]_split',
+ 'Divergence[localabsoluteJitter_mean(A:,i:,u:)]_var_p1',
+ 'Divergence[localabsoluteJitter_mean(u:)]_var_p1',
+ 'Divergence[localabsoluteJitter_mean(i:)]_var_p1',
+ 'Divergence[localabsoluteJitter_mean(A:)]_var_p1',
+ 'Divergence[localShimmer_mean(A:,i:,u:)]_var_p1',
+ 'Divergence[localShimmer_mean(u:)]_var_p1',
+ 'Divergence[localShimmer_mean(i:)]_var_p1',
+ 'Divergence[localShimmer_mean(A:)]_var_p1',
+ 'Divergence[localabsoluteJitter_mean(A:,i:,u:)]_var_p2',
+ 'Divergence[localabsoluteJitter_mean(u:)]_var_p2',
+ 'Divergence[localabsoluteJitter_mean(i:)]_var_p2',
+ 'Divergence[localabsoluteJitter_mean(A:)]_var_p2',
+ 'Divergence[localShimmer_mean(A:,i:,u:)]_var_p2',
+ 'Divergence[localShimmer_mean(u:)]_var_p2',
+ 'Divergence[localShimmer_mean(i:)]_var_p2',
+ 'Divergence[localShimmer_mean(A:)]_var_p2']
 
 
+base_features=['localabsoluteJitter_mean(A:,i:,u:)',
+'localabsoluteJitter_mean(u:)',
+'localabsoluteJitter_mean(i:)',
+'localabsoluteJitter_mean(A:)',
+'localShimmer_mean(A:,i:,u:)',
+'localShimmer_mean(u:)',
+'localShimmer_mean(i:)',
+'localShimmer_mean(A:)',]
+
+# base_features=['localabsoluteJitter_mean(A:,i:,u:)',
+# 'localShimmer_mean(A:,i:,u:)',
+# ]
+
+
+lst=[]
+for sync_M in Syncrony_measres:
+    for basefeat in base_features:    
+        lst.append(sync_M.format(basefeat))
 
 
 print(" Simple between group test (t-test, u-test)")
+
+# =============================================================================
+'''
+
+    Choose parameters
+
+'''
+# Parameters=list(df_Syncrony_phonation_statistic_ASD.columns)
 # Parameters=list(df_Syncrony_formant_statistic_ASD.columns) + list(df_Session_formant_statistic_ASD.columns)
+# Parameters=list(df_Syncrony_phonation_statistic_ASD.columns) + list(df_Session_phonation_statistic_ASD.columns)
+# Parameters=Divergence_phonation_columns
 # Parameters=list(df_Syncrony_formant_statistic_ASD.columns)
-# Parameters=df_Session_formant_statistic_ASD.columns
+Parameters=df_Session_formant_statistic_ASD.columns
 # =============================================================================
 '''
 
@@ -351,7 +459,40 @@ for age in TD_age_set:
     
 
 df_formant_statistic_agesexmatch_ASDSevere=df_formant_statistic_77.copy().loc[SevereASD_age_sex_match]
+df_formant_statistic_agesexmatch_ASDMild=df_formant_statistic_77.copy().loc[MildASD_age_sex_match]
 
+df_formant_statistic_agesexmatch_ASDSevere=Add_numSums(df_formant_statistic_agesexmatch_ASDSevere)
+df_formant_statistic_agesexmatch_ASDMild=Add_numSums(df_formant_statistic_agesexmatch_ASDMild)
+df_formant_statistic_TD_normal=Add_numSums(df_formant_statistic_TD_normal)
+
+
+dfFormantStatisticFractionpath=dfFormantStatisticpath+'/Fraction'
+if not os.path.exists(dfFormantStatisticFractionpath):
+    os.makedirs(dfFormantStatisticFractionpath)
+
+pickle.dump(df_formant_statistic_agesexmatch_ASDSevere,open(dfFormantStatisticFractionpath+'/df_formant_statistic_agesexmatch_ASDSevere.pkl','wb'))
+pickle.dump(df_formant_statistic_agesexmatch_ASDMild,open(dfFormantStatisticFractionpath+'/df_formant_statistic_agesexmatch_ASDMild.pkl','wb'))
+pickle.dump(df_formant_statistic_TD_normal,open(dfFormantStatisticFractionpath+'/df_formant_statistic_TD_normal.pkl','wb'))
+pickle.dump(df_formant_statistic_77_Notautism,open(dfFormantStatisticFractionpath+'/df_formant_statistic_77_Notautism.pkl','wb'))
+pickle.dump(df_formant_statistic_77_ASD,open(dfFormantStatisticFractionpath+'/df_formant_statistic_77_ASD.pkl','wb'))
+pickle.dump(df_formant_statistic_77_Autism,open(dfFormantStatisticFractionpath+'/df_formant_statistic_77_Autism.pkl','wb'))
+df_average_stdValues=pd.DataFrame([],columns=df_formant_statistic_agesexmatch_ASDSevere.columns)
+
+
+df_average_stdValues.loc['df_formant_statistic_agesexmatch_ASDSevere_MEAN']=df_formant_statistic_agesexmatch_ASDSevere.mean()
+df_average_stdValues.loc['df_formant_statistic_agesexmatch_ASDMild_MEAN']=df_formant_statistic_agesexmatch_ASDMild.mean()
+df_average_stdValues.loc['df_formant_statistic_TD_normal_MEAN']=df_formant_statistic_TD_normal.mean()
+df_average_stdValues.loc['df_formant_statistic_agesexmatch_ASDSevere_MEDIAN']=df_formant_statistic_agesexmatch_ASDSevere.median()
+df_average_stdValues.loc['df_formant_statistic_agesexmatch_ASDMild_MEDIAN']=df_formant_statistic_agesexmatch_ASDMild.median()
+df_average_stdValues.loc['df_formant_statistic_TD_normal_MEDIAN']=df_formant_statistic_TD_normal.median()
+df_average_stdValues.loc['df_formant_statistic_agesexmatch_ASDSevere_STD']=df_formant_statistic_agesexmatch_ASDSevere.std()
+df_average_stdValues.loc['df_formant_statistic_agesexmatch_ASDMild_STD']=df_formant_statistic_agesexmatch_ASDMild.std()
+df_average_stdValues.loc['df_formant_statistic_TD_normal_STD']=df_formant_statistic_TD_normal.std()
+
+ChosenASDs_mean=['df_formant_statistic_agesexmatch_ASDSevere_MEAN','df_formant_statistic_agesexmatch_ASDMild_MEAN','df_formant_statistic_TD_normal_MEAN',]
+ChosenASDs_median=['df_formant_statistic_agesexmatch_ASDSevere_MEDIAN','df_formant_statistic_agesexmatch_ASDMild_MEDIAN','df_formant_statistic_TD_normal_MEDIAN',]
+Chosenmeans=df_average_stdValues.loc[ChosenASDs_mean,Measurement_basefeature].T
+Chosenmedians=df_average_stdValues.loc[ChosenASDs_median,Measurement_basefeature].T
 
 
 TopTop_data_lst=[]
@@ -360,10 +501,11 @@ TopTop_data_lst=[]
 # TopTop_data_lst.append(['df_formant_statistic_agematchASDmild','df_formant_statistic_TD_normal'])
 # TopTop_data_lst.append(['df_formant_statistic_agematchASDSeverenMild','df_formant_statistic_TD_normal'])
 # TopTop_data_lst.append(['df_formant_statistic_ASDagematch','df_formant_statistic_TD_normal'])
-TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDSevere','df_formant_statistic_TD_normal'])
-# TopTop_data_lst.append(['df_formant_statistic_77_Notautism','df_formant_statistic_77_Autism'])
-# TopTop_data_lst.append(['df_formant_statistic_77_ASD','df_formant_statistic_77_Autism'])
-# TopTop_data_lst.append(['df_formant_statistic_77_Notautism','df_formant_statistic_77_ASD'])
+# TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDSevere','df_formant_statistic_TD_normal'])
+# TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_TD_normal'])
+TopTop_data_lst.append(['df_formant_statistic_77_Notautism','df_formant_statistic_77_Autism'])
+TopTop_data_lst.append(['df_formant_statistic_77_ASD','df_formant_statistic_77_Autism'])
+TopTop_data_lst.append(['df_formant_statistic_77_Notautism','df_formant_statistic_77_ASD'])
 # TopTop_data_lst.append(['df_formant_statistic_77_AD','df_formant_statistic_77_AS'])
 # TopTop_data_lst.append(['df_formant_statistic_77_AS','df_formant_statistic_77_HFA'])
 # TopTop_data_lst.append(['df_formant_statistic_77_AD','df_formant_statistic_77_HFA'])
@@ -405,11 +547,22 @@ TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDSevere','df_formant
 # label_data=label_data[self_specify_cols]
 # self_specify_cols=['Divergence[between_variance(A:,i:,u:)]', 'Divergence[between_covariance(A:,i:,u:)]_split',
 #                    'Divergence[hotelling_B]']
+# self_specify_cols=base_variance_features
+# self_specify_cols=['Divergence[within_covariance(A:,i:,u:)]_var_p2']
+# self_specify_cols=['Divergence[within_covariance_norm(A:,i:,u:)]',
+# 'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
+# 'Divergence[within_covariance_norm(A:,i:,u:)]_split',
+# 'Divergence[within_covariance(A:,i:,u:)]_split',
+# 'Divergence[within_covariance(A:,i:,u:)]_var_p2',
+# 'Divergence[between_covariance(A:,i:,u:)]_split',
+# 'Divergence[total_covariance(A:,i:,u:)]_split',]
 
-# self_specify_cols=['Divergence[between_covariance_norm(A:,i:,u:)]',\
-#                    'Syncrony[between_variance(A:,i:,u:)]',\
-#                    'Syncrony[FCR]']
-# self_specify_cols=['Divergence[localShimmer_mean(u:)]_var_p2','Divergence[localabsoluteJitter_mean(A:)]_var_p2']
+# self_specify_cols=[
+# 'Divergence[within_covariance(A:,i:,u:)]_split',
+# 'Divergence[within_covariance(A:,i:,u:)]_var_p2',
+# 'Divergence[within_covariance(A:,i:,u:)]',
+# ]
+# self_specify_cols=['Divergence[localShimmer_mean(A:,i:,u:)]']
 self_specify_cols=[]
 if len(self_specify_cols) > 0:
     inspect_cols=self_specify_cols
@@ -445,7 +598,8 @@ for Top_data_lst in TopTop_data_lst:
         for tests in [stats.mannwhitneyu, stats.ttest_ind]:
             test_results=tests(vars()[Top_data_lst[0]][columns],vars()[Top_data_lst[1]][columns])
             p_val=test_results[1]
-            
+            # if np.isnan(p_val):
+            #     aaa=ccc
             
             if tests == stats.mannwhitneyu:
                 mean_difference=vars()[Top_data_lst[0]][columns].median() - vars()[Top_data_lst[1]][columns].median()
@@ -473,110 +627,6 @@ for Top_data_lst in TopTop_data_lst:
         # text(0.9, 0.6, addtextvariable, ha='center', va='center', transform=ax.transAxes)
         # =============================================================================
     warnings.simplefilter('always')
-    
-    
-# =============================================================================
-''' Manual check '''
-pattern='Divergence[localabsoluteJitter_mean\(.*\)]_var_p2'
-selected_rows=[]
-for insp_c in inspect_cols:
-    x=re.search(pattern, insp_c)
-    if x != None:
-        print(x)
-
-Base_phones=['A:','u:','i:']
-Base_phones+=
-selected_rows=
-All_cmp_dict['df_formant_statistic_agesexmatch_ASDSevere vs df_formant_statistic_TD_normal'].loc[]
-aaa=ccc
-# =============================================================================
-'''
-
-    Manual area
-
-'''
-# =============================================================================
-
-
-ASDSevere_data_lst=['df_formant_statistic_agematchASDSevere','df_formant_statistic_TD_normal']
-ASDMild_data_lst=['df_formant_statistic_agematchASDmild','df_formant_statistic_TD_normal']
-ASDSevereMild_data_lst=['df_formant_statistic_agematchASDSeverenMild','df_formant_statistic_TD_normal']
-ASDagematch_data_lst=['df_formant_statistic_ASDagematch','df_formant_statistic_TD_normal']
-ASDagesexmatch_data_lst=['df_formant_statistic_agesexmatch_ASDSevere','df_formant_statistic_TD_normal']
-# Inspect Record_dict
-# Select features that Severe vs TD is stgnificant and see if the mild ASD has the same polarity with severe ASD
-def Digin_Record_dict(Record_dict, Target_data_lst, Cmp_data_lst, Regess_result_dict=[]):
-    if len(Regess_result_dict) >0:
-        df_Feature_check_target=pd.DataFrame([],columns=['target', 'compare', 'corr_ASD'])
-    else:
-        df_Feature_check_target=pd.DataFrame([],columns=['target', 'compare'])
-    for idx in Record_dict[' vs '.join(Target_data_lst)].index:
-        df_target=Record_dict[' vs '.join(Target_data_lst)].loc[idx]
-        df_auxilrary=All_cmp_dict[' vs '.join(Cmp_data_lst)].loc[idx]
-        
-        if not np.isnan(df_target['UTestp']):
-            print(df_auxilrary['UTest' + ' - '.join(Cmp_data_lst)], df_target['UTest'+' - '.join(Target_data_lst)])
-            if len(Regess_result_dict) >0:
-                df_Feature_check_target.loc[idx]=[df_auxilrary['UTest' + ' - '.join(Cmp_data_lst)], df_target['UTest'+' - '.join(Target_data_lst)], Regess_result_dict['spearmanr']['__ASD'].loc[idx]]
-            else:
-                df_Feature_check_target.loc[idx]=[df_auxilrary['UTest' + ' - '.join(Cmp_data_lst)], df_target['UTest'+' - '.join(Target_data_lst)]]
-    return df_Feature_check_target
-
-df_Feature_check_severe = Digin_Record_dict(Record_dict, Target_data_lst = ASDSevere_data_lst, Cmp_data_lst = ASDMild_data_lst).sort_index()
-df_Feature_check_mild = Digin_Record_dict(Record_dict, Target_data_lst = ASDMild_data_lst, Cmp_data_lst = ASDSevere_data_lst).sort_index()
-df_Feature_check_severemild = Digin_Record_dict(Record_dict, Target_data_lst = ASDSevereMild_data_lst, Cmp_data_lst = ASDSevere_data_lst).sort_index()
-df_Feature_check_agematch = Digin_Record_dict(Record_dict, Target_data_lst = ASDagematch_data_lst, Cmp_data_lst = ASDSevere_data_lst).sort_index()
-df_Feature_check_agesexmatch = Digin_Record_dict(Record_dict, Target_data_lst = ASDagesexmatch_data_lst, Cmp_data_lst = ASDSevere_data_lst).sort_index()
-
-with open(args.ResultsOutpath + 'severe{}.txt'.format(args.epoch), 'w') as f_severe,\
-    open(args.ResultsOutpath + 'mild{}.txt'.format(args.epoch), 'w') as f_mild,\
-    open(args.ResultsOutpath + 'severemild{}.txt'.format(args.epoch), 'w') as f_severemild,\
-    open(args.ResultsOutpath + 'agematch{}.txt'.format(args.epoch), 'w') as f_agematch,\
-    open(args.ResultsOutpath + 'agesexmatch{}.txt'.format(args.epoch), 'w') as f_agesexmatch:
-    print('df_Feature_check_severe:', df_Feature_check_severe, file=f_severe)
-    print('df_Feature_check_mild:', df_Feature_check_mild, file=f_mild)
-    print('df_Feature_check_severemild:', df_Feature_check_severemild, file=f_severemild)
-    print('df_Feature_check_agematch:', df_Feature_check_agematch, file=f_agematch)
-    print('df_Feature_check_agesexmatch:', df_Feature_check_agesexmatch, file=f_agesexmatch)
-
-print(df_Feature_check_agesexmatch)
-
-basic_columns=['u_num', 'a_num', 'i_num', 'ADOS_C', 'dia_num', 'sex', 'age', 'Module','timeSeries_len']
-insp_column=basic_columns + ['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1','Divergence[within_covariance_norm(A:,i:,u:)]_var_p2']
-
-
-Aa_ASD=df_formant_statistic_agesexmatch_ASDSevere[insp_column]
-Aa_TD=df_formant_statistic_TD_normal[insp_column]
-
-Inspect_columns=[('localShimmer_mean(u:)','Divergence[localShimmer_mean(u:)]_var_p2')]
-score_df_columns=[]
-def Plot_Timeseries(df_formant_statistic, df_person_segment_feature,Inspect_columns, score_df):
-    fig=plt.figure()
-    for people in df_formant_statistic.index:
-        # df_person_segment_feature_dict_TD
-        Dict_df_ASD=df_person_segment_feature[people]
-        for cols, score_cols in Inspect_columns: 
-            df_ASD_d=Dict_df_ASD['D'][cols]
-            df_ASD_k=Dict_df_ASD['K'][cols]
-            df_ASD_d.name="doc"
-            df_ASD_k.name="kid"
-            df_ASD_dk=pd.concat([df_ASD_d,df_ASD_k],axis=1)
-            sns.lineplot(data=df_ASD_dk)
-            title='{0}'.format('ASD ' + people, 'Col: ',cols)
-            
-            plt.title( title )
-            
-            score=score_df.loc[people,score_cols]
-            addtext='score: {0}'.format(np.round(score,3))
-            text(0.1, 0.1, addtext, ha='center', va='center')
-            plt.show()
-            plt.clf()
-
-df_formant_statistic_agesexmatchASDSevere_sorted=df_formant_statistic_agesexmatch_ASDSevere.sort_values(Inspect_columns[0][-1])
-Plot_Timeseries(df_formant_statistic_agesexmatchASDSevere_sorted,df_person_segment_feature_dict_ASD,Inspect_columns,df_formant_statistic_all)
-
-df_formant_statistic_TD_normal_sorted=df_formant_statistic_TD_normal.sort_values(Inspect_columns[0][-1])
-Plot_Timeseries(df_formant_statistic_TD_normal_sorted,df_person_segment_feature_dict_TD,Inspect_columns,df_formant_statistic_all)
 
 # =============================================================================
 '''
@@ -589,6 +639,8 @@ def intersection(lst1, lst2):
     return lst3
   
 # =============================================================================
+self_specify_cols=Parameters
+
 
 Feature_collect=Dict()
 Feature_collect['df_Session_formant_statistic_ASD'].feature=df_Session_formant_statistic_ASD
@@ -628,7 +680,262 @@ for feature_strs in Feature_collect.keys():
     
     Correlation_dict[feature_strs]=correlations_ASD
     
+# Chosen_correla=Correlation_dict['df_Syncrony_phonation_statistic_ASD'].loc[self_specify_cols]
 
+
+
+# =============================================================================
+''' Nice Table area 
+
+Automatically generate nice table from Collected data dictionary
+
+'''
+
+ASDSevere_TDnormal='df_formant_statistic_agesexmatch_ASDSevere vs df_formant_statistic_TD_normal'
+ASDMild_TDnormal='df_formant_statistic_agesexmatch_ASDMild vs df_formant_statistic_TD_normal'
+
+KeyColumnMapp=Dict()
+df_sources_dict=Dict()
+
+mean_str='TTest'
+median_str='UTest'
+KeyColumnMapp['mean_str']=mean_str
+KeyColumnMapp['median_str']=median_str
+KeyColumnMapp['mean_strp']=mean_str + 'p'
+KeyColumnMapp['median_strp']=median_str + 'p'
+KeyColumnMapp['ASDSev_mean_str']=mean_str+ASDSevere_TDnormal.replace('vs','-')
+KeyColumnMapp['ASDSev_median_str']=median_str+ASDSevere_TDnormal.replace('vs','-')
+KeyColumnMapp['ASDMil_mean_str']=mean_str+ASDMild_TDnormal.replace('vs','-')
+KeyColumnMapp['ASDMil_median_str']=median_str+ASDMild_TDnormal.replace('vs','-')
+
+
+def Addsuffix(val):
+    dagger='†'
+    if val <0.1 and val > 0.05:
+        return dagger
+    elif val < 0.05 and val >= 0.01:
+        return '*'
+    elif val < 0.01 and val >= 0.001:
+        return '**'
+    elif val < 0.001:
+        return '***'
+    elif val > 0.1:
+        return ''
+    else:
+        raise ValueError('not a valid p value')
+def Add_dataframe(idx,col,KeyColumnMapp,df_source,df_Table):
+    # col='ASDSev_mean'
+    col_str=col+'_str'
+    data_col=KeyColumnMapp[col_str]
+    pool_med=col.split('_')[-1]
+    pool_med_str=pool_med+'_str'
+    # df_Table.loc[idx,col]=str(df_source.loc[idx,data_col])
+    p_val=df_source.loc[idx,KeyColumnMapp[pool_med_str + 'p'] ]
+    suffix=Addsuffix(p_val)
+    df_Table.loc[idx,col] = str(df_source.loc[idx,data_col]) + suffix
+    return df_Table
+def Get_FeatureGrps(idx,Feature_collect):
+    for Featgrps in Feature_collect.keys():
+        # print(idx in Feature_collect[Featgrps].columns)
+        if idx in Feature_collect[Featgrps].columns:
+            return Featgrps
+    raise KeyError('feature not existing in groups')
+# =============================================================================
+df_Table=pd.DataFrame([],columns=['ASDSev_median','ASDSev_mean','ASDMil_median','ASDMil_mean','pearson','spearman'])
+ASDTD_cmps_lst=[col for col in  df_Table.columns if 'ASD' in col]
+
+df_severenTD=All_cmp_dict[ASDSevere_TDnormal]
+df_mildnTD=All_cmp_dict[ASDMild_TDnormal]
+df_sources_dict['ASDSev']=df_severenTD
+df_sources_dict['ASDMil']=df_mildnTD
+
+bookeep_dict=Dict()
+bookeepDF_dict=Dict()
+count=0
+for idx in df_severenTD.index:
+
+
+    for col in ASDTD_cmps_lst:
+        role_str=col.split('_')[0]
+        df_source=df_sources_dict[role_str]
+        df_Table=Add_dataframe(idx,col,KeyColumnMapp,df_source,df_Table).copy()
+        # col_str=col+'_str'
+        # data_col=KeyColumnMapp[col_str]
+        # pool_med=col.split('_')[-1]
+        # pool_med_str=pool_med+'_str'
+        # # df_Table.loc[idx,col]=str(df_source.loc[idx,data_col])
+        # p_val=df_source.loc[idx,KeyColumnMapp[pool_med_str + 'p'] ]
+        # suffix=Addsuffix(p_val)
+        # df_Table.loc[idx,col] = str(df_source.loc[idx,data_col]) + suffix
+        # # print(df_Table['FCR',''])
+        
+    bookeepDF_dict[count]=df_Table
+    count+=1
+        # if col == 'ASDMil_mean' and idx == 'between_covariance(A:,i:,u:)':
+        #     if '*' in df_Table.loc['between_covariance(A:,i:,u:)','ASDMil_mean']:
+        #         aaa=ccc
+        # if 'between_covariance(A:,i:,u:)' in df_Table.index:
+        #     if type(df_Table.loc['between_covariance(A:,i:,u:)','ASDMil_mean']) != str:
+        #         df_Table.loc['between_covariance(A:,i:,u:)','ASDMil_mean'] = str(df_Table.loc['between_covariance(A:,i:,u:)','ASDMil_mean'])
+        #     if '*' in df_Table.loc['between_covariance(A:,i:,u:)','ASDMil_mean']:
+        #         aaa=ccc
+    feat_grp=Get_FeatureGrps(idx,Feature_collect)
+    
+    for corre_col in ['pearson','spearman']:
+        r_val_str=corre_col + 'r'
+        p_val_str=corre_col + '_p'
+        
+        df_source=Correlation_dict[feat_grp]
+        p_val=df_source.loc[idx,p_val_str]
+        suffix=Addsuffix(p_val)
+        df_Table.loc[idx,corre_col] = str(df_source.loc[idx,r_val_str]) + suffix
+
+assert 0==1
+# =============================================================================
+''' Manual check '''
+# pattern='Divergence\[localabsoluteJitter_mean\(.*\)\]_var_p2'
+# pattern='Divergence\[localShimmer_mean\(.*\)\]_var_p2'
+# selected_rows=[]
+# for insp_c in inspect_cols:
+#     x=re.search(pattern, insp_c)
+#     if x != None:
+#         selected_rows.append(insp_c)
+#         print(insp_c)
+
+# selected_rows=np.array(selected_rows)
+# Aaa_infos=All_cmp_dict['df_formant_statistic_agesexmatch_ASDSevere vs df_formant_statistic_TD_normal'].loc[selected_rows]
+
+
+# =============================================================================
+'''
+
+    Manual area
+
+'''
+# =============================================================================
+
+
+
+ASDSevere_data_lst=['df_formant_statistic_agematchASDSevere','df_formant_statistic_TD_normal']
+ASDSevereMild_data_lst=['df_formant_statistic_agematchASDSeverenMild','df_formant_statistic_TD_normal']
+ASDagematch_data_lst=['df_formant_statistic_ASDagematch','df_formant_statistic_TD_normal']
+ASDagesexmatchSevere_data_lst=['df_formant_statistic_agesexmatch_ASDSevere','df_formant_statistic_TD_normal']
+ASDagesexmatchMild_data_lst=['df_formant_statistic_agematchASDmild','df_formant_statistic_TD_normal']
+# Inspect Record_dict
+# Select features that Severe vs TD is stgnificant and see if the mild ASD has the same polarity with severe ASD
+def Digin_Record_dict(Record_dict, Target_data_lst, Cmp_data_lst, Regess_result_dict=[]):
+    if len(Regess_result_dict) >0:
+        df_Feature_check_target=pd.DataFrame([],columns=['target', 'compare', 'corr_ASD'])
+    else:
+        df_Feature_check_target=pd.DataFrame([],columns=['target', 'compare'])
+    for idx in Record_dict[' vs '.join(Target_data_lst)].index:
+        df_target=Record_dict[' vs '.join(Target_data_lst)].loc[idx]
+        df_auxilrary=All_cmp_dict[' vs '.join(Cmp_data_lst)].loc[idx]
+        
+        if not np.isnan(df_target['UTestp']):
+            print(df_auxilrary['UTest' + ' - '.join(Cmp_data_lst)], df_target['UTest'+' - '.join(Target_data_lst)])
+            if len(Regess_result_dict) >0:
+                df_Feature_check_target.loc[idx]=[df_auxilrary['UTest' + ' - '.join(Cmp_data_lst)], df_target['UTest'+' - '.join(Target_data_lst)], Regess_result_dict['spearmanr']['__ASD'].loc[idx]]
+            else:
+                df_Feature_check_target.loc[idx]=[df_auxilrary['UTest' + ' - '.join(Cmp_data_lst)], df_target['UTest'+' - '.join(Target_data_lst)]]
+    return df_Feature_check_target
+
+df_Feature_check_severe = Digin_Record_dict(Record_dict, Target_data_lst = ASDSevere_data_lst, Cmp_data_lst = ASDagesexmatchSevere_data_lst).sort_index()
+# df_Feature_check_mild = Digin_Record_dict(Record_dict, Target_data_lst = ASDagesexmatchSevere_data_lst, Cmp_data_lst = ASDSevere_data_lst).sort_index()
+df_Feature_check_severemild = Digin_Record_dict(Record_dict, Target_data_lst = ASDSevereMild_data_lst, Cmp_data_lst = ASDSevere_data_lst).sort_index()
+df_Feature_check_agematch = Digin_Record_dict(Record_dict, Target_data_lst = ASDagematch_data_lst, Cmp_data_lst = ASDSevere_data_lst).sort_index()
+df_Feature_check_agesexmatchSevere = Digin_Record_dict(Record_dict, Target_data_lst = ASDagesexmatchSevere_data_lst, Cmp_data_lst = ASDagesexmatchSevere_data_lst).sort_index()
+df_Feature_check_agesexmatchMild = Digin_Record_dict(Record_dict, Target_data_lst = ASDagesexmatchMild_data_lst, Cmp_data_lst = ASDagesexmatchSevere_data_lst).sort_index()
+with open(args.ResultsOutpath + 'severe{}.txt'.format(args.epoch), 'w') as f_severe,\
+    open(args.ResultsOutpath + 'mild{}.txt'.format(args.epoch), 'w') as f_mild,\
+    open(args.ResultsOutpath + 'severemild{}.txt'.format(args.epoch), 'w') as f_severemild,\
+    open(args.ResultsOutpath + 'agematch{}.txt'.format(args.epoch), 'w') as f_agematch,\
+    open(args.ResultsOutpath + 'agesexmatch{}.txt'.format(args.epoch), 'w') as f_agesexmatch:
+    print('df_Feature_check_severe:', df_Feature_check_severe, file=f_severe)
+    print('df_Feature_check_mild:', df_Feature_check_mild, file=f_mild)
+    print('df_Feature_check_severemild:', df_Feature_check_severemild, file=f_severemild)
+    print('df_Feature_check_agematch:', df_Feature_check_agematch, file=f_agematch)
+    print('df_Feature_check_agesexmatch:', df_Feature_check_agesexmatchSevere, file=f_agesexmatch)
+
+print(df_Feature_check_agesexmatchSevere)
+
+
+
+basic_columns=['u_num', 'a_num', 'i_num', 'ADOS_C', 'dia_num', 'sex', 'age', 'Module','timeSeries_len']
+insp_column=basic_columns + ['Divergence[within_covariance(A:,i:,u:)]_var_p2']
+
+
+Aa_ASD=df_formant_statistic_agesexmatch_ASDSevere[insp_column]
+Aa_TD=df_formant_statistic_TD_normal[insp_column]
+
+Inspect_columns=[('within_covariance_norm(A:,i:,u:)','Divergence[within_covariance_norm(A:,i:,u:)]')]
+score_df_columns=[]
+def Plot_Timeseries(df_formant_statistic, df_person_segment_feature,Inspect_columns, score_df, feat_type='formant'):
+    fig=plt.figure()
+    for people in df_formant_statistic.index:
+        # df_person_segment_feature_dict_TD
+        for cols, score_cols in Inspect_columns: 
+            if feat_type == 'formant':
+                Dict_df_ASD=df_person_segment_feature[people]
+            else:
+                pattern=r"\(.*\)"
+                bag=re.findall(pattern, cols)
+                assert len(bag) == 1
+                phone_str=bag[0]
+                phone=phone_str[phone_str.find('(')+1:phone_str.find(')')]
+                Dict_df_ASD=df_person_segment_feature[phone]['segment'][people]
+            df_ASD_d=Dict_df_ASD['D'][cols]
+            df_ASD_k=Dict_df_ASD['K'][cols]
+            df_ASD_d.name="doc"
+            df_ASD_k.name="kid"
+            df_ASD_dk=pd.concat([df_ASD_d,df_ASD_k],axis=1)
+            sns.lineplot(data=df_ASD_dk)
+            title='{0}'.format('ASD ' + people, 'Col: ',cols)
+            
+            plt.title( title )
+            
+            score=score_df.loc[people,score_cols]
+            addtext='score: {0}'.format(np.round(score,3))
+            text(0.1, 0.1, addtext, ha='center', va='center')
+            plt.show()
+            plt.clf()
+
+phonation_pattern=['shimmer','jitter','stdevF0']
+
+for Insp_col in Inspect_columns:
+    Inp_c=Insp_col[0]
+    def checkphonation_feat(Inp_c):
+        cond=False
+        for pho_patt in phonation_pattern:
+            if pho_patt in Inp_c.lower():
+                cond = cond or True
+        return cond
+    if checkphonation_feat(Inp_c):
+        feat_type='phonation'
+        df_person_segment_feature_dict_ASD=df_POI_person_segment_feature_dict_ASD_phonation
+        df_person_segment_feature_dict_TD=df_POI_person_segment_feature_dict_TD_phonation
+    else:
+        feat_type='formant'
+        df_person_segment_feature_dict_ASD=df_person_segment_feature_dict_ASD_formant
+        df_person_segment_feature_dict_TD=df_person_segment_feature_dict_TD_formant
+        
+    
+
+
+
+    df_formant_statistic_agesexmatchASDMild_sorted=df_formant_statistic_agesexmatch_ASDMild.sort_values(Inspect_columns[0][-1])
+    Plot_Timeseries(df_formant_statistic_agesexmatchASDMild_sorted,df_person_segment_feature_dict_ASD,Inspect_columns,df_formant_statistic_all,\
+                    feat_type=feat_type)
+    
+
+
+    df_formant_statistic_agesexmatchASDSevere_sorted=df_formant_statistic_agesexmatch_ASDSevere.sort_values(Inspect_columns[0][-1])
+    Plot_Timeseries(df_formant_statistic_agesexmatchASDSevere_sorted,df_person_segment_feature_dict_ASD,Inspect_columns,df_formant_statistic_all,\
+                    feat_type=feat_type)
+    
+    df_formant_statistic_TD_normal_sorted=df_formant_statistic_TD_normal.sort_values(Inspect_columns[0][-1])
+    Plot_Timeseries(df_formant_statistic_TD_normal_sorted,df_person_segment_feature_dict_TD,Inspect_columns,df_formant_statistic_all,\
+                    feat_type=feat_type)
 
 
 # Debug 
@@ -874,18 +1181,28 @@ for i in range(0,len(comb_lsts)+1):
 # =============================================================================
 ''' ANOVA area '''
 # =============================================================================
-IV_list=['sex','Module','ASDTD']
-# IV_lst=['ASDTD']
+# IV_list=['sex','Module','ASDTD']
+IV_list=['total_variance(A:,i:,u:)',
+'total_covariance(A:,i:,u:)',
+'between_variance(A:,i:,u:)',
+'between_variance_f2(A:,i:,u:)',
+'within_variance(A:,i:,u:)',
+'within_variance_f2(A:,i:,u:)',
+'baseline_numeffect'
+]
 # comcinations=list(itertools.product(*Effect_comb))
-ways=2
+df_formant_statistic=df_formant_statistic_77
+ways=1
 combination = combinations(IV_list, ways)
 for comb in combination:
     IV_lst = list(comb)
-    DV_str='between_variance(A:,i:,u:)'
-    df_remaned, formula = Regression_Preprocess_setp(DV_str, IV_lst, df_formant_statistic_all)
+    # DV_str='between_variance(A:,i:,u:)'
+    DV_str='ADOS_cate'
+    df_remaned, formula = Regression_Preprocess_setp(DV_str, IV_lst, df_formant_statistic)
+    df_remaned['baseline_numeffect']=df_remaned['u_num+i_num+a_num']
     punc=":,()"
     model = ols(formula, data=df_remaned).fit()
-    anova = sm.stats.anova_lm(model, typ=ways)
+    anova = sm.stats.anova_lm(model, typ=2)
     print(anova)
 
 

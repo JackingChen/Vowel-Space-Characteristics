@@ -66,7 +66,7 @@ def get_args():
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='ASD_DOCKID',
+    parser.add_argument('--dataset_role', default='TD_DOCKID',
                             help='[TD_DOCKID_emotion | ASD_DOCKID_emotion | kid_TD | kid88]')
     parser.add_argument('--Inspect_roles', default=['D','K'],
                             help='')
@@ -549,7 +549,9 @@ for PhoneOfInterest_str in Phonation_POI_people_segment_role_utt_dict.keys():
     df_POI_person_segment_feature_dict[PhoneOfInterest_str].segment=df_person_segment_feature_dict
     df_POI_person_segment_feature_dict[PhoneOfInterest_str].half=df_person_half_feature_dict
 
+pickle.dump(df_POI_person_segment_feature_dict,open(outpklpath+"df_POI_person_segment_feature_dict_{0}_{1}.pkl".format(dataset_role, 'phonation'),"wb"))
 
+aaaa=ccc
 
 # # Then merge All df_POI_person_segment_feature_dict sub dicts!!
 # df_POI_person_segment_feature_merged_dict=Dict()
@@ -567,7 +569,7 @@ for PhoneOfInterest_str in Phonation_POI_people_segment_role_utt_dict.keys():
 #                 # df_POI_person_segment_feature_merged_dict[segmenthalf][people][role] = \
 #                 #     df_POI_person_segment_feature_merged_dict[segmenthalf][people][role].loc[:,~df_POI_person_segment_feature_merged_dict[segmenthalf][people][role].columns.duplicated()]
 
-
+df_person_segment_feature_dict_ASD
 
 # =============================================================================
 '''

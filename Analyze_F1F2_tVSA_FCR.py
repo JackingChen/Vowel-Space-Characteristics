@@ -146,7 +146,7 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--Inspect', default=False,
                             help='path of the base directory')
-    parser.add_argument('--reFilter', default=True,
+    parser.add_argument('--reFilter', default=False,
                             help='')
     parser.add_argument('--correlation_type', default='spearmanr',
                             help='spearmanr|pearsonr')
@@ -310,9 +310,11 @@ Vowels_AUI=Get_Vowels_AUI(AUI_info, args.Inspect_features,VUIsource="From__Forma
 # pickle.dump(Vowels_AUI,open(outpklpath+"Vowels_AUI_{}.pkl".format(role),"wb"))
 
 label_generate_choose_lst=['ADOS_C','dia_num']
-articulation=Articulation()
+articulation=Articulation(Stat_med_str_VSA='mean+')
 df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst)
-
+df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
+                                            df_formant_statistic['i_num'] +\
+                                            df_formant_statistic['a_num']
 
 for i in range(len(df_formant_statistic)):
     name=df_formant_statistic.iloc[i].name
@@ -344,24 +346,22 @@ pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pk
 ''' Calculate correlations for Formant fetures'''
 # columns=[
 #         'FCR', 'VSA1', 'between_variance_f1(A:,i:,u:)',
-#        'within_variance_f1(A:,i:,u:)', 'between_variance_f1_norm(A:,i:,u:)',
-#        'within_variance_f1_norm(A:,i:,u:)', 'between_variance_f2(A:,i:,u:)',
-#        'within_variance_f2(A:,i:,u:)', 'between_variance_f2_norm(A:,i:,u:)',
-#        'within_variance_f2_norm(A:,i:,u:)',
-#        'between_covariance_norm(A:,i:,u:)', 'between_variance_norm(A:,i:,u:)',
-#        'between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)',
-#        'within_covariance_norm(A:,i:,u:)', 'within_variance_norm(A:,i:,u:)',
-#        'within_covariance(A:,i:,u:)', 'within_variance(A:,i:,u:)',
-#        'total_covariance_norm(A:,i:,u:)', 'total_variance_norm(A:,i:,u:)',
-#        'total_covariance(A:,i:,u:)', 'total_variance(A:,i:,u:)',
-#        'sam_wilks_lin(A:,i:,u:)', 'pillai_lin(A:,i:,u:)',
-#        'hotelling_lin(A:,i:,u:)', 'roys_root_lin(A:,i:,u:)', 'ADOS_cate',
-#        'u_num+i_num+a_num'
+#         'within_variance_f1(A:,i:,u:)', 'between_variance_f1_norm(A:,i:,u:)',
+#         'within_variance_f1_norm(A:,i:,u:)', 'between_variance_f2(A:,i:,u:)',
+#         'within_variance_f2(A:,i:,u:)', 'between_variance_f2_norm(A:,i:,u:)',
+#         'within_variance_f2_norm(A:,i:,u:)',
+#         'between_covariance_norm(A:,i:,u:)', 'between_variance_norm(A:,i:,u:)',
+#         'between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)',
+#         'within_covariance_norm(A:,i:,u:)', 'within_variance_norm(A:,i:,u:)',
+#         'within_covariance(A:,i:,u:)', 'within_variance(A:,i:,u:)',
+#         'total_covariance_norm(A:,i:,u:)', 'total_variance_norm(A:,i:,u:)',
+#         'total_covariance(A:,i:,u:)', 'total_variance(A:,i:,u:)',
+#         'sam_wilks_lin(A:,i:,u:)', 'pillai_lin(A:,i:,u:)',
+#         'hotelling_lin(A:,i:,u:)', 'roys_root_lin(A:,i:,u:)', 'ADOS_cate',
+#         'u_num+i_num+a_num'
 #         ]
 columns=df_formant_statistic.columns
-df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
-                                            df_formant_statistic['i_num'] +\
-                                            df_formant_statistic['a_num']
+
 
 
 ManualCondition=Dict()
@@ -373,24 +373,29 @@ for file in condfiles:
     ManualCondition[name]=df_cond['Unnamed: 0'][df_cond['50%']==True]
 
 label_correlation_choose_lst=['ADOS_C',]
-# ==========
-# debug
-df_formant_statistic77_path=outpklpath+'{name}_{role}.pkl'.format(name='Formant_AUI_tVSAFCRFvals',role='kid88')
-df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
-Aaa_df_feature_ASD=Eval_med.Calculate_correlation(label_choose_lst,df_formant_statistic_77,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
-# ==========
 
 
 N=2
 Eval_med=Evaluation_method()
-Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_formant_statistic_77,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
+Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
 # df_formant_statistic['between_covariance_norm(A:,i:,u:)']
 # df_formant_statistic['between_covariance(A:,i:,u:)']
 
 
+base_variance_features=['sam_wilks_lin(A:,i:,u:)',
+'between_covariance_norm(A:,i:,u:)',
+'within_covariance_norm(A:,i:,u:)',
+'total_covariance_norm(A:,i:,u:)',
+'between_covariance(A:,i:,u:)',
+'within_covariance(A:,i:,u:)',
+'total_covariance(A:,i:,u:)',
+]
 
-
-
+correlation_dfFeatures=df_formant_statistic.corr()
+Aaa_correlat=correlation_dfFeatures.loc['u_num+i_num+a_num',base_variance_features]
+Aab_correlat=correlation_dfFeatures.loc['u_num',base_variance_features]
+Aac_correlat=correlation_dfFeatures.loc['i_num',base_variance_features]
+Aad_correlat=correlation_dfFeatures.loc['a_num',base_variance_features]
 
 
 
