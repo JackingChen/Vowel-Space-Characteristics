@@ -16,7 +16,10 @@ Get_F1F2.py: 更改過articulation.py 的function 拿來算F1, F2
 
 get_F1F2_feature.py: 將算好的F1, F2變成Session level feature的形式
 
-Analyze_F1F2_tVSA_FCR.py: 主要拿來分析tVSA_FCR和F-value的腳本Analyze_F1F2_VowelFormantFeatures.py: 主要拿來分析F1 F2的mean, std, skew, kurtosis的腳本
+Analyze_F1F2_tVSA_FCR.py: 主要拿來分析tVSA_FCR和F-value的腳本
+
+Analyze_F1F2_VowelFormantFeatures.py: 主要拿來分析F1 F2的mean, std, skew, kurtosis的腳本
+
 Analyze_F1F2.py: 主要拿來分析各個vowel的F1 F2的散佈情況(畫圖和做檢定)
 
 
