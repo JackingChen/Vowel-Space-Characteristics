@@ -46,7 +46,10 @@ class Syncrony:
                 
                 timeseries_0.name=p_1
                 timeseries_1.name=p_2
-        
+                
+                RESULT_dict['Average[{}]_p1'.format(col)]=np.mean(timeseries_0)
+                RESULT_dict['Average[{}]_p2'.format(col)]=np.mean(timeseries_1)
+                
                 df_timeseries_pairs=pd.concat([timeseries_0,timeseries_1],axis=1)
                 r=df_timeseries_pairs.corr().loc[p_1,p_2]
                 
@@ -77,9 +80,12 @@ class Syncrony:
                 RESULT_dict['Divergence[{}]_split'.format(col)]=Dist_split_divergence
                 RESULT_dict['Divergence[{}]_var_p1'.format(col)]=r_Variance_divergence_p1
                 RESULT_dict['Divergence[{}]_var_p2'.format(col)]=r_Variance_divergence_p2
-                RESULT_dict['Variance[{}]_p1'.format(col)]=var_p1
-                RESULT_dict['Variance[{}]_p2'.format(col)]=var_p2
-                RESULT_dict['Variance[{}]_distp1p2'.format(col)]=var_pairwise_dist
+                
+                RESULT_dict['Average[{}]'.format(col)]=np.mean(pairwise_dist)
+                RESULT_dict['Average[{}]_split'.format(col)]=np.mean(pairwise_split_dist)
+                # RESULT_dict['Variance[{}]_p1'.format(col)]=var_p1
+                # RESULT_dict['Variance[{}]_p2'.format(col)]=var_p2
+                # RESULT_dict['Variance[{}]_distp1p2'.format(col)]=var_pairwise_dist
                 # middlePoint=np.floor(len(timeseries_0)/2)
                 
         

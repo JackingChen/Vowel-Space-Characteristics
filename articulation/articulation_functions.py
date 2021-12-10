@@ -164,12 +164,17 @@ def measureFormants(sound, f0min,f0max, time_step=0.0025,MaxnumForm=5,Maxformant
     return f1_list, f2_list
 
 def measurePitch(voiceID, f0min, f0max, unit):
-    columns=['duration', 'meanF0', 'stdevF0', 'hnr', 'localJitter', 'localabsoluteJitter', 'rapJitter', 'ppq5Jitter', 'ddpJitter', 'localShimmer', 'localdbShimmer', 'apq3Shimmer', 'aqpq5Shimmer', 'apq11Shimmer', 'ddaShimmer']
+    columns=['duration', 'intensity_mean', 'meanF0', 'stdevF0', 'hnr', 'localJitter', 'localabsoluteJitter', 'rapJitter', 'ppq5Jitter', 'ddpJitter', 'localShimmer', 'localdbShimmer', 'apq3Shimmer', 'aqpq5Shimmer', 'apq11Shimmer', 'ddaShimmer']
     sound = parselmouth.Sound(voiceID) # read the sound
     duration = call(sound, "Get total duration") # duration
     pitch = call(sound, "To Pitch", 0.0, f0min, f0max) #create a praat pitch object
     meanF0 = call(pitch, "Get mean", 0, 0, unit) # get mean pitch
     stdevF0 = call(pitch, "Get standard deviation", 0 ,0, unit) # get standard deviation
+    if duration >=0.064:
+        intensity = sound.to_intensity()
+        intensity_mean=np.mean(intensity.values)
+    else:
+        intensity_mean=-1
     harmonicity = call(sound, "To Harmonicity (cc)", 0.01, f0min, 0.1, 1.0)
     hnr = call(harmonicity, "Get mean", 0, 0)
     pointProcess = call(sound, "To PointProcess (periodic, cc)", f0min, f0max)
@@ -185,5 +190,5 @@ def measurePitch(voiceID, f0min, f0max, unit):
     apq11Shimmer =  call([sound, pointProcess], "Get shimmer (apq11)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
     ddaShimmer = call([sound, pointProcess], "Get shimmer (dda)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
     
-    df=pd.DataFrame(np.array([duration, meanF0, stdevF0, hnr, localJitter, localabsoluteJitter, rapJitter, ppq5Jitter, ddpJitter, localShimmer, localdbShimmer, apq3Shimmer, aqpq5Shimmer, apq11Shimmer, ddaShimmer]),index=columns)
+    df=pd.DataFrame(np.array([duration, intensity_mean, meanF0, stdevF0, hnr, localJitter, localabsoluteJitter, rapJitter, ppq5Jitter, ddpJitter, localShimmer, localdbShimmer, apq3Shimmer, aqpq5Shimmer, apq11Shimmer, ddaShimmer]),index=columns)
     return df.T

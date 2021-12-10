@@ -38,7 +38,7 @@ import argparse
 import math
 from pydub import AudioSegment
 
-
+from HYPERPARAM import phonewoprosody, Label
 from multiprocessing import Pool, current_process
 import pickle
 import subprocess
@@ -63,7 +63,7 @@ def get_args():
     parser.add_argument('--filepath', default='/homes/ssd1/jackchen/DisVoice/data/Segmented_ADOS_emotion_normalized',
                         help='/homes/ssd1/jackchen/DisVoice/data/{Segmented_ADOS_normalized|Session_ADOS_normalized}')
     parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/kid_cmpWithHuman/ADOS_tdnn_fold_transfer',
-                        help='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_ADOShappyDAAIKidallDeceiptformosaCSRC_chain/kid/ADOS_tdnn_fold_transfer | /mnt/sdd/jackchen/egs/formosa/s6/Alignment_human/kid/Audacity_phone')
+                        help='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_ADOShappyDAAIKidallDeceiptformosaCSRC_chain/old_system/kid/ADOS_tdnn_fold_transfer | /mnt/sdd/jackchen/egs/formosa/s6/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/kid_cmpWithHuman/ADOS_tdnn_fold_transfer')
     parser.add_argument('--outpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--formantmethod', default='praat',
@@ -99,7 +99,7 @@ Stat_med_str=args.Stat_med_str_VSA
 PoolFormantWindow=args.PoolFormantWindow
 Inspect_features=args.Inspect_features
 import praat.praat_functions as praat_functions
-from script_mananger import script_manager
+# from script_mananger import script_manager
 from utils_jack import *
 from utils_jack  import functional_method, Formant_utt2people_reshape, \
                         Gather_info_certainphones,GetValuelimit_IQR,\
@@ -147,7 +147,9 @@ def Process_F1F2_Multi(trnpath,trntype='human',AVERAGEMETHOD='middle',functional
     flat_keys=[item for sublist in keys for item in sublist]
     assert len(flat_keys) == len(files)
     # final_results=pool.starmap(process_audio, [([file_block,silence,trnpath,functional_method_window]) for file_block in tqdm(keys)])
-    multi=Multiprocess.Multi(filepath, MaxnumForm=5)
+    multi=Multiprocess.Multi(filepath, MaxnumForm=5, AVERAGEMETHOD=AVERAGEMETHOD)
+    multi._updatePhonedict(phonewoprosody.Phoneme_sets)
+    multi._updateLeftSymbMapp(phonewoprosody.LeftSymbMapp)
     final_results=pool.starmap(multi.process_audio, [([file_block,silence,trnpath,PoolFormantWindow]) for file_block in tqdm(keys)])
 
     
@@ -221,7 +223,7 @@ Formants_utt_symb=pickle.load(open(outpath+"/[Testing]Formants_utt_{role}_symb_b
 
 
 # =============================================================================
-from HYPERPARAM import phonewoprosody, Label
+
 PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
 PhoneOI=PhoneMapp_dict.keys()
 PhoneOfInterest=list(PhoneMapp_dict.keys())
@@ -254,9 +256,10 @@ if len(limit_people_rule) >0:
 '''
 # =============================================================================
 Dict_phone_Inspect=Dict()
-for phonesInspect in ['A:','u:','i:|j','A:|u:|i:|j']:
+for phonesInspect in ['A:','u:','i:|j','A:|u:|i:|j','A:|u:|i:|j|w']:
 # for phonesInspect in ['uA:','uO:','uaI','ueI']:
     df_evaluation_metric=EvaluateAlignments(Formants_utt_symb_cmp,Formants_utt_symb,phonesInspect)
+    df_evaluation_metric.loc['average']=df_evaluation_metric.mean()
     print('phones Inspect',phonesInspect)
     print(df_evaluation_metric)
     Dict_phone_Inspect[phonesInspect]=df_evaluation_metric

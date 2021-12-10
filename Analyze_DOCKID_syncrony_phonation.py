@@ -56,21 +56,21 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--reFilter', default=True, type=bool,
+    parser.add_argument('--reFilter', default=False, type=bool,
                             help='')
     parser.add_argument('--check', default=True, type=bool,
                             help='')
     parser.add_argument('--label_choose_lst', default=['ADOS_C'],
                             help=['ADOS_C','dia_num'])
-    parser.add_argument('--MinNum', default=3,
+    parser.add_argument('--MinNum', default=2,
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='TD_DOCKID',
+    parser.add_argument('--dataset_role', default='ASD_DOCKID',
                             help='[TD_DOCKID_emotion | ASD_DOCKID_emotion | kid_TD | kid88]')
     parser.add_argument('--Inspect_roles', default=['D','K'],
                             help='')
-    parser.add_argument('--Inspect_features_phonations', default=['stdevF0','localJitter', 'localabsoluteJitter','localShimmer'],
+    parser.add_argument('--Inspect_features_phonations', default=['intensity_mean','meanF0', 'stdevF0','hnr','localJitter', 'localabsoluteJitter','localShimmer'],
                             help='')
     parser.add_argument('--basic_columns', default=['u_num', 'a_num', 'i_num', 'ADOS_C', 'dia_num', 'sex', 'age', 'Module','ADOS_cate', 'u_num+i_num+a_num'],
                             help='')
@@ -551,7 +551,7 @@ for PhoneOfInterest_str in Phonation_POI_people_segment_role_utt_dict.keys():
 
 pickle.dump(df_POI_person_segment_feature_dict,open(outpklpath+"df_POI_person_segment_feature_dict_{0}_{1}.pkl".format(dataset_role, 'phonation'),"wb"))
 
-aaaa=ccc
+
 
 # # Then merge All df_POI_person_segment_feature_dict sub dicts!!
 # df_POI_person_segment_feature_merged_dict=Dict()
@@ -569,7 +569,6 @@ aaaa=ccc
 #                 # df_POI_person_segment_feature_merged_dict[segmenthalf][people][role] = \
 #                 #     df_POI_person_segment_feature_merged_dict[segmenthalf][people][role].loc[:,~df_POI_person_segment_feature_merged_dict[segmenthalf][people][role].columns.duplicated()]
 
-df_person_segment_feature_dict_ASD
 
 # =============================================================================
 '''
@@ -578,10 +577,13 @@ df_person_segment_feature_dict_ASD
 
 '''
 features=[
-    'stdevF0_mean(A:,i:,u:)', 'localJitter_mean(A:,i:,u:)',
-       'localabsoluteJitter_mean(A:,i:,u:)', 'localShimmer_mean(A:,i:,u:)',
-       'stdevF0_var(A:,i:,u:)', 'localJitter_var(A:,i:,u:)',
-       'localabsoluteJitter_var(A:,i:,u:)', 'localShimmer_var(A:,i:,u:)',
+    'intensity_mean_mean(A:,i:,u:)', 'meanF0_mean(A:,i:,u:)',
+       'stdevF0_mean(A:,i:,u:)', 'hnr_mean(A:,i:,u:)',
+       'localJitter_mean(A:,i:,u:)', 'localabsoluteJitter_mean(A:,i:,u:)',
+       'localShimmer_mean(A:,i:,u:)', 'intensity_mean_var(A:,i:,u:)',
+       'meanF0_var(A:,i:,u:)', 'stdevF0_var(A:,i:,u:)', 'hnr_var(A:,i:,u:)',
+       'localJitter_var(A:,i:,u:)', 'localabsoluteJitter_var(A:,i:,u:)',
+       'localShimmer_var(A:,i:,u:)',
        ]
 exclude_cols=['ADOS_cate']   # covariance of only two classes are easily to be zero
 FilteredFeatures = [c for c in features if c not in exclude_cols]

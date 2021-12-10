@@ -26,7 +26,7 @@ from tqdm import tqdm
 path_app = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(path_app+'/../')
 import praat.praat_functions as praat_functions
-from script_mananger import script_manager
+# from script_mananger import script_manager
 from scipy import stats
 from utils_jack import dynamic2statict_artic, save_dict_kaldimat, get_dict, f_classif
 import re

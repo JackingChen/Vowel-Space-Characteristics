@@ -26,7 +26,7 @@ path_app = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(path_app+'/../')
 from utils_jack import dynamic2statict, save_dict_kaldimat
 import praat.praat_functions as praat_functions
-from script_mananger import script_manager
+# from script_mananger import script_manager
 import torch
 from tqdm import tqdm
 from itertools import combinations
@@ -579,11 +579,11 @@ class Phonation_jack:
                     
         return pd.DataFrame(df)
 
-if __name__=="__main__":
+# if __name__=="__main__":
 
-    if len(sys.argv)!=6:
-        print("python phonation.py <file_or_folder_audio> <file_features> <static (true, false)> <plots (true,  false)> <format (csv, txt, npy, kaldi, torch)>")
-        sys.exit()
+#     if len(sys.argv)!=6:
+#         print("python phonation.py <file_or_folder_audio> <file_features> <static (true, false)> <plots (true,  false)> <format (csv, txt, npy, kaldi, torch)>")
+#         sys.exit()
 
-    phonation=Phonation()
-    script_manager(sys.argv, phonation)
+#     phonation=Phonation()
+#     script_manager(sys.argv, phonation)

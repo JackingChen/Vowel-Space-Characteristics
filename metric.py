@@ -197,15 +197,22 @@ class Evaluation_method:
             feature_type: {Session_formant |  Syncrony_formant}
         '''
         # df_pearsonr_table=pd.DataFrame([],columns=[correlation_type,'{}_pvalue'.format(correlation_type[:5]),'de-zero_num'])
-        df_pearsonr_table=pd.DataFrame([],columns=['pearsonr','pearson_p',\
-                                                   'spearmanr','spearman_p',\
-                                                   'R2','de-zero_num'])
+        
+        CorreDicts=Dict()
         for lab_choose in label_choose_lst:
+            df_pearsonr_table=pd.DataFrame([],columns=['pearsonr','pearson_p',\
+                                                   'spearmanr','spearman_p',\
+                                                   'R2_adj','de-zero_num'])
+            
             if feature_type == 'Session_formant':
                 filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
                 filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
             elif feature_type == 'Syncrony_formant':
                 filter_bool=df_formant_statistic['timeSeries_len']>N
+            else:
+                filter_bool=pd.Series([True]*len(df_formant_statistic),index=df_formant_statistic.index)
+                
+                
             filter_bool=np.logical_and(filter_bool,df_formant_statistic[lab_choose].isna()!=True)
             if constrain_sex != -1:
                 filter_bool=np.logical_and(filter_bool,df_formant_statistic['sex']==constrain_sex)
@@ -224,6 +231,10 @@ class Evaluation_method:
             #         filter_bool=np.logical_and(filter_bool,filter_autism)
             if constrain_ASDTD != -1:
                 filter_bool=np.logical_and(filter_bool,df_formant_statistic['ASDTD']==constrain_ASDTD)
+            
+            if lab_choose == 'AA2':
+                filter_bool=np.logical_and(filter_bool,df_formant_statistic['AA2']<=2)
+            
             if len(evictNamelst)>0:
                 for name in evictNamelst:
                     filter_bool.loc[name]=False
@@ -236,7 +247,9 @@ class Evaluation_method:
                     X,y=df_formant_qualified[col].values.reshape(-1,1), df_formant_qualified[lab_choose].values.reshape(-1,1)
                     reg = LinearRegression().fit(X,y)
                     r2=reg.score(X,y)
-                    df_pearsonr_table.loc[col]=[pear,pear_p, spear,spear_p, r2,\
+                    n,p=X.shape
+                    r2_adj=1-(1-r2)*(n-1)/(n-p-1)
+                    df_pearsonr_table.loc[col]=[pear,pear_p, spear,spear_p, r2_adj,\
                                                 len(df_formant_qualified[col])]
                     # if correlation_type == 'pearsonr':
                         
@@ -248,7 +261,8 @@ class Evaluation_method:
                     #     df_pearsonr_table.loc[col]=[spear,spear_p,len(df_formant_qualified[col])]
                     # elif correlation_type == 'linearregression':
                         
-                    #     df_pearsonr_table.loc[col]=[r2,np.nan,len(df_formant_qualified[col])]
+                    #     df_pearsonr_table.loc[col]=[r2_adj,np.nan,len(df_formant_qualified[col])]
             # print("Setting N={0}, the correlation metric is: ".format(N))
             # print("Using evaluation metric: {}".format(correlation_type))
-        return df_pearsonr_table
+            CorreDicts[lab_choose]=df_pearsonr_table
+        return CorreDicts

@@ -36,6 +36,8 @@ from sklearn.metrics import recall_score
 
 from articulation.HYPERPARAM import phonewoprosody, Label
 import articulation.articulation
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import f1_score
 
 
 def Assert_labelfeature(feat_name,lab_name):
@@ -80,67 +82,61 @@ experiment=args.experiment
 # =============================================================================
 # Feature
 Session_level_all=Dict()
-# featuresOfInterest=[['BWratio(A:,i:,u:)','F_val_mix(A:,i:,u:)'],['BWratio(A:,i:,u:)','BV(A:,i:,u:)_l2']]
-# featuresOfInterest=[['BWratio(A:,i:,u:)'],['a+b+c']]
+columns=[
+    'Divergence[within_covariance_norm(A:,i:,u:)]',
+    'Divergence[within_variance_norm(A:,i:,u:)]',    
+    'Divergence[between_covariance_norm(A:,i:,u:)]',    
+    'Divergence[between_variance_norm(A:,i:,u:)]',    
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
+    'Divergence[pillai_lin_norm(A:,i:,u:)]',
+    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
+    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
+    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
+    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
+    ]
+# columns=['totalword']
+
 # columns=[
-#     'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',
-#     'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[within_covariance_norm(A:,i:,u:)]_split',
-#     'Divergence[within_covariance_norm(A:,i:,u:)]',
-#     'Divergence[within_covariance(A:,i:,u:)]_var_p2',
-#     'Divergence[within_covariance(A:,i:,u:)]_var_p1',
-#     'Divergence[within_covariance(A:,i:,u:)]_split',
-#     'Divergence[within_covariance(A:,i:,u:)]',
+#     'FCR+AUINum',
+#     'VSA1+AUINum',
+#     'FCR*AUINum',
+#     'VSA1*AUINum',
+#     'FCR',
+#     'VSA1',
+#     'between_covariance(A:,i:,u:)',
+#     'between_variance(A:,i:,u:)',
+#     'within_covariance(A:,i:,u:)',
+#     'within_variance(A:,i:,u:)',
+#     'sam_wilks_lin(A:,i:,u:)',
+#     'pillai_lin(A:,i:,u:)',
+#     'u_num+i_num+a_num',
 #     ]
-columns=['FCR', 'FCR+AUINum', 'FCR*AUINum', 'VSA1', 'VSA1+AUINum', 'VSA1*AUINum',
-'between_variance_f1(A:,i:,u:)', 'within_variance_f1(A:,i:,u:)',
-'linear_disc_f1(A:,i:,u:)', 'between_variance_f1_norm(A:,i:,u:)',
-'within_variance_f1_norm(A:,i:,u:)', 'linear_disc_f_norm1(A:,i:,u:)',
-'between_variance_f2(A:,i:,u:)', 'within_variance_f2(A:,i:,u:)',
-'linear_disc_f2(A:,i:,u:)', 'between_variance_f2_norm(A:,i:,u:)',
-'within_variance_f2_norm(A:,i:,u:)', 'linear_disc_f_norm2(A:,i:,u:)',
-'between_covariance_norm(A:,i:,u:)', 'between_variance_norm(A:,i:,u:)',
-'between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)',
-'within_covariance_norm(A:,i:,u:)', 'within_variance_norm(A:,i:,u:)',
-'within_covariance(A:,i:,u:)', 'within_variance(A:,i:,u:)',
-'total_covariance_norm(A:,i:,u:)', 'total_variance_norm(A:,i:,u:)',
-'total_covariance(A:,i:,u:)', 'total_variance(A:,i:,u:)',
-'sam_wilks_lin(A:,i:,u:)', 'pillai_lin(A:,i:,u:)',
-'hotelling_lin(A:,i:,u:)', 'roys_root_lin(A:,i:,u:)',
-'sam_wilks_lin_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)',
-'hotelling_lin_norm(A:,i:,u:)', 'roys_root_lin_norm(A:,i:,u:)',
-'u_num+i_num+a_num']
-# columns=['FCR', 'VSA1',
-#   'between_variance_f1_norm(A:,i:,u:)',
-#   'within_variance_f1_norm(A:,i:,u:)',
-#   'linear_disc_f_norm1(A:,i:,u:)',
-#   'between_variance_f2_norm(A:,i:,u:)',
-#   'within_variance_f2_norm(A:,i:,u:)',
-#   'linear_disc_f_norm2(A:,i:,u:)',
-#   'between_covariance_norm(A:,i:,u:)',
-#   'between_variance_norm(A:,i:,u:)',
-#   'within_covariance_norm(A:,i:,u:)',
-#   'within_variance_norm(A:,i:,u:)',
-#   'total_covariance_norm(A:,i:,u:)',
-#   'total_variance_norm(A:,i:,u:)',
-#   'sam_wilks_lin_norm(A:,i:,u:)',
-#   'pillai_lin_norm(A:,i:,u:)',
-#   'hotelling_lin_norm(A:,i:,u:)',
-#   'roys_root_lin_norm(A:,i:,u:)']
+
 # columns=[
-#   'FCR+AUINum',
-#   'VSA1+AUINum',
-#   'FCR*AUINum',
-#   'VSA1*AUINum',
-#   'FCR',
-#   'VSA1',
-#   'total_covariance(A:,i:,u:)',
-#   'total_variance(A:,i:,u:)',
-#   'between_covariance(A:,i:,u:)',
-#   'between_variance(A:,i:,u:)',
-#   'within_covariance(A:,i:,u:)',
-#   'within_variance(A:,i:,u:)',
-#     ]
+#     'FCR+AUINum',
+#     'VSA1+AUINum',
+#     'FCR*AUINum',
+#     'VSA1*AUINum',
+#     'FCR',
+#     'VSA1',
+#     'between_covariance(A:,i:,u:)',
+#     'between_variance(A:,i:,u:)',
+#     'within_covariance(A:,i:,u:)',
+#     'within_variance(A:,i:,u:)',
+#     'sam_wilks_lin(A:,i:,u:)',
+#   'hotelling_lin(A:,i:,u:)',
+#   'u_num+i_num+a_num',
+    # 'pillai_lin_norm(A:,i:,u:)',
+    # 'pillai_lin(A:,i:,u:)'
+    # ]
 # featuresOfInterest=[['u_num+i_num+a_num']]
 # featuresOfInterest=[['between_covariance(A:,i:,u:)'],['between_variance(A:,i:,u:)'],['u_num+i_num+a_num']]
 featuresOfInterest=[ [col] for col in columns]
@@ -148,13 +144,16 @@ featuresOfInterest=[ [col] for col in columns]
 
 
 # label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
-# label_choose=['ADOS_C']
+label_choose=['ADOS_C']
 # label_choose=['ADOS_cate','ASDTD']
+# FeatureLabelMatch=[['TD_normal vs ASDSevere_agesexmatch','ASDTD'],
+#                     ['TD_normal vs ASDMild_agesexmatch','ASDTD'],
+#                     ['Notautism vs ASD','ADOS_cate'],
+#                     ['ASD vs Autism','ADOS_cate'],
+#                     ['Notautism vs Autism','ADOS_cate']]
 FeatureLabelMatch=[['TD_normal vs ASDSevere_agesexmatch','ASDTD'],
-                   ['TD_normal vs ASDMild_agesexmatch','ASDTD'],
-                   ['Notautism vs ASD','ADOS_cate'],
-                   ['ASD vs Autism','ADOS_cate'],
-                   ['Notautism vs Autism','ADOS_cate']]
+                    ['TD_normal vs ASDMild_agesexmatch','ASDTD'],
+                    ]
 df_formant_statistics_CtxPhone_collect_dict=Dict()
 
 
@@ -177,7 +176,7 @@ class ADOSdataset():
         self.FeatureCombs['Notautism vs Autism']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_Autism']
     
         self._FeatureBuild()
-    def Get_FormantAUI_feat(self,label_choose,pickle_path,featuresOfInterest=['MSB_f1','MSB_f2','MSB_mix'],**kwargs):
+    def Get_FormantAUI_feat(self,label_choose,pickle_path,featuresOfInterest=['MSB_f1','MSB_f2','MSB_mix'],filterbyNum=True,**kwargs):
         self.featuresOfInterest=featuresOfInterest
         arti=articulation.articulation.Articulation()
         if not kwargs and len(pickle_path)>0:
@@ -185,7 +184,9 @@ class ADOSdataset():
         elif len(kwargs)>0: # usage Get_FormantAUI_feat(...,key1=values1):
             for k, v in kwargs.items(): #there will be only one element
                 df_tmp=kwargs[k]
-        df_tmp=arti.BasicFilter_byNum(df_tmp,N=self.N)
+
+        if filterbyNum:
+            df_tmp=arti.BasicFilter_byNum(df_tmp,N=self.N)
         
         # experiment!! remove soon
         # df_tmp['a+b+c']=df_tmp[['u_num', 'a_num', 'i_num']].sum(axis=1)
@@ -244,6 +245,8 @@ ErrorFeat_bookeep=Dict()
 Pseudo_CtxDepPhone_path='artuculation_AUI/Pseudo_CtxDepVowels'
 CtxDepPhone_path='artuculation_AUI/CtxDepVowels/bkup0729'
 Vowel_path='artuculation_AUI/Vowels'
+Interactionfeat_path='artuculation_AUI/Interaction'
+OtherFeat_path='Other/Static_BasicInfo'
 # for feature_paths in [Vowel_path, CtxDepPhone_path, Pseudo_CtxDepPhone_path]:
 for feature_paths in [Vowel_path]:
 # for feature_paths in [Vowel_path, CtxDepPhone_path]:
@@ -252,7 +255,7 @@ for feature_paths in [Vowel_path]:
     if args.UseManualCtxFeat and len(Manual_choosen_feature)>0 and feature_paths == CtxDepPhone_path:
         files = FilterFile_withinManualName(files, Manual_choosen_feature)
     
-    #load features from file
+    # load features from file
     # for file in files: #iterate over features
     #     feat_=os.path.basename(file).split(".")[0]        
     #     for feat_col in featuresOfInterest:
@@ -261,7 +264,7 @@ for feature_paths in [Vowel_path]:
     #         # else:
     #         feat_col_ = list(feat_col) # ex: ['MSB_f1']
     #         for lab_ in label_choose:
-    #             X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path=file,featuresOfInterest=feat_col_)
+    #             X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path=file,featuresOfInterest=feat_col_,filterbyNum=False)
     #             Item_name="{feat}::{lab}".format(feat='-'.join([feat_]+feat_col_),lab=lab_)
     #             Session_level_all[Item_name].X, \
     #                 Session_level_all[Item_name].y, \
@@ -293,7 +296,8 @@ for feature_paths in [Vowel_path]:
 # =============================================================================
 # Model parameters
 # =============================================================================
-C_variable=np.array([0.1,0.5,1.0,10.0, 50.0, 100.0])
+C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
+# C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 100.0, 1000.0, 10000.0])
 n_estimator=[2, 4, 8, 16, 32, 64]
 Scoring=['neg_mean_absolute_error','neg_mean_squared_error']
 
@@ -308,28 +312,48 @@ Classifier['SVC']={'model':sklearn.svm.SVC(),\
                     'kernel': ['rbf'],\
                                 }}
 
-#penalty{‘l1’, ‘l2’, ‘elasticnet’, ‘none’}, default=’l2’
-#class_weight: dict or ‘balanced’, default=None
-#solver{‘newton-cg’, ‘lbfgs’, ‘liblinear’, ‘sag’, ‘saga’}, default=’lbfgs’
-#multi_class{‘auto’, ‘ovr’, ‘multinomial’}, default=’auto’
 Classifier['LR']={'model':sklearn.linear_model.LogisticRegression(),\
                   'parameters':{'C':C_variable,\
                                 }}
     
+Classifier['DT']={'model':sklearn.tree.DecisionTreeClassifier(),\
+                  'parameters':{'criterion':['gini','entropy'],
+                                'splitter':['splitter','random'],\
+                                }}
+    
+
+
+
 # Classifier['SVC']={'model':sklearn.svm.SVC(),\
-#                   'parameters':{'C':[50.0],\
+#                   'parameters':{'C':[100.0],\
 #                     'kernel': ['rbf'],\
 #                                 }}
 
+'''
+
+    Regressor
+
+'''
+###############################################################################
 # Classifier['EN']={'model':ElasticNet(random_state=0),\
 #                   'parameters':{'alpha':np.arange(0,1,0.25),\
 #                                 'l1_ratio': np.arange(0,1,0.25)}} #Just a initial value will be changed by parameter tuning
-                                                    # l1_ratio = 1 is the lasso penalty
+#                                                     # l1_ratio = 1 is the lasso penalty
 # Classifier['SVR']={'model':sklearn.svm.SVR(),\
 #                   'parameters':{'C':C_variable,\
 #                     'kernel': ['rbf'],\
 #                                 }}
 
+# Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
+#                   'parameters':{'fit_intercept':[True,False],\
+#                                 }}
+###############################################################################
+    
+    
+# Classifier['XGBoost']={'model':xgboost.sklearn.XGBRegressor(),\
+#                   'parameters':{'fit_intercept':[True,False],\
+#                                 }}    
+    
 # Classifier['SVR']={'model':sklearn.svm.SVR(),\
 #                   'parameters':{'C':[50],\
 #                     'kernel': ['rbf'],\
@@ -364,6 +388,9 @@ df_best_result_pear=pd.DataFrame([])
 df_best_result_spear=pd.DataFrame([])
 df_best_cross_score=pd.DataFrame([])
 df_best_result_UAR=pd.DataFrame([])
+df_best_result_AUC=pd.DataFrame([])
+df_best_result_f1=pd.DataFrame([])
+df_best_result_allThreeClassifiers=pd.DataFrame([])
 # =============================================================================
 Result_path="RESULTS/"
 if not os.path.exists(Result_path):
@@ -375,6 +402,7 @@ warnings.filterwarnings("ignore")
 count=0
 OutFeature_dict=Dict()
 Best_param_dict=Dict()
+
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
     writer_clf = pd.ExcelWriter(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_"+final_result_file, engine = 'xlsxwriter')
     for feature_lab_str, features in Session_level_all.items():
@@ -383,7 +411,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         print("=====================Cross validation start==================")
         p_grid=clf['parameters']
         Gclf = GridSearchCV(estimator=clf['model'], param_grid=p_grid, scoring=args.selectModelScoring, cv=loo, refit=True, n_jobs=-1)
-        # Score=cross_val_score(Gclf, features.X, features.y, cv=loo)            
+        # Score=cross_val_score(Gclf, features.X, features.y, cv=loo) 
+        CVpredict=cross_val_predict(Gclf, features.X, features.y, cv=loo)           
         Gclf.fit(features.X,features.y)
         if clf_keys == "EN":
             print('The coefficient of best estimator is: ',Gclf.best_estimator_.coef_)
@@ -396,7 +425,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         Best_param_dict[feature_lab_str]=best_parameters
         cv_results_info=Gclf.cv_results_
 
-        CVpredict=cross_val_predict(Gclf, features.X, features.y, cv=loo)
+        
         
         if features.feattype == 'regression':
             r2=r2_score(features.y,CVpredict )
@@ -408,6 +437,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         elif features.feattype == 'classification':
             n,p=features.X.shape
             UAR=recall_score(features.y, CVpredict, average='macro')
+            AUC=roc_auc_score(features.y, CVpredict)
+            f1Score=f1_score(features.y, CVpredict, average='macro')
             print('Feature {0}, label {1} ,UAR {2}'.format(feature_keys, label_keys,UAR))
         
         if args.Plot and p <2:
@@ -417,7 +448,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             # axes.plot((features.X - min(features.X) )/ max(features.X), Gclf.best_estimator_.fit(features.X,features.y).predict(features.X), color=model_color[0],
             #               label='CV Predict')
             axes.scatter((features.X - min(features.X) )/ max(features.X), CVpredict, 
-                         facecolor="none", edgecolor="k", s=50,
+                         facecolor="none", edgecolor="k", s=150,
                          label='{}'.format(feature_lab_str)
                          )
             axes.scatter((features.X - min(features.X) )/ max(features.X), features.y, 
@@ -454,15 +485,27 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             df_best_result_spear.loc[feature_keys,label_keys]='{0}/{1}'.format(np.round(spear_result,3),np.round(spearman_p,6))
             df_best_result_spear.loc[feature_keys,'de-zero_num']=len(features.X)
             # df_best_cross_score.loc[feature_keys,label_keys]=Score.mean()
+            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (R2adj/pear/spear)'.format(label_keys,clf_keys)]\
+                        ='{0}/{1}/{2}'.format(np.round(r2_adj,3),np.round(pearson_result,3),np.round(spear_result,3))
+
         elif features.feattype == 'classification':
             df_best_result_UAR.loc[feature_keys,label_keys]='{0}'.format(UAR)
+            df_best_result_AUC.loc[feature_keys,label_keys]='{0}'.format(AUC)
+            df_best_result_f1.loc[feature_keys,label_keys]='{0}'.format(f1Score)
+            # df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (UAR/AUC/f1score)'.format(label_keys,clf_keys)]\
+            #             ='{0}/{1}/{2}'.format(np.round(UAR,3),np.round(AUC,3),np.round(f1Score,3))
+            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1}'.format(label_keys,clf_keys)]\
+                        ='{0}'.format(np.round(UAR,3))
+    
+    if features.feattype == 'regression':
+        df_best_result_r2.to_excel(writer_clf,sheet_name="R2_adj")
+        df_best_result_pear.to_excel(writer_clf,sheet_name="pear")
+        df_best_result_spear.to_excel(writer_clf,sheet_name="spear")
+        df_best_result_spear.to_csv(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_spearman.csv")
+    elif features.feattype == 'classification':
+        df_best_result_UAR.to_excel(writer_clf,sheet_name="UAR")
+        df_best_result_AUC.to_excel(writer_clf,sheet_name="AUC")
+        df_best_result_f1.to_excel(writer_clf,sheet_name="f1")
 
-
-if features.feattype == 'regression':
-    df_best_result_r2.to_excel(writer_clf,sheet_name="R2_adj")
-    df_best_result_pear.to_excel(writer_clf,sheet_name="pear")
-    df_best_result_spear.to_excel(writer_clf,sheet_name="spear")
-    df_best_result_spear.to_csv(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_spearman.csv")
-elif features.feattype == 'classification':
-    df_best_result_UAR.to_excel(writer_clf,sheet_name="UAR")
 writer_clf.save()
+df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"_"+args.Feature_mode+"_3clsferRESULT.xlsx")

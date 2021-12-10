@@ -146,7 +146,7 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--Inspect', default=False,
                             help='path of the base directory')
-    parser.add_argument('--reFilter', default=False,
+    parser.add_argument('--reFilter', default=True,
                             help='')
     parser.add_argument('--correlation_type', default='spearmanr',
                             help='spearmanr|pearsonr')
@@ -163,7 +163,6 @@ def get_args():
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
 
-    
     args = parser.parse_args()
     return args
 
@@ -310,7 +309,7 @@ Vowels_AUI=Get_Vowels_AUI(AUI_info, args.Inspect_features,VUIsource="From__Forma
 # pickle.dump(Vowels_AUI,open(outpklpath+"Vowels_AUI_{}.pkl".format(role),"wb"))
 
 label_generate_choose_lst=['ADOS_C','dia_num']
-articulation=Articulation(Stat_med_str_VSA='mean+')
+articulation=Articulation(Stat_med_str_VSA='mean')
 df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst)
 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
                                             df_formant_statistic['i_num'] +\

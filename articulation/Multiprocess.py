@@ -212,7 +212,17 @@ class Multi:
                     if utt not in Phonation_utt_symb.keys():
                         Phonation_utt_symb[utt]=pd.DataFrame()
                     Phonation_utt_symb[utt]=Phonation_utt_symb[utt].append(df_feat_utt)
-        
+                    # try:
+                    #     df_feat_utt=measurePitch(temp_outfile, minf0, maxf0, "Hertz")
+                    #     df_feat_utt.index=[symb]
+                    #     if utt not in Phonation_utt_symb.keys():
+                    #         Phonation_utt_symb[utt]=pd.DataFrame()
+                    #     Phonation_utt_symb[utt]=Phonation_utt_symb[utt].append(df_feat_utt)
+                    # except:
+                    #     print("Error processing Phonation instances ",utt+"__"+symb)
+                    #     error_msg_bag.append('Phonation '+utt+"__"+symb)
+                    #     pass
+                    
                 
                 # =============================================================================
                 os.remove(temp_outfile)

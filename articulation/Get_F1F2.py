@@ -148,7 +148,6 @@ sys.path.append(path_app)
 PoolFormantWindow=args.PoolFormantWindow
 plot_outpath=args.plot_outpath
 import praat.praat_functions as praat_functions
-from script_mananger import script_manager
 from utils_jack  import functional_method, Info_name_sex, F0_parameter_dict
 
 
@@ -410,29 +409,50 @@ for people in PeopleOfInterest:
 # find not reasonable data by functionals 
 # =============================================================================
 df_top_dict=Dict()
+df_totalRecord_dict=Dict()
 N=1
 FilterOutlier=True
 for feat in args.Inspect_features:
     for symb in PhoneOI:
         df_people_statistics=pd.DataFrame([],columns=['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max'])
+        df_allPeople=pd.DataFrame()
         for person in AUI_dict.keys():
             if symb not in AUI_dict[person].keys():
                 continue
             df_data=AUI_dict[person][symb][[feat]]
+            
             if FilterOutlier:
                 q25, q75 = df_data.quantile(q=0.25).values[0], df_data.quantile(q=0.75).values[0]
                 iqr=q75 - q25
                 cut_off = iqr * 1.5
                 lower, upper = q25 - cut_off, q75 + cut_off
                 
-                df_data = df_data[df_data <= upper]
-                df_data = df_data[df_data >= lower]
                 
-            
+                df_data=df_data[np.logical_and(df_data <= upper, df_data >= lower).values]
+                df_data=df_data[(df_data>0).values]
+                # df_data = df_data[df_data <= upper]
+                # df_data = df_data[df_data >= lower]
+                
+            assert not np.isnan(df_data.values).any()
             df_people_statistics.loc[person,df_data.describe().index]=df_data[feat].describe()
             df_people_statistics['symb']=symb
-            
+        
+            df_allPeople=df_allPeople.append(df_data)
+        
         df_top_dict[symb][feat]=df_people_statistics
+        
+
+        df_totalRecord_dict[symb][feat]=df_allPeople     # this part is for table in TBME2021
+
+df_F1F2Statistics=pd.DataFrame()  # this part and df_totalRecord_dict is for table in TBME2021
+for symb in df_totalRecord_dict.keys():
+    for feat in df_totalRecord_dict[symb].keys():
+        mean_val=df_totalRecord_dict[symb][feat].describe().loc['mean'].values[0]
+        std_val=df_totalRecord_dict[symb][feat].describe().loc['std'].values[0]
+        data_string=str(np.round(mean_val,3)) + "/({})".format(np.round(std_val,3))
+        df_F1F2Statistics.loc[symb,feat]=data_string
+
+
 
 cond_N=(df_top_dict['A:'].F1['count'] > N) & (df_top_dict['u:'].F1['count'] > N) & (df_top_dict['i:'].F1['count'] > N)
 # find those people that F1 
