@@ -73,6 +73,13 @@ class Phonation:
             # cluster_str=','.join(sorted(F12_raw_dict.keys()))
             
             def MeanVar_features(df_vowel, Sessional_pools=['mean','var']):
+                # =============================================================================
+                '''
+                
+                    Phonation feature calculation module
+                
+                '''                
+                # =============================================================================
                 df_mean=df_vowel[self.Inspect_features].mean(axis=0)
                 df_var=df_vowel[self.Inspect_features].var(axis=0)
                 

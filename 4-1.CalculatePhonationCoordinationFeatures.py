@@ -11,18 +11,9 @@ Created on Wed Aug  4 12:21:17 2021
         1. Data prepare area
             a. Filter out data using by 1.5*IQR
         2-1. Personal timeseries generation (Details in TBME2021)
-        2-2. Calculate LOC timeseries features within each defined timesteps (Details in TBME2021)
+        2-2. Calculate phonation timeseries features within each defined timesteps (Details in TBME2021)
         3. Calculate syncrony features based on feature timeseries
-        
-        
-        
-        [Notafications]
-        1. Keep in mind that last frame may have unenough  vowels, so sometimes the 
-           latter code will fill arbitrary data  (The system will promt "Filled  N EmptIES" if it detected timeseries with not enough phones)
-        
-        2. Some people having too little timeseries will have zero last-half, so Fill_n_Create_AUIInfo
-           will fill values to each phone, each role. The total filled message will be len(Missbag) * 3
-           
+    
            
         Input:  Formants_utt_symb
         Output: df_syncrony_measurement.loc[people,feature]
@@ -86,7 +77,7 @@ def get_args():
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='ASD_DOCKID',
+    parser.add_argument('--dataset_role', default='TD_DOCKID',
                             help='[TD_DOCKID_emotion | ASD_DOCKID_emotion | kid_TD | kid88]')
     parser.add_argument('--Inspect_roles', default=['D','K'],
                             help='')
@@ -440,24 +431,6 @@ for PhoneOfInterest_str in Phonation_POI_people_segment_role_utt_dict.keys():
 pickle.dump(df_POI_person_segment_feature_dict,open(outpklpath+"df_POI_person_segment_feature_dict_{0}_{1}.pkl".format(dataset_role, 'phonation'),"wb"))
 
 
-
-# # Then merge All df_POI_person_segment_feature_dict sub dicts!!
-# df_POI_person_segment_feature_merged_dict=Dict()
-# for PhoneOfInterest_str in df_POI_person_segment_feature_dict.keys():
-#     for segmenthalf in df_POI_person_segment_feature_dict[PhoneOfInterest_str].keys():
-#         for people in df_POI_person_segment_feature_dict[PhoneOfInterest_str][segmenthalf].keys():
-#             for role in df_POI_person_segment_feature_dict[PhoneOfInterest_str][segmenthalf][people].keys():
-#                 if role not in df_POI_person_segment_feature_merged_dict[segmenthalf][people].keys():
-#                     df_POI_person_segment_feature_merged_dict[segmenthalf][people][role]=pd.DataFrame()
-#                 df_POI_person_segment_feature_merged_dict[segmenthalf][people][role]=\
-#                     pd.concat([df_POI_person_segment_feature_merged_dict[segmenthalf][people][role],\
-#                                df_POI_person_segment_feature_dict[PhoneOfInterest_str][segmenthalf][people][role]],axis=1)
-#                 df_POI_person_segment_feature_merged_dict[segmenthalf][people][role] = \
-#                     df_POI_person_segment_feature_merged_dict[segmenthalf][people][role].drop(columns=basic_columns)
-#                 # df_POI_person_segment_feature_merged_dict[segmenthalf][people][role] = \
-#                 #     df_POI_person_segment_feature_merged_dict[segmenthalf][people][role].loc[:,~df_POI_person_segment_feature_merged_dict[segmenthalf][people][role].columns.duplicated()]
-
-
 # =============================================================================
 '''
 
@@ -508,15 +481,4 @@ lst=[]
 for col in df_syncrony_measurement.columns:
     if df_syncrony_measurement[col].isnull().values.any():
         lst.append(col)
-# =============================================================================
-''' Correaltion area ''' 
-correlationColumns=df_syncrony_measurement.columns    
-
-N=2
-Eval_med=Evaluation_method()
-Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_syncrony_measurement,\
-                                                             N,correlationColumns,\
-                                                             constrain_sex=-1, constrain_module=-1,\
-                                                             feature_type='Syncrony_formant')
-
 

@@ -6,7 +6,7 @@ Created on Wed Jun 30 15:56:45 2021
 @author: jackchen
 
 
-    This script is only for TBMEA1 
+    This script is only for TBMEB1 
 
 """
 
@@ -19,6 +19,7 @@ import pickle
 
 from scipy.stats import spearmanr,pearsonr 
 from sklearn.model_selection import LeaveOneOut
+from sklearn.tree import DecisionTreeClassifier
 
 from addict import Dict
 # import functions
@@ -78,38 +79,48 @@ def get_args():
                         help='')
     args = parser.parse_args()
     return args
-
-
 args = get_args()
 start_point=args.start_point
 experiment=args.experiment
 
 # =============================================================================
-# Feature
 Session_level_all=Dict()
 columns=[
-    'FCR+AUINum',
-    'VSA1+AUINum',
-    'FCR*AUINum',
-    'VSA1*AUINum',
-    'FCR',
-    'VSA1',
-    'between_covariance(A:,i:,u:)',
-    'between_variance(A:,i:,u:)',
-    'within_covariance(A:,i:,u:)',
-    'within_variance(A:,i:,u:)',
-    'sam_wilks_lin(A:,i:,u:)',
-    'pillai_lin(A:,i:,u:)',
-    'u_num+i_num+a_num',
+    'Divergence[within_covariance_norm(A:,i:,u:)]',
+    'Divergence[within_variance_norm(A:,i:,u:)]',    
+    'Divergence[between_covariance_norm(A:,i:,u:)]',    
+    'Divergence[between_variance_norm(A:,i:,u:)]',    
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
+    'Divergence[pillai_lin_norm(A:,i:,u:)]',
+    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
+    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
+    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
+    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
     ]
-
 
 featuresOfInterest=[ [col] for col in columns]
 # featuresOfInterest=[ [col] + ['u_num+i_num+a_num'] for col in columns]
 
+
 # label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
 label_choose=['ADOS_C']
 # label_choose=['ADOS_cate','ASDTD']
+# FeatureLabelMatch=[['TD_normal vs ASDSevere_agesexmatch','ASDTD'],
+#                     ['TD_normal vs ASDMild_agesexmatch','ASDTD'],
+#                     ['Notautism vs ASD','ADOS_cate'],
+#                     ['ASD vs Autism','ADOS_cate'],
+#                     ['Notautism vs Autism','ADOS_cate']]
+FeatureLabelMatch=[['TD_normal vs ASDSevere_agesexmatch','ASDTD'],
+                    ['TD_normal vs ASDMild_agesexmatch','ASDTD'],
+                    ]
 df_formant_statistics_CtxPhone_collect_dict=Dict()
 # =============================================================================
 
@@ -141,7 +152,7 @@ class ADOSdataset():
 
         if filterbyNum:
             df_tmp=arti.BasicFilter_byNum(df_tmp,N=self.N)
-        
+
         if label_choose not in df_tmp.columns:
             for people in df_tmp.index:
                 lab=Label.label_raw[label_choose][Label.label_raw['name']==people]
@@ -182,20 +193,23 @@ for feature_paths in [Vowel_path]:
 # for feature_paths in [Vowel_path, CtxDepPhone_path]:
     files = glob.glob(ados_ds.featurepath +'/'+ feature_paths+'/*.pkl')
 
-    # load features from file
-    for file in files: #iterate over features
-        feat_=os.path.basename(file).split(".")[0]        
+    for feat_,lab_ in FeatureLabelMatch:
+        # feat_=key
         for feat_col in featuresOfInterest:
-            # if len(feat_col)==1:
-            #     feat_col_ = list([feat_col]) # ex: ['MSB_f1']
-            # else:
             feat_col_ = list(feat_col) # ex: ['MSB_f1']
-            for lab_ in label_choose:
-                X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path=file,featuresOfInterest=feat_col_,filterbyNum=False)
-                Item_name="{feat}::{lab}".format(feat='-'.join([feat_]+feat_col_),lab=lab_)
-                Session_level_all[Item_name].X, \
-                    Session_level_all[Item_name].y, \
-                        Session_level_all[Item_name].feattype = X,y, featType
+            
+            X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path='',featuresOfInterest=feat_col_,feat_=ados_ds.Features_comb[feat_])
+            
+            if np.isnan(X).any() or np.isnan(y).any():
+                print("Feat: ",feat_col_,'Contains nan')
+                ErrorFeat_bookeep['{0} {1} {2}'.format(feat_,lab_,feat_col_)].X=X
+                ErrorFeat_bookeep['{0} {1} {2}'.format(feat_,lab_,feat_col_)].y=y
+                continue
+            
+            Item_name="{feat}::{lab}".format(feat='-'.join([feat_]+feat_col_),lab=lab_)
+            Session_level_all[Item_name].X, \
+                Session_level_all[Item_name].y, \
+                    Session_level_all[Item_name].feattype = X,y, featType
 
 
 
@@ -205,60 +219,33 @@ for feature_paths in [Vowel_path]:
 C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
 n_estimator=[2, 4, 8, 16, 32, 64]
 
+'''
 
+    Classifier
+
+'''
 Classifier={}
-loo=LeaveOneOut()
-'''
-
-    Regressor
-
-'''
-###############################################################################
-Classifier['EN']={'model':ElasticNet(random_state=0),\
-                  'parameters':{'alpha':np.arange(0,1,0.25),\
-                                'l1_ratio': np.arange(0,1,0.25)}} #Just a initial value will be changed by parameter tuning
-                                                    # l1_ratio = 1 is the lasso penalty
-Classifier['SVR']={'model':sklearn.svm.SVR(),\
+Classifier['SVC']={'model':sklearn.svm.SVC(),\
                   'parameters':{'C':C_variable,\
                     'kernel': ['rbf'],\
                                 }}
 
-Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
-                  'parameters':{'fit_intercept':[True,False],\
+Classifier['LR']={'model':sklearn.linear_model.LogisticRegression(),\
+                  'parameters':{'C':C_variable,\
                                 }}
-###############################################################################
     
+Classifier['DT']={'model':DecisionTreeClassifier(),\
+                  'parameters':{'criterion':['gini','entropy'],
+                                'splitter':['splitter','random'],\
+                                }}
     
-# Classifier['XGBoost']={'model':xgboost.sklearn.XGBRegressor(),\
-#                   'parameters':{'fit_intercept':[True,False],\
-#                                 }}    
-    
-# Classifier['SVR']={'model':sklearn.svm.SVR(),\
-#                   'parameters':{'C':[50],\
-#                     'kernel': ['rbf'],\
-#                                 }}    
-    
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#               'parameters':{'alpha':[0.1, 0.5, 1],\
-#                             'l1_ratio': [0.1, 0.5, 1]}} #Just a initial value will be changed by parameter tuning
-    
-#                                                    # l1_ratio = 1 is the lasso penalty
-
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#               'parameters':{'alpha':[0.5],\
-#                             'l1_ratio': [0.5]}} #Just a initial value will be changed by parameter tuning
-#                                                   # l1_ratio = 1 is the lasso penalty
 
 
 
-
+loo=LeaveOneOut()
 
 # =============================================================================
-'''
-
-    BookKeep area
-
-'''
+# Outputs
 Best_predict_optimize={}
 
 df_best_result_r2=pd.DataFrame([])

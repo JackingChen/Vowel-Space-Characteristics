@@ -10,9 +10,11 @@ The procedures are in the following:
     1. read the phone timestamps (audacity format, you should generate it from ASR alignments)
     2. slice the time boundaries out of the audio files and run praat functions on the short audio sample
 
+
 Because this procedure will take multiple hours!!!!!! we implemented multiprocessing
 approach but still leave a "Manual area" at the bottom
 
+支線問題： 沒辦法跟goodness of pronunciation對齊 （次要問題，直到需要拿去跟GOP一起預測才需要被解）
 Note !!!!!!!!!!!!  with unknown reason, The output of gop.*.txt will have less SHORT 'SIL' than forced alignment results
 ex:
     2015_12_05_01_063_1_K_95_angry: utt in Utt_phf_dict 1 Not Match utt in Formants_utt_symb 3
@@ -25,11 +27,13 @@ Here I put an log to report the unmatched files:Divergence[between_variance_f2_n
     len(Utt_phf_dict[utt][Utt_phf_dict[utt].index != 'SIL']) != len(Formants_utt_symb[utt][Formants_utt_symb[utt].index != "SIL"]):
     at line 343
 
+
+
 update 2021/05/27 :  extend audio segments with half a window
     st_ext= max(st - F1F2_extractor.sizeframe/2,0)
     ed_ext= min(ed + F1F2_extractor.sizeframe/2,max(df_segInfo[1]))
     
-       2021/06/10 :  changed the muli-process method to starmap:
+      2021/06/10 :  changed the muli-process method to starmap:
                            code: final_results=pool.starmap
                      added an argument for formant funcational method:
                            functional_method(data, method='middle', window=3)
@@ -38,7 +42,17 @@ update 2021/05/27 :  extend audio segments with half a window
           2. Filter out the outlier and make condition mask for unqualified people
                            
 """
+'''
 
+    Input: 
+        wav files: <path-to-wav-files>/Segmented_ADOS_ASD_emotion_normalized
+        trn files: <path-to-trn-files>/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain
+    Output:
+        Formants_utt_symb
+        Formants_people_symb
+        Phonation_utt_symb
+
+'''
 
 from scipy.io.wavfile import read
 import os
@@ -113,10 +127,12 @@ def get_args():
                         help='path of the base directory', dest='base_path')
     parser.add_argument('--base_path_phf', default='/homes/ssd1/jackchen/gop_prediction/data',
                         help='path of the base directory')
-    parser.add_argument('--filepath', default='/homes/ssd1/jackchen/DisVoice/data/Segmented_ADOS_normalized',
-                        help='/homes/ssd1/jackchen/DisVoice/data/{Segmented_ADOS_ASD_emotion_normalized|Segmented_ADOS_emotion_normalized|Segmented_ADOS_TD_normalized|Segmented_ADOS_TD_emotion_normalized}')
-    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/ASD_DOCKID/ADOS_tdnn_fold_transfer',
-                        help='/mnt/sdd/jackchen/egs/formosa/s6/{Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/{kid88|kid_TD|ASD_DOCKID|ASD_DOCKID_emotion|TD_DOCKID_emotion}/ADOS_tdnn_fold_transfer | Alignment_human/kid/Audacity_phone|')
+    parser.add_argument('--filepath', default='/homes/ssd1/jackchen/DisVoice/data/Segmented_ADOS_TD_normalized',
+                        help='''/homes/ssd1/jackchen/DisVoice/data/{Segmented_ADOS_ASD_emotion_normalized|Segmented_ADOS_emotion_normalized|Segmented_ADOS_TD_normalized|Segmented_ADOS_TD_emotion_normalized}
+                              注意！trnpath 是依賴filepath的，兩者的{filename}.txt, {filename}.wav filename要一模一樣''')
+    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/kid_TD/ADOS_tdnn_fold_transfer',
+                        help='''/mnt/sdd/jackchen/egs/formosa/s6/{Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/{kid88|kid_TD|ASD_DOCKID|ASD_DOCKID_emotion|TD_DOCKID_emotion}/ADOS_tdnn_fold_transfer | Alignment_human/kid/Audacity_phone|
+                              注意！trnpath 是依賴filepath的，兩者的{filename}.txt, {filename}.wav filename要一模一樣''')
     parser.add_argument('--outpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--plot_outpath', default='Plot/',
@@ -281,6 +297,8 @@ shutil.copy(peoplepath, people_outpath)
 
  
 ''' Multithread processing end '''
+# 這一區開始是檢查算出的F1 F2分佈使用的，可以用boxplot觀察每個人的個別/a/ /u/ /i/ phone 
+# 其中一項分析會是看/a/ /u/ /i/ 三個phone彼此之間的距離，是否遠大於alignment可能造成的誤差，結果我認為確實是
 
 
 # =============================================================================
@@ -378,6 +396,7 @@ for feat in args.Inspect_features:
         
 # =============================================================================
 # Joint plot those people of data
+# 以人為單位畫出vowel space 圖
 # =============================================================================
 plot_outpath=plot_outpath+trnpath[re.search("new_system",trnpath).end()+1:re.search("ADOS_tdnn",trnpath).start()-1]
 for people in PeopleOfInterest:
@@ -387,10 +406,7 @@ for people in PeopleOfInterest:
         df_tmp['phone']=symb
         df_samples_AUI=df_samples_AUI.append(df_tmp)
     sns.jointplot(data=df_samples_AUI, x='F1',y='F2',hue='phone')
-    # for line in range(0,AUI_dict[people][symb].shape[0]):
-    #     plt.text(AUI_dict[people][symb].F1.iloc[line]+0.2, AUI_dict[people][symb].F1.iloc[line], AUI_dict[people][symb].utt.iloc[line], horizontalalignment='left', size='medium', color='black', weight='semibold')
 
-    
     
     if not os.path.exists(plot_outpath):
         os.makedirs(plot_outpath)
@@ -403,11 +419,12 @@ for people in PeopleOfInterest:
 # =============================================================================
 '''
 
-    Filter data (by 1.5*IQR) and Generate Qualified people condition dataframe
+    Filter data (by 1.5*IQR)
+
+    TBME2021 Table 1 的F1 F2 分佈需要的資訊是由這個部份生成的（存在df_totalRecord_dict）
 
 '''
 # find not reasonable data by functionals 
-# =============================================================================
 df_top_dict=Dict()
 df_totalRecord_dict=Dict()
 N=1
@@ -440,7 +457,6 @@ for feat in args.Inspect_features:
             df_allPeople=df_allPeople.append(df_data)
         
         df_top_dict[symb][feat]=df_people_statistics
-        
 
         df_totalRecord_dict[symb][feat]=df_allPeople     # this part is for table in TBME2021
 
@@ -451,7 +467,14 @@ for symb in df_totalRecord_dict.keys():
         std_val=df_totalRecord_dict[symb][feat].describe().loc['std'].values[0]
         data_string=str(np.round(mean_val,3)) + "/({})".format(np.round(std_val,3))
         df_F1F2Statistics.loc[symb,feat]=data_string
+# =============================================================================
 
+'''
+
+    Generate Qualified people condition dataframe
+    用一個condition 來篩出不太正確的人， 結果是會存到 unreasonable_all.xlsx, F1A_lessThan_u.xlsx, F1A_lessThan_i.xlsx, F2i_lessThan_u.xlsx
+
+'''
 
 
 cond_N=(df_top_dict['A:'].F1['count'] > N) & (df_top_dict['u:'].F1['count'] > N) & (df_top_dict['i:'].F1['count'] > N)
@@ -477,165 +500,3 @@ cond_feat2.to_frame().to_excel(condition_path+"F1A_lessThan_i.xlsx")
 cond_feat3.to_frame().to_excel(condition_path+"F2i_lessThan_u.xlsx")
 
 # BetweenPhoneDistance= GetBetweenPhoneDistance(df_top_dict)
-
-
-
-
-    
-    
-    
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-# =============================================================================
-'''
-
-    Old function codes that are not in use currently
-
-'''
-# =============================================================================
-def process_audio(files,silence,trnpath,functional_method_window):
-
-    
-
-# Person_IQR_dict=Dict()
-# Person_IQR_all_dict=Dict()
-# for p, v in Formants_people_symb.items():
-#     for symb in PhoneOI:
-#         phones_comb=Formants_people_symb[p]
-#         for phone, values in phones_comb.items():
-#             if phone in [x for x in  PhoneMapp_dict[symb]]:
-#                 df_phone_values=pd.DataFrame(phones_comb[phone],columns=args.Inspect_features)
-#                 df_phone_values.index=[phone]*len(values)
-                
-#                 gender_query_str=p
-#                 series_gend=Info_name_sex[Info_name_sex['name']==gender_query_str]['sex']
-#                 gender=series_gend.values[0]
-                
-#                 df_phone_values['sex']=gender
-#                 # Gather all data of all single person
-#                 if symb not in Person_IQR_dict[p].keys():
-#                     Person_IQR_dict[p][symb]=pd.DataFrame()
-#                 Person_IQR_dict[p][symb]=Person_IQR_dict[p][symb].append(df_phone_values)
-                
-                
-#                 # Gather all data of all people
-#                 if symb not in Person_IQR_all_dict.keys():
-#                     Person_IQR_all_dict[symb]=pd.DataFrame()
-#                 Person_IQR_all_dict[symb]=Person_IQR_all_dict[symb].append(df_phone_values)
-    Formants_people_symb=Dict()
-    Formants_utt_symb=Dict()
-    error_msg_bag=[]
-    print("Process {} executing".format(files))
-    for file in files:
-        filename=os.path.basename(file).split(".")[0]
-        spkr_name=filename[:re.search("_[K|D]_", filename).start()]
-        utt='_'.join(filename.split("_")[:])
-        
-        trn=trnpath+"/{name}.txt".format(name=filename)
-        df_segInfo=pd.read_csv(trn, header=None,delimiter='\t')
-        if 'Session' in filepath:
-            audiofile=filepath+"/{name}.wav".format(name=filename[:re.search("_[K|D]_", filename).end()-1])
-        elif 'Segment' in filepath:
-            audiofile=filepath+"/{name}.wav".format(name=filename)
-        else:
-            raise OSError(os.strerror, 'not allowed filepath')
-        audio = AudioSegment.from_wav(audiofile)
-        
-        gender_query_str=filename[:re.search("_[K|D]_", filename).start()]
-        role=filename[re.search("[K|D]", filename).start()]
-        if role =='D':
-            gender='female'
-        elif role =='K':
-            series_gend=Info_name_sex[Info_name_sex['name']==gender_query_str]['sex']
-            gender=series_gend.values[0]
-        
-        minf0=F0_parameter_dict[gender]['f0_min']
-        maxf0=F0_parameter_dict[gender]['f0_max']
-        
-        F1F2_extractor=Extract_F1F2(maxf0=maxf0, minf0=minf0)
-    
-        for st,ed,symb in df_segInfo.values:
-            ''' Allow an extention of a half window length  for audio segment calculation'''
-            st_ext= max(st - F1F2_extractor.sizeframe/2,0)
-            ed_ext= min(ed + F1F2_extractor.sizeframe/2,max(df_segInfo[1]))
-            # segment_lengths.append((ed-st)) # np.quatile(segment_lengths,0.05)=0.08
-            st_ms=st * 1000 #Works in milliseconds
-            ed_ms=ed * 1000 #Works in milliseconds
-            # st_ms=st_ext * 1000 #Works in milliseconds
-            # ed_ms=ed_ext * 1000 #Works in milliseconds
-    
-            audio_segment = silence + audio[st_ms:ed_ms] + silence
-            temp_outfile=F1F2_extractor.PATH+'/../tempfiles/tempwav{}.wav'.format(utt+symb)
-            
-            audio_segment.export(temp_outfile, format="wav")
-            if args.formantmethod == 'Disvoice':
-                [F1,F2]=F1F2_extractor.extract_features_file(temp_outfile)
-            elif args.formantmethod == 'praat':
-                try:
-                    MaxnumForm=5
-                    # if 'u:' in symb or 'A:' in symb:
-                    if 'u:' in symb:
-                        maxFormant=3000
-                    else:
-                        maxFormant=5000
-                    [F1,F2]=measureFormants(temp_outfile,minf0,maxf0,time_step=F1F2_extractor.step,MaxnumForm=MaxnumForm,Maxformant=maxFormant,framesize=F1F2_extractor.sizeframe)
-                except :
-                    print("Error processing ",utt+"__"+symb)
-                    error_msg_bag.append(utt+"__"+symb)
-            if len(F1) == 0 or len(F2)==0:
-                F1_static, F2_static= -1, -1
-            else:
-                F1_static=functional_method(F1,method=AVERAGEMETHOD,window=functional_method_window)
-                F2_static=functional_method(F2,method=AVERAGEMETHOD,window=functional_method_window)
-            
-            
-            assert  math.isnan(F1_static) == False and math.isnan(F2_static) == False
-            # if symb !='u:1':
-            os.remove(temp_outfile)
-            
-            tmp_dict=Dict()
-            tmp_dict[symb].F1=F1_static
-            tmp_dict[symb].F2=F2_static
-            df_tmp=pd.DataFrame.from_dict(tmp_dict)
-            if utt not in  Formants_utt_symb.keys():
-                Formants_utt_symb[utt]=df_tmp
-            else:
-                Formants_utt_symb[utt]=pd.concat([Formants_utt_symb[utt],df_tmp],axis=1)
-            
-            if len(F1) != 0 and len(F2)!=0:
-                if spkr_name not in Formants_people_symb.keys():
-                    if symb not in Formants_people_symb[spkr_name].keys():
-                        Formants_people_symb[spkr_name][symb]=[[F1_static, F2_static]]
-                    elif symb in Formants_people_symb[spkr_name].keys():
-                        Formants_people_symb[spkr_name][symb].append([F1_static, F2_static])
-                else:
-                    if symb not in Formants_people_symb[spkr_name].keys():
-                        Formants_people_symb[spkr_name][symb]=[[F1_static, F2_static]]
-                    elif symb in Formants_people_symb[spkr_name].keys(): 
-                        Formants_people_symb[spkr_name][symb].append([F1_static, F2_static])
-        Formants_utt_symb[utt] = Formants_utt_symb[utt].T
-        df=pd.DataFrame(df_segInfo[[0,1]].values,index=df_segInfo[2])
-        Formants_utt_symb[utt]['start']=df[0]
-        Formants_utt_symb[utt]['end']=df[1]
-        if args.check:
-            if len(Utt_phf_dict[utt][Utt_phf_dict[utt].index != 'SIL']) != len(Formants_utt_symb[utt][Formants_utt_symb[utt].index != "SIL"]):
-                with open('Gen_formant_multiprocess.log', 'a') as f:
-                    string=utt + ": utt in Utt_phf_dict " + str(len(Utt_phf_dict[utt])) + " Not Match utt in Formants_utt_symb "+  str(len(Formants_utt_symb[utt])) + "\n"
-                    
-                    f.write(string)
-            assert len(Formants_utt_symb[utt]) !=0
-    
-    return Formants_utt_symb, Formants_people_symb

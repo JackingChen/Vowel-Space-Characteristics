@@ -7,23 +7,12 @@ Created on Wed Aug  4 12:21:17 2021
 """
 
 '''
-        This script is a inherited from Analyze_DOCKID_syncrony_formant.py
         1. Data prepare area
             a. Filter out data using by 1.5*IQR
         2-1. Personal timeseries generation (Details in TBME2021)
         2-2. Calculate LOC timeseries features within each defined timesteps (Details in TBME2021)
         3. Calculate syncrony features based on feature timeseries
-        
-        
-        
-        [Notafications]
-        1. Keep in mind that last frame may have unenough  vowels, so sometimes the 
-           latter code will fill arbitrary data  (The system will promt "Filled  N EmptIES" if it detected timeseries with not enough phones)
-        
-        2. Some people having too little timeseries will have zero last-half, so Fill_n_Create_AUIInfo
-           will fill values to each phone, each role. The total filled message will be len(Missbag) * 3
-           
-           
+
         Input:  Formants_utt_symb
         Output: df_syncrony_measurement.loc[people,feature]
     
@@ -51,6 +40,7 @@ from varname import nameof
 from tqdm import tqdm
 import re
 from multiprocessing import Pool, current_process
+from articulation.articulation import Articulation
 import articulation.Multiprocess as Multiprocess
 from datetime import datetime as dt
 import pathlib
@@ -58,14 +48,7 @@ import pathlib
 from scipy import special, stats
 import warnings
 from Syncrony import Syncrony
-
-from utils_jack  import  Formant_utt2people_reshape, Gather_info_certainphones, \
-                         FilterUttDictsByCriterion, GetValuelimit_IQR, \
-                         Get_aligned_sequences, WER, Get_Vowels_AUI
-from metric import Evaluation_method     
-import random
-from phonation.phonation import  Phonation
-from SlidingWindow import slidingwindow as SW
+from SlidingWindow import Reorder2_PER_utt
 # =============================================================================
 def get_args():
     # we add compulsary arguments as named arguments for readability
@@ -76,21 +59,25 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--reFilter', default=False, type=bool,
+    parser.add_argument('--reFilter', default=True, type=bool,
                             help='')
     parser.add_argument('--check', default=True, type=bool,
                             help='')
     parser.add_argument('--label_choose_lst', default=['ADOS_C'],
                             help=['ADOS_C','dia_num'])
-    parser.add_argument('--MinNum', default=2,
+    parser.add_argument('--poolMed', default='middle',
+                            help='path of the base directory')
+    parser.add_argument('--poolWindowSize', default=3,
+                            help='path of the base directory')
+    parser.add_argument('--MinPhoneNum', default=3,
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='ASD_DOCKID',
+    parser.add_argument('--dataset_role', default='TD_DOCKID',
                             help='[TD_DOCKID_emotion | ASD_DOCKID_emotion | kid_TD | kid88]')
-    parser.add_argument('--Inspect_roles', default=['D','K'],
+    parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
-    parser.add_argument('--Inspect_features_phonations', default=['intensity_mean','meanF0', 'stdevF0','hnr','localJitter', 'localabsoluteJitter','localShimmer'],
+    parser.add_argument('--Inspect_roles', default=['D','K'],
                             help='')
     parser.add_argument('--basic_columns', default=['u_num', 'a_num', 'i_num', 'ADOS_C', 'dia_num', 'sex', 'age', 'Module','ADOS_cate', 'u_num+i_num+a_num'],
                             help='')
@@ -98,6 +85,12 @@ def get_args():
     return args
 
 args = get_args()
+
+from utils_jack  import  Formant_utt2people_reshape, Gather_info_certainphones, \
+                         FilterUttDictsByCriterion, GetValuelimit_IQR, \
+                         Get_aligned_sequences, WER, Get_Vowels_AUI
+from metric import Evaluation_method     
+import random
 
 def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_dict, People_data_distrib,\
                               PhoneMapp_dict, PhoneOfInterest ,\
@@ -109,7 +102,7 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
     Vowels_AUI_info_dict=Dict()
     df_person_segment_feature_dict=Dict()
     MissingSegment_bag=[]
-    for people in tqdm(keys_people):
+    for people in keys_people:
         Formants_segment_role_utt_dict=Formants_people_segment_role_utt_dict[people]
         if len(In_Segments_order) ==0 :
             Segments_order=sorted(list(Formants_segment_role_utt_dict.keys()))
@@ -145,7 +138,7 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
 
     return df_person_segment_feature_dict, Vowels_AUI_info_dict, MissingSegment_bag
 
-def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule, outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'):
+def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule, outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'):
     pool = Pool(int(os.cpu_count()))
     keys=[]
     interval=20
@@ -162,8 +155,9 @@ def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule, o
         for utt, df_utt in load_file_tmp.items():
             Formants_utt_symb_limited[utt]=df_utt
     
-    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl","wb"))
-    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl")
+    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]Formants_utt_symb_limited.pkl","wb"))
+    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]Formants_utt_symb_limited.pkl")
+    
     
 def GetValuemeanstd(AUI_info_total,PhoneMapp_dict,Inspect_features):
     People_data_distrib=Dict()
@@ -202,8 +196,7 @@ def FillData_NormDistrib(AUI_info,People_data_distrib,Inspect_features,PhoneOfIn
                     df_filled_samples_ori['cmps']='ori'
                     df_filled_samples=pd.concat([df_filled_samples_ori,df_filled_samples_cmp],axis=0)
                     AUI_info_filled[people][phonesymb]=AUI_info_filled[people][phonesymb].append(df_filled_samples)        
-                    if verbose:
-                        print("Filled ", Num2sample ,'EmptIES ')
+
     return AUI_info_filled
 
 def Fill_n_Create_AUIInfo(Formants_utt_symb_SegmentRole, People_data_distrib, Inspect_features ,PhoneMapp_dict, PhoneOfInterest ,people, vowel_min_num=3):
@@ -218,6 +211,10 @@ def Fill_n_Create_AUIInfo(Formants_utt_symb_SegmentRole, People_data_distrib, In
         
     AUI_info_filled = FillData_NormDistrib(AUI_info,People_data_distrib,Inspect_features,PhoneOfInterest, vowel_min_num)
     return AUI_info_filled
+
+
+
+
 # =============================================================================
 '''
     
@@ -230,6 +227,7 @@ def Fill_n_Create_AUIInfo(Formants_utt_symb_SegmentRole, People_data_distrib, In
 ''' parse namespace '''
 args = get_args()
 pklpath=args.inpklpath
+windowsize=args.poolWindowSize
 label_choose_lst=args.label_choose_lst # labels are too biased
 dataset_role=args.dataset_role
 # Randseed=args.Randseed
@@ -237,20 +235,22 @@ outpklpath=args.inpklpath+"/Session_formants_people_vowel_feat/"
 if not os.path.exists(outpklpath):
     os.makedirs(outpklpath)
 
-Phonation_utt_symb=pickle.load(open(pklpath+"/Phonation_utt_symb_{role}.pkl".format(role=dataset_role),'rb'))
+
+Formants_utt_symb=pickle.load(open(pklpath+"/Formants_utt_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,windowsize,dataset_role),'rb'))
 
 PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
-PhoneOfInterest=list(PhoneMapp_dict.keys())
+PhoneOfInterest=sorted(list(PhoneMapp_dict.keys()))
 
-''' Filter unqualified Phonation vowels '''
-Phonation_people_information=Formant_utt2people_reshape(Phonation_utt_symb,Phonation_utt_symb,Align_OrinCmp=False)
-AUI_info_phonation_total=Gather_info_certainphones(Phonation_people_information,PhoneMapp_dict,PhoneOfInterest)
-limit_people_rule_Phonation=GetValuelimit_IQR(AUI_info_phonation_total,PhoneMapp_dict,args.Inspect_features_phonations)
+''' Vowel AUI rule is using phonewoprosody '''
+Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
+AUI_info_total=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
+limit_people_rule=GetValuelimit_IQR(AUI_info_total,PhoneMapp_dict,args.Inspect_features)
+
 
 ''' multi processing start '''
 date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
 outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
-filepath=outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl"
+filepath=outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
 if os.path.exists(filepath) and args.reFilter==False:
     fname = pathlib.Path(filepath)
     mtime = dt.fromtimestamp(fname.stat().st_mtime)
@@ -258,17 +258,17 @@ if os.path.exists(filepath) and args.reFilter==False:
     
     # If file last modify time is not now (precisions to the hours) than we create new one
     if filemtime != date_now:
-        Process_IQRFiltering_Phonation_Multi(Phonation_utt_symb,limit_people_rule_Phonation) # the results will be output as pkl file at outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl"
+        Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
 else:
-    Process_IQRFiltering_Phonation_Multi(Phonation_utt_symb,limit_people_rule_Phonation)
-
-Phonation_utt_symb_limited=pickle.load(open(filepath,"rb"))
+    Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule)
+Formants_utt_symb_limited=pickle.load(open(filepath,"rb"))
 ''' multi processing end '''
-if len(limit_people_rule_Phonation) >0:
-    Phonation_utt_symb=Phonation_utt_symb_limited
+if len(limit_people_rule) >0:
+    Formants_utt_symb=Formants_utt_symb_limited
 
-Phonation_people_information=Formant_utt2people_reshape(Phonation_utt_symb,Phonation_utt_symb,Align_OrinCmp=False)
-AUI_info_phonation=Gather_info_certainphones(Phonation_people_information,PhoneMapp_dict,PhoneOfInterest)
+Formants_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
+AUI_info_total=Gather_info_certainphones(Formants_people_information,PhoneMapp_dict,PhoneOfInterest)
+
 # =============================================================================
 '''
 
@@ -292,11 +292,6 @@ for key, values in HalfDesider.items():
     for v in values:        
         emotion2half[v]=key
 
-def POI_List2str(list):
-    return ','.join(list)
-
-def POI_Str2list(str):
-    return str.split(',')
 # =============================================================================
 def Reorder2Emotion_PER_utt(Formants_utt_symb, HalfDesider, PhonesOfInterest=['u:', 'i:', 'A:']):
     Formants_people_segment_role_utt_dict=Dict()
@@ -322,201 +317,166 @@ def Reorder2Emotion_PER_utt(Formants_utt_symb, HalfDesider, PhonesOfInterest=['u
     return Formants_people_segment_role_utt_dict, Formants_people_half_role_utt_dict
 
 
+def POI_List2str(list):
+    return ','.join(list)
 
-'''  
+def POI_Str2list(str):
+    return str.split(',')
 
-    There are so many options to calculate the phonation time series (A:, u:, i:, or all of them together)
-    We keep the flexibility to generate all of them
 
-'''
-Phonation_POI_people_segment_role_utt_dict=Dict()
-for PhoneOfInterest in [['A:'],['u:'],['i:'],sorted(list(PhoneMapp_dict.keys()))]:
-    if 'emotion' in  dataset_role:
-        Phonation_people_segment_role_utt_dict, Phonation_people_half_role_utt_dict\
-            =Reorder2Emotion_PER_utt(Phonation_utt_symb, HalfDesider,PhoneOfInterest)
-    else:
-        sliding_window=SW()
-        # Phonation_people_segment_role_utt_dict=Reorder2_PER_utt_phonation(Phonation_utt_symb,PhoneOfInterest,MinNum=args.MinNum)
-        Phonation_people_segment_role_utt_dict=sliding_window.Reorder2_PER_utt_phonation(Phonation_utt_symb,PhoneMapp_dict,\
+if 'emotion' in  dataset_role:
+    Formants_people_segment_role_utt_dict, Formants_people_half_role_utt_dict\
+        =Reorder2Emotion_PER_utt(Formants_utt_symb, HalfDesider,PhoneOfInterest)
+
+else:
+    # Formants_people_segment_role_utt_dict=Reorder2_PER_utt(Formants_utt_symb,PhoneOfInterest,MinNum=args.MinPhoneNum)
+    Formants_people_segment_role_utt_dict=Reorder2_PER_utt(Formants_utt_symb,PhoneMapp_dict,\
                                                            PhoneOfInterest,args.Inspect_roles,\
-                                                           MinNum=args.MinNum)
-                                                                            
-        Phonation_people_half_role_utt_dict=Dict()
-        for people in Phonation_people_segment_role_utt_dict.keys():
-            split_num=len(Phonation_people_segment_role_utt_dict[people])//2
-            for segment in Phonation_people_segment_role_utt_dict[people].keys():
-                for role in Phonation_people_segment_role_utt_dict[people][segment].keys():
-                    if segment <= split_num:
-                        Phonation_people_half_role_utt_dict[people]['first_half'][role].update(Phonation_people_segment_role_utt_dict[people][segment][role])
-                    else:
-                        Phonation_people_half_role_utt_dict[people]['last_half'][role].update(Phonation_people_segment_role_utt_dict[people][segment][role])
-    
-    Phonation_POI_people_segment_role_utt_dict[POI_List2str(PhoneOfInterest)].segment=Phonation_people_segment_role_utt_dict
-    Phonation_POI_people_segment_role_utt_dict[POI_List2str(PhoneOfInterest)].half=Phonation_people_half_role_utt_dict
+                                                           MinNum=args.MinPhoneNum)            
+    Formants_people_half_role_utt_dict=Dict()
+    Formants_people_whole_role_utt_dict=Dict()
+    for people in Formants_people_segment_role_utt_dict.keys():
+        split_num=len(Formants_people_segment_role_utt_dict[people])//2
+        for segment in Formants_people_segment_role_utt_dict[people].keys():
+            for role in Formants_people_segment_role_utt_dict[people][segment].keys():
+                if segment <= split_num:
+                    Formants_people_half_role_utt_dict[people]['first_half'][role].update(Formants_people_segment_role_utt_dict[people][segment][role])
+                else:
+                    Formants_people_half_role_utt_dict[people]['last_half'][role].update(Formants_people_segment_role_utt_dict[people][segment][role])
+                Formants_people_whole_role_utt_dict[people]['whole'][role].update(Formants_people_segment_role_utt_dict[people][segment][role])
 
 # Data Statistics for the use of filling empty segments
-People_data_distrib_phonation=GetValuemeanstd(AUI_info_phonation_total,PhoneMapp_dict,args.Inspect_features_phonations)
+People_data_distrib=GetValuemeanstd(AUI_info_total,PhoneMapp_dict,args.Inspect_features)
+
+
+
 # =============================================================================
 '''
-
-2-2. Calculate phonation timeseries features (Only used for analysis in TBME2021, not main experiment)
-
+    2-2. Calculate LOC timeseries features within each defined timesteps (Details in TBME2021)
+    
 Prepare df_formant_statistics for each segment
 
-df_person_segment_feature_dict[people][role]=df_person_segment_feature
+Input:  Formants_people_segment_role_utt_dict
+Output: df_person_segment_feature_dict[people][role]=df_person_segment_feature
 
 df_person_segment_feature=
-
-    u_num  a_num  ...  ADOS_cate  u_num+i_num+a_num
-0     2.0   10.0  ...        2.0               16.0
-1     8.0   13.0  ...        2.0               34.0
-2     5.0    9.0  ...        2.0               19.0
-3    12.0    4.0  ...        2.0               27.0
-4     6.0    7.0  ...        2.0               25.0
-5     3.0    3.0  ...        2.0               11.0
+        u_num  a_num  ...  linear_discriminant_covariance(A:,i:)  ADOS_cate
+happy     5.0    6.0  ...                          -4.877535e-15        1.0
+afraid    3.0    3.0  ...                           8.829873e-18        1.0
+angry     6.0   13.0  ...                           1.658604e-17        1.0
+sad       7.0   10.0  ...                           0.000000e+00        1.0
 
 '''
 emotion_timeorder=['happy', 'afraid', 'angry', 'sad']
-phonation=Phonation(Inspect_features=args.Inspect_features_phonations)
-phonation._updateISSegmentFeature(True)
+articulation=Articulation()
 # =============================================================================
-df_POI_person_segment_feature_dict=Dict()
+keys=[]
+interval=5
+for i in range(0,len(People_data_distrib.keys()),interval):
+    keys.append(list(People_data_distrib.keys())[i:i+interval])
+flat_keys=[item for sublist in keys for item in sublist]
+assert len(flat_keys) == len(People_data_distrib)
 
-for PhoneOfInterest_str in Phonation_POI_people_segment_role_utt_dict.keys():
-    Phonation_people_segment_role_utt_dict=Phonation_POI_people_segment_role_utt_dict[PhoneOfInterest_str].segment
-    Phonation_people_half_role_utt_dict=Phonation_POI_people_segment_role_utt_dict[PhoneOfInterest_str].half
-    
-    
-    PhoneOfInterest=POI_Str2list(PhoneOfInterest_str)
-    ''' This part for phonation '''            
-    keys=[]
-    interval=5
-    for i in range(0,len(People_data_distrib_phonation.keys()),interval):
-        # print(list(Utt_ctxdepP_dict.keys())[i:i+interval])
-        keys.append(list(People_data_distrib_phonation.keys())[i:i+interval])
-    flat_keys=[item for sublist in keys for item in sublist]
-    assert len(flat_keys) == len(People_data_distrib_phonation)
-    
-    pool = Pool(os.cpu_count())
-    # pool = Pool(2)
-    if 'emotion' in  dataset_role:
-        Segment_lst=emotion_timeorder
-    else:
-        Segment_lst=[]
-    
-    final_result = pool.starmap(GetPersonalSegmentFeature_map, [(key,Phonation_people_segment_role_utt_dict,People_data_distrib_phonation, \
-                                      PhoneMapp_dict, PhoneOfInterest ,\
-                                      args.Inspect_roles, args.Inspect_features_phonations,\
-                                      Segment_lst, phonation, phonation.vowel_min_num) for key in tqdm(keys)])
-    print('GetPersonalSegmentFeature_map done')
-    df_person_segment_feature_dict=Dict()
-    Vowels_AUI_info_segments_dict=Dict()
-    MissSeg=[]
-    for d, vowelinfoseg, missSeg in tqdm(final_result):
-        MissSeg.extend(missSeg)
-        for spk in d.keys():
-            df_person_segment_feature_dict[spk]=d[spk]
-            Vowels_AUI_info_segments_dict[spk]=d[spk]
-    
-    # Some people having too little timeseries will have zero last-half, so Fill_n_Create_AUIInfo
-    # will fill values to each phone, each role. The total filled message will be len(Missbag) * 3
-    final_result = pool.starmap(GetPersonalSegmentFeature_map, [(key,Phonation_people_half_role_utt_dict,People_data_distrib_phonation, \
+pool = Pool(os.cpu_count())
+if 'emotion' in  dataset_role:
+    Segment_lst=emotion_timeorder
+else:
+    Segment_lst=[]
+
+final_result = pool.starmap(GetPersonalSegmentFeature_map, [(key,Formants_people_segment_role_utt_dict,People_data_distrib, \
                                   PhoneMapp_dict, PhoneOfInterest ,\
-                                  args.Inspect_roles, args.Inspect_features_phonations,\
-                                  list(HalfDesider.keys()), phonation, phonation.vowel_min_num) for key in tqdm(keys)])
-    print('GetPersonalSegmentFeature_map done')
-    df_person_half_feature_dict=Dict()
-    Vowels_AUI_half_dict=Dict()
-    MissHalf=[]
-    for d, vowelinfoseg, missHal in tqdm(final_result):
-        MissHalf.extend(missHal)
-        for spk in d.keys():
-            df_person_half_feature_dict[spk]=d[spk]
-            Vowels_AUI_half_dict[spk]=d[spk]
-    
-    df_POI_person_segment_feature_dict[PhoneOfInterest_str].segment=df_person_segment_feature_dict
-    df_POI_person_segment_feature_dict[PhoneOfInterest_str].half=df_person_half_feature_dict
+                                  args.Inspect_roles, args.Inspect_features,\
+                                  Segment_lst, articulation) for key in tqdm(keys)])
+print('GetPersonalSegmentFeature_map segment done !!!')
+df_person_segment_feature_dict=Dict()
+Vowels_AUI_info_segments_dict=Dict()
+MissSeg=[]
+for d, vowelinfoseg, missSeg in tqdm(final_result):
+    MissSeg.extend(missSeg) #Bookeep the people that the timestamps are missing 
+    for spk in d.keys():
+        df_person_segment_feature_dict[spk]=d[spk]
+        Vowels_AUI_info_segments_dict[spk]=d[spk]
 
-pickle.dump(df_POI_person_segment_feature_dict,open(outpklpath+"df_POI_person_segment_feature_dict_{0}_{1}.pkl".format(dataset_role, 'phonation'),"wb"))
+# Some people having too little timeseries will have zero last-half, so Fill_n_Create_AUIInfo
+# will fill values to each phone, each role. The total filled message will be len(Missbag) * 3
+final_result = pool.starmap(GetPersonalSegmentFeature_map, [(key,Formants_people_half_role_utt_dict,People_data_distrib, \
+                              PhoneMapp_dict, PhoneOfInterest ,\
+                              args.Inspect_roles, args.Inspect_features,\
+                              list(HalfDesider.keys()), articulation) for key in keys])
+print('GetPersonalSegmentFeature_map done')
+df_person_half_feature_dict=Dict()
+Vowels_AUI_half_dict=Dict()
+MissHalf=[]
+for d, vowelinfoseg, missHal in tqdm(final_result):
+    MissHalf.extend(missHal) #Bookeep the people that the first/last half is missing 
+    for spk in d.keys():
+        df_person_half_feature_dict[spk]=d[spk]
+        Vowels_AUI_half_dict[spk]=d[spk]
 
 
+final_result = pool.starmap(GetPersonalSegmentFeature_map, [(key,Formants_people_whole_role_utt_dict,People_data_distrib, \
+                              PhoneMapp_dict, PhoneOfInterest ,\
+                              args.Inspect_roles, args.Inspect_features,\
+                              ['whole'], articulation) for key in keys])
 
-# # Then merge All df_POI_person_segment_feature_dict sub dicts!!
-# df_POI_person_segment_feature_merged_dict=Dict()
-# for PhoneOfInterest_str in df_POI_person_segment_feature_dict.keys():
-#     for segmenthalf in df_POI_person_segment_feature_dict[PhoneOfInterest_str].keys():
-#         for people in df_POI_person_segment_feature_dict[PhoneOfInterest_str][segmenthalf].keys():
-#             for role in df_POI_person_segment_feature_dict[PhoneOfInterest_str][segmenthalf][people].keys():
-#                 if role not in df_POI_person_segment_feature_merged_dict[segmenthalf][people].keys():
-#                     df_POI_person_segment_feature_merged_dict[segmenthalf][people][role]=pd.DataFrame()
-#                 df_POI_person_segment_feature_merged_dict[segmenthalf][people][role]=\
-#                     pd.concat([df_POI_person_segment_feature_merged_dict[segmenthalf][people][role],\
-#                                df_POI_person_segment_feature_dict[PhoneOfInterest_str][segmenthalf][people][role]],axis=1)
-#                 df_POI_person_segment_feature_merged_dict[segmenthalf][people][role] = \
-#                     df_POI_person_segment_feature_merged_dict[segmenthalf][people][role].drop(columns=basic_columns)
-#                 # df_POI_person_segment_feature_merged_dict[segmenthalf][people][role] = \
-#                 #     df_POI_person_segment_feature_merged_dict[segmenthalf][people][role].loc[:,~df_POI_person_segment_feature_merged_dict[segmenthalf][people][role].columns.duplicated()]
+# This section is to inspect features if we collect vowel information for the whole session    
+# The purpose of doing this is because the whole session feature should equal or be similar to LOC features (The total session as a timestep)
+print('GetPersonalSegmentFeature_map whole done')
+df_person_whole_feature_dict=Dict()
+Vowels_AUI_whold_dict=Dict()
+for d, vowelinfoseg, missHal in tqdm(final_result):
+    for spk in d.keys():
+        df_person_whole_feature_dict[spk]=d[spk]
+
+# This will be used in Statistical tests
+pickle.dump(df_person_segment_feature_dict,open(outpklpath+"df_person_segment_feature_dict_{0}_{1}.pkl".format(dataset_role, 'formant'),"wb"))
 
 
 # =============================================================================
 '''
 
-    Calculate syncrony features
+    3. Calculate syncrony features based on feature timeseries
+
+
+    Input: df_person_segment_feature_dict
+    Output: 
 
 '''
+
+
+
 features=[
-    'intensity_mean_mean(A:,i:,u:)', 'meanF0_mean(A:,i:,u:)',
-       'stdevF0_mean(A:,i:,u:)', 'hnr_mean(A:,i:,u:)',
-       'localJitter_mean(A:,i:,u:)', 'localabsoluteJitter_mean(A:,i:,u:)',
-       'localShimmer_mean(A:,i:,u:)', 'intensity_mean_var(A:,i:,u:)',
-       'meanF0_var(A:,i:,u:)', 'stdevF0_var(A:,i:,u:)', 'hnr_var(A:,i:,u:)',
-       'localJitter_var(A:,i:,u:)', 'localabsoluteJitter_var(A:,i:,u:)',
-       'localShimmer_var(A:,i:,u:)',
-       ]
-exclude_cols=['ADOS_cate']   # covariance of only two classes are easily to be zero
+        'FCR',
+       'VSA1', 'between_variance_f1(A:,i:,u:)', 'within_variance_f1(A:,i:,u:)',
+       'between_variance_f1_norm(A:,i:,u:)',
+       'within_variance_f1_norm(A:,i:,u:)', 'between_variance_f2(A:,i:,u:)',
+       'within_variance_f2(A:,i:,u:)', 'between_variance_f2_norm(A:,i:,u:)',
+       'within_variance_f2_norm(A:,i:,u:)',
+       'between_covariance_norm(A:,i:,u:)', 'between_variance_norm(A:,i:,u:)',
+       'between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)',
+       'within_covariance_norm(A:,i:,u:)', 'within_variance_norm(A:,i:,u:)',
+       'within_covariance(A:,i:,u:)', 'within_variance(A:,i:,u:)',
+       'total_covariance_norm(A:,i:,u:)', 'total_variance_norm(A:,i:,u:)',
+       'total_covariance(A:,i:,u:)', 'total_variance(A:,i:,u:)',
+       'sam_wilks_lin(A:,i:,u:)', 'pillai_lin(A:,i:,u:)',
+       'hotelling_lin(A:,i:,u:)', 'roys_root_lin(A:,i:,u:)',
+       'sam_wilks_lin_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)',
+       'hotelling_lin_norm(A:,i:,u:)', 'roys_root_lin_norm(A:,i:,u:)',
+        'u_num+i_num+a_num']
+exclude_cols=['ADOS_cate']   # To avoid labels that will cause errors 
+                             # Covariance of only two classes are easily to be zero
 FilteredFeatures = [c for c in features if c not in exclude_cols]
 # =============================================================================
-syncrony=Syncrony()
-Phonation_temporal_poolMed=['mean','var']
-df_syncrony_measurement_phonation_all=pd.DataFrame()
 
-for PhoneOfInterest_str in df_POI_person_segment_feature_dict.keys():
-    df_POI_person_segment_feature_PhoneOfInterest_str_dict=df_POI_person_segment_feature_dict[PhoneOfInterest_str]
-    df_person_segment_feature_dict=df_POI_person_segment_feature_PhoneOfInterest_str_dict.segment
-    df_person_half_feature_dict=df_POI_person_segment_feature_PhoneOfInterest_str_dict.half
-    
-    features=['{0}_{1}({2})'.format(feat , pool, PhoneOfInterest_str) for pool in Phonation_temporal_poolMed for feat in args.Inspect_features_phonations]
-    
-    df_syncrony_measurement_phonation=syncrony.calculate_features(df_person_segment_feature_dict, df_person_half_feature_dict,\
-                               features,PhoneOfInterest_str,\
+syncrony=Syncrony()
+PhoneOfInterest_str=''
+df_syncrony_measurement=syncrony.calculate_features(df_person_segment_feature_dict, df_person_half_feature_dict,\
+                               FilteredFeatures,PhoneOfInterest_str,\
                                args.Inspect_roles, Label,\
                                MinNumTimeSeries=2, label_choose_lst=['ADOS_C'])
+
+timeSeries_len_columns=[col  for col in df_syncrony_measurement.columns if 'timeSeries_len' in col]
+df_syncrony_measurement['timeSeries_len']=df_syncrony_measurement[timeSeries_len_columns].min(axis=1)
     
-        
-    df_syncrony_measurement_phonation_all=pd.concat([df_syncrony_measurement_phonation_all,df_syncrony_measurement_phonation], axis=1)    
-        
-timeSeries_len_columns=[col  for col in df_syncrony_measurement_phonation_all.columns if 'timeSeries_len' in col]
-df_syncrony_measurement_phonation_all['timeSeries_len']=df_syncrony_measurement_phonation_all[timeSeries_len_columns].min(axis=1)
-
-
-df_syncrony_measurement_phonation_all=df_syncrony_measurement_phonation_all.loc[:,~df_syncrony_measurement_phonation_all.columns.duplicated()]
-pickle.dump(df_syncrony_measurement_phonation_all,open(outpklpath+"Syncrony_measure_of_variance_phonation_{}.pkl".format(dataset_role),"wb"))
-
-    
-df_syncrony_measurement=df_syncrony_measurement_phonation_all
-lst=[]
-for col in df_syncrony_measurement.columns:
-    if df_syncrony_measurement[col].isnull().values.any():
-        lst.append(col)
-# =============================================================================
-''' Correaltion area ''' 
-correlationColumns=df_syncrony_measurement.columns    
-
-N=2
-Eval_med=Evaluation_method()
-Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_syncrony_measurement,\
-                                                             N,correlationColumns,\
-                                                             constrain_sex=-1, constrain_module=-1,\
-                                                             feature_type='Syncrony_formant')
-
+pickle.dump(df_syncrony_measurement,open(outpklpath+"Syncrony_measure_of_variance_{}.pkl".format(dataset_role),"wb"))
 

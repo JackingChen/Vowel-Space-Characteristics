@@ -112,7 +112,7 @@ def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule, outpath='/h
     assert len(flat_keys) == len(Formants_utt_symb.keys())
     muti=Multiprocess.Multi()
     final_results=pool.starmap(muti.FilterUttDictsByCriterion_map, [([Formants_utt_symb,Formants_utt_symb,file_block,limit_people_rule]) for file_block in tqdm(keys)])
-
+    
     Formants_utt_symb_limited=Dict()
     for load_file_tmp,_ in final_results:        
         for utt, df_utt in load_file_tmp.items():
@@ -201,6 +201,8 @@ if not os.path.exists(outpklpath):
 
 
 Formants_utt_symb=pickle.load(open(pklpath+"/Formants_utt_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,windowsize,role),'rb'))
+
+
 
 
 # =============================================================================
@@ -326,240 +328,11 @@ Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_c
 #  Pearson
 #  between_covariance(A:,i:,u:)       -0.346864  ...         86.0
 #  between_variance(A:,i:,u:)         -0.465486  ...         86.0
-# =============================================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-# =============================================================================
-'''
-
-    Calculate each vowel formant duration
-    (This part is for debugging, and is not part of the paper TBME2021)
-
-      
-    averaged duration
-    u
-    0.0860
-    i
-    0.0705
-    a
-    0.0932
-
-'''
-# =============================================================================
-# def Calculate_each_vowel_formant_duration(AUI_info):
-#     Dict_phoneDuration=Dict()
-#     Dict_phoneDuration_mean=pd.DataFrame([])
-#     for phone in PhoneOfInterest:
-#         Dict_phoneDuration[phone]=pd.DataFrame([],columns=['dur'])
-#         for people in AUI_info.keys():
-#             df_data=AUI_info[people][phone]            
-#             Dict_phoneDuration[phone].loc[people,'dur']=(df_data['end']-df_data['start']).mean()
-#         Dict_phoneDuration_mean.loc[phone,'mean']=Dict_phoneDuration[phone].mean().values
-#     return Dict_phoneDuration, Dict_phoneDuration_mean
-# Dict_phoneDuration, Dict_phoneDuration_mean = Calculate_each_vowel_formant_duration(AUI_info)
-# =============================================================================
-aaa=ccc
 
 
 
 
 # =============================================================================
-'''
-
-Plotting area
-
-'''
-phoneme_color_map={'a':'tab:blue','u:':'tab:orange','i:':'tab:green',\
-                   'A:':'tab:blue','A:1':'tab:orange','A:2':'tab:green','A:3':'tab:red','A:4':'tab:purple','A:5':'tab:gray'}
-# =============================================================================
-
-Plotout_path="Plots/"
-
-if not os.path.exists(Plotout_path):
-    os.makedirs(Plotout_path)
 
 
 
-def plot(Vowels_AUI,outname=Plotout_path+'{0}_ADOS{1}',label_choose='ADOS_C'):
-    for people in Vowels_AUI.keys():
-        if people not in df_formant_statistic.index:
-            continue
-        formant_info=df_formant_statistic.loc[people]
-        ASDlab=Label.label_raw[label_choose][Label.label_raw['name']==people].values
-        fig, ax = plt.subplots()
-        for phone, values in Vowels_AUI[people].items():
-            x,y=values.loc[:,'F1'],values.loc[:,'F2']
-    
-            area=np.repeat(1,len(x))
-            cms=np.repeat(phoneme_color_map[phone],len(x))
-            plt.scatter(x, y, s=area, c=cms,  label=phone)
-            plt.title('{0}_ADOS{1}'.format(pid_dict[people],ASDlab[0]))
-            
-        additional_info1="FCR={FCR}, VSA1={VSA1}, VSA2={VSA2}, LnVSA={LnVSA}".format(\
-            FCR=formant_info['FCR'],VSA1=formant_info['VSA1'],VSA2=formant_info['VSA2'],LnVSA=formant_info['LnVSA'])
-        additional_info2="F_vals_f1={F_vals_f1}, F_vals_f2={F_vals_f2}, F_val_mix={F_val_mix}".format(\
-            F_vals_f1=formant_info['F_vals_f1'],F_vals_f2=formant_info['F_vals_f2'],F_val_mix=formant_info['F_val_mix'])
-
-        plt.ylim(0, 5000)
-        plt.xlim(0, 5000)
-        ax.legend()
-        plt.figtext(0,0,additional_info1)
-        plt.figtext(0,-0.1,additional_info2)
-        plt.savefig(outname.format(pid_dict[people],ASDlab[0]),dpi=300, bbox_inches = "tight")
-        plt.show()
-
-
-plot(Vowels_AUI,Plotout_path+'{0}_ADOS{1}')
-
-if INSPECT:
-    phone="ax5"
-    
-    label_ADOSC=Label.label_raw[['name','ADOS_C']].set_index("name")
-    Num_spokenphone=Vowels_AUI_sampNum[people][phone]
-    
-    df_formant_statistic[phone]=pd.concat([df_formant_statistic[phone],Num_spokenphone],axis=1)
-
-    # =============================================================================
-    '''
-    
-    Plot x = desired value, y= ADOS score. We want to sample critical samples for further inspection
-    
-    '''
-    # num_spoken_phone=pd.DataFrame.from_dict(Vowels_AUI_sampNum,orient='index',columns=['num_spoken_phone'])
-    N=10
-    # =============================================================================
-    fig, ax = plt.subplots()
-    feature_str='F_val_mix'
-    df_formant_statistic_col=df_formant_statistic.astype(float)[feature_str]
-    label_ADOSC=Label.label_raw[['name','ADOS_C']].set_index("name")
-    df_formant_statistic_qualified=pd.concat([df_formant_statistic_col,label_ADOSC],axis=1)
-    # df_formant_statistic_col=pd.concat([df_formant_statistic_col,num_spoken_phone],axis=1)
-    # df_formant_statistic_qualified=df_formant_statistic_col[df_formant_statistic_col['num_spoken_phone']>N]
-    
-    area=np.repeat(10,len(df_formant_statistic_qualified))
-    cms=range(len(df_formant_statistic_qualified))
-    
-    
-    x, y=df_formant_statistic_qualified.iloc[:,0], df_formant_statistic_qualified.iloc[:,1]
-    plt.scatter(x,y, c=cms, s=area)
-    for xi, yi, pidi in zip(x,y,df_formant_statistic_qualified.index):
-        ax.annotate(str(pid_dict[pidi]), xy=(xi,yi))
-    plt.title(feature_str)
-    plt.xlabel("feature")
-    plt.ylabel("ADOS")
-    ax.legend()
-    plt.savefig(Plotout_path+'Acorrelation{0}.png'.format(feature_str),dpi=300, bbox_inches = "tight")
-    plt.show()
-df_pid=pd.DataFrame.from_dict(pid_dict,orient='index')
-df_pid.columns=['name_id']
-df_pid[df_pid['name_id']==69].index    
-
-
-
-
-# =============================================================================
-'''Function that is used but placed at the bottom to make the code neat''' 
-# =============================================================================
-
-def FilterUttDictsByCriterion_map(Formants_utt_symb,Formants_utt_symb_cmp,keys,limit_people_rule):
-    # Masks will be generated by setting criterion on Formants_utt_symb
-    # and Formants_utt_symb_cmp will be masked by the same mask as Formants_utt_symb
-    # we need to make sure two things:
-    #   1. the length of Formants_utt_symb_cmp and Formants_utt_symb are the same
-    #   2. the phone sequences are aligned correctly
-    Formants_utt_symb_limited=Dict()
-    Formants_utt_symb_cmp_limited=Dict()
-    for utt in tqdm(keys):
-        people=utt[:utt.find(re.findall("_[K|D]",utt)[0])]
-        df_ori=Formants_utt_symb[utt].sort_values(by="start")
-        df_cmp=Formants_utt_symb_cmp[utt].sort_values(by="start")
-        df_ori['text']=df_ori.index
-        df_cmp['text']=df_cmp.index
-        
-        r=df_cmp.index.astype(str)
-        h=df_ori.index.astype(str)
-        
-        error_info, WER_value=WER(r,h)
-        utt_human_ali, utt_hype_ali=Get_aligned_sequences(ref=df_cmp, hype=df_ori ,error_info=error_info) # This step cannot gaurentee hype and human be exact the same string
-                                                                                                          # because substitude error also counts when selecting the optimal 
-                                                                                                          # matched string         
-        utt_human_ali.index=utt_human_ali['text']
-        utt_human_ali=utt_human_ali.drop(columns=["text"])
-        utt_hype_ali.index=utt_hype_ali['text']
-        utt_hype_ali=utt_hype_ali.drop(columns=["text"])
-        
-        assert len(utt_human_ali) == len(utt_hype_ali)
-        limit_rule=limit_people_rule[people]
-        SymbRuleChecked_bookkeep={}
-        for symb_P in limit_rule.keys():
-            values_limit=limit_rule[symb_P]
-    
-            filter_bool=utt_hype_ali.index.str.contains(symb_P)  #  1. select the phone with criterion
-            filter_bool_inv=np.invert(filter_bool)           #  2. create a mask for unchoosed phones
-                                                             #  we want to make sure that only 
-                                                             #  the phones not match the criterion will be False
-            for feat in values_limit.keys():
-                feat_max_value=values_limit[feat]['max']
-                filter_bool=np.logical_and(filter_bool , (utt_hype_ali[feat]<=feat_max_value))
-                feat_min_value=values_limit[feat]['min']
-                filter_bool=np.logical_and(filter_bool , (utt_hype_ali[feat]>=feat_min_value))
-                
-            filter_bool=np.logical_or(filter_bool_inv,filter_bool)
-            
-            # check & debug
-            if not filter_bool.all():
-                print(utt,filter_bool[filter_bool==False])
-            
-            SymbRuleChecked_bookkeep[symb_P]=filter_bool.to_frame()
-        
-        df_True=pd.DataFrame(np.array([True]*len(utt_hype_ali)))
-        for keys, values in SymbRuleChecked_bookkeep.items():
-            df_True=np.logical_and(values,df_True)
-        
-        Formants_utt_symb_limited[utt]=utt_hype_ali[df_True[0].values]
-        Formants_utt_symb_cmp_limited[utt]=utt_human_ali[df_True[0].values]
-    return Formants_utt_symb_limited,Formants_utt_symb_cmp_limited

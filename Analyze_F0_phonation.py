@@ -5,15 +5,25 @@ Created on Thu Oct 29 17:14:41 2020
 
 @author: jackchen
 
-This script does the main expeeriments in Table 1 (Correlation between Level of clustering and ADOS_A) 
-1. Data prepare area: Gather raw data of the three critical monophthongs (F1 & F2) and save in: df_formant_statistic.
-    * Note we hack into scipy f-classif function to decompose ssbn and sswn. We found that ssbn is the main factor of correlation 
-2. Correlation area: Write a standard correlation function to calculate the correlations between all features ADOS_C 
-3. t-test area: t-test between each groups 
+
+This script is a inherited from Analyze_F1F2_tVSA_FCR.py
+1. Data prepare area: 
+    Gather raw data of the three critical monophthongs (F1 & F2) and save in: df_formant_statistic.
+    
+    1-1 Filtering area:
+        Filter out the outliers by IQR method (defined in muti.FilterUttDictsByCriterion_map)
+    
+2. Feature calculating area
+    a. We use articulation.calculate_features() method to calculate LOC features 
+    
+3. Evaluation area
 
 
+Input:
+    Phonation_utt_symb
 
-4. Manual Ttest area: Not really important, just ignore it
+Output:
+    df_phonation_statistic_77
 
 """
 
@@ -42,6 +52,12 @@ import articulation.Multiprocess as Multiprocess
 from datetime import datetime as dt
 import pathlib
 from phonation.phonation import  Phonation
+from scipy import special, stats
+import warnings
+from utils_jack  import  Formant_utt2people_reshape, Gather_info_certainphones, \
+                         FilterUttDictsByCriterion, GetValuelimit_IQR, \
+                         Get_aligned_sequences, WER, Get_Vowels_AUI
+from metric import Evaluation_method     
 
 def criterion_filter(df_formant_statistic,N=10,\
                      constrain_sex=-1, constrain_module=-1,constrain_agemax=-1,constrain_ADOScate=-1,constrain_agemin=-1,\
@@ -88,9 +104,6 @@ def to_matrix(l, n): #Create a 2D list out of 1D list
     return [l[i:i+n] for i in range(0, len(l), n)]
 
 
-from scipy import special, stats
-import warnings
-
     
 def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule, outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'):
     pool = Pool(int(os.cpu_count()))
@@ -112,24 +125,6 @@ def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule, o
     
     pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl","wb"))
     print('Formants_utt_symb saved to ',outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl")
-'''
-
-Calculating FCR
-FCR=(F2u+F2a+F1i+F1u)/(F2i+F1a)
-VSA1=ABS((F1i*(F2a –F2u)+F1a *(F2u–F2i)+F1u*(F2i–F2a))/2)
-VSA2=sqrt(S*(S-EDiu)(S-EDia)(S-EDau))
-LnVSA=sqrt(LnS*(LnS-LnEDiu)(LnS-LnEDia)(LnS-LnEDau))
-
-where,
-u=F12_val_dict['w']
-a=F12_val_dict['A']
-i=F12_val_dict['j']
-
-EDiu=sqrt((F2u–F2i)^2+(F1u–F1i)^2)
-EDia=sqrt((F2a–F2i)^2+(F1a–F1i)^2)
-EDau=sqrt((F2u–F2a)^2+(F1u–F1a)^2)
-S=(EDiu+EDia+EDau)/2
-'''
 
 # =============================================================================
 def get_args():
@@ -151,7 +146,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Stat_med_str_VSA', default='mean',
                             help='path of the base directory')
-    parser.add_argument('--dataset_role', default='kid88',
+    parser.add_argument('--dataset_role', default='kid_TD',
                             help='kid_TD| kid88')
     # parser.add_argument('--Inspect_features', default=['F1','F2'],
     #                         help='')
@@ -164,14 +159,6 @@ def get_args():
 
 args = get_args()
 base_path=args.base_path
-
-# path_app = base_path+'/../'
-# sys.path.append(path_app)
-from utils_jack  import  Formant_utt2people_reshape, Gather_info_certainphones, \
-                         FilterUttDictsByCriterion, GetValuelimit_IQR, \
-                         Get_aligned_sequences, WER, Get_Vowels_AUI
-from metric import Evaluation_method     
-
 
 # =============================================================================
 '''
@@ -198,15 +185,13 @@ label_set=['ADOS_C','ADOS_S','ADOS_SC']
 # =============================================================================
 '''
 
+    1-1. Filtering area
+    
     Filter out data using by 1.5*IQR
 
 '''
 PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
-
-
 PhoneOfInterest=list(PhoneMapp_dict.keys())
-
-
 # =============================================================================
 
 
@@ -237,43 +222,18 @@ if len(limit_people_rule_Phonation) >0:
 
 Phonation_people_information=Formant_utt2people_reshape(Phonation_utt_symb,Phonation_utt_symb,Align_OrinCmp=False)
 AUI_info_phonation=Gather_info_certainphones(Phonation_people_information,PhoneMapp_dict,PhoneOfInterest)
-# =============================================================================
-'''
-
-    Calculate each vowel formant duration
 
 
-      
-    averaged duration
-    u
-    0.0860
-    i
-    0.0705
-    a
-    0.0932
+
+# =============================================================================        
+''' 
+
+    2. Feature calculating area
+
 
 '''
 # =============================================================================
-# def Calculate_each_vowel_formant_duration(AUI_info):
-#     Dict_phoneDuration=Dict()
-#     Dict_phoneDuration_mean=pd.DataFrame([])
-#     for phone in PhoneOfInterest:
-#         Dict_phoneDuration[phone]=pd.DataFrame([],columns=['dur'])
-#         for people in AUI_info.keys():
-#             df_data=AUI_info[people][phone]            
-#             Dict_phoneDuration[phone].loc[people,'dur']=(df_data['end']-df_data['start']).mean()
-#         Dict_phoneDuration_mean.loc[phone,'mean']=Dict_phoneDuration[phone].mean().values
-#     return Dict_phoneDuration, Dict_phoneDuration_mean
-# Dict_phoneDuration, Dict_phoneDuration_mean = Calculate_each_vowel_formant_duration(AUI_info)
-# =============================================================================
-
-
-
-
-''' Calculate temporal variance features '''
 Vowels_AUI_phonation=Get_Vowels_AUI(AUI_info_phonation, args.Inspect_features_phonations,VUIsource="From__Formant_people_information")
-
-
 
 # Calculate phonation features
 phonation=Phonation(Inspect_features=args.Inspect_features_phonations)
@@ -297,7 +257,12 @@ df_phonation_statistic_77=criterion_filter(df_phonation_statistic,\
 # =============================================================================
 '''
 
-    2. Correlation area
+    2. Evaluation area
+
+    We still keep this area to get a peek of the correlation result.
+    The evaluation function should be the same as the one in Statistical_tests.py
+    
+    The evaluation module is defined in Evaluation_method()
 
 '''
 # =============================================================================
@@ -323,15 +288,13 @@ df_phonation_statistic_77['u_num+i_num+a_num']=df_phonation_statistic_77['u_num'
                                             df_phonation_statistic_77['i_num'] +\
                                             df_phonation_statistic_77['a_num']
 
-
-# ManualCondition=Dict()
-# suffix='.xlsx'
-# condfiles=glob.glob('Inspect/condition/*'+suffix)
-# for file in condfiles:
-#     df_cond=pd.read_excel(file)
-#     name=os.path.basename(file).replace(suffix,"")
-#     ManualCondition[name]=df_cond['Unnamed: 0'][df_cond['50%']==True]
-
 N=0
 Eval_med=Evaluation_method()
 Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_phonation_statistic_77,N,columns,constrain_sex=-1, constrain_module=-1)
+
+
+# =============================================================================
+''' Not presented in TBME2021 '''
+# localJitter_mean(u:)                0.300436   0.005211  ...  0.079301         85.0
+# localabsoluteJitter_mean(u:)        0.397684   0.000164  ...  0.148010         85.0
+# =============================================================================

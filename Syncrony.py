@@ -16,6 +16,18 @@ class Syncrony:
                            features,PhoneOfInterest_str,\
                            Inspect_roles, Label,\
                            MinNumTimeSeries=3, label_choose_lst=['ADOS_C']):
+        # =============================================================================
+        '''
+        
+            This function calculates the coordinative features in TBME2021
+            
+            Input: df_person_segment_feature_dict, df_person_half_feature_dict
+            Output: df_syncrony_measurement
+        
+        '''         
+        # =============================================================================
+        
+        
         p_1=Inspect_roles[0]
         p_2=Inspect_roles[1]
         df_syncrony_measurement=pd.DataFrame()
@@ -40,7 +52,6 @@ class Syncrony:
             
             for col in features:
                 # Calculate the syncrony
-                FeatName='Syncrony[{}]'.format(col)
                 timeseries_0=person_0[col]
                 timeseries_1=person_1[col]
                 
@@ -53,7 +64,7 @@ class Syncrony:
                 df_timeseries_pairs=pd.concat([timeseries_0,timeseries_1],axis=1)
                 r=df_timeseries_pairs.corr().loc[p_1,p_2]
                 
-                RESULT_dict[FeatName]=r
+                RESULT_dict['Syncrony[{}]'.format(col)]=r # The syncrony feature
                 
         
                 # Calculate the distance
@@ -62,14 +73,16 @@ class Syncrony:
                 assert len(pairwise_split_dist) == 2
                 # cmpFirst_dist = (timeseries_1 - timeseries_0.iloc[0]).abs()
                 
+                # Divergence features
                 Time=range(len(timeseries_0))
                 r_pairwise_dist=np.corrcoef(Time, pairwise_dist)[0,1]
                 # r_cmpFirst_dist=np.corrcoef(Time, cmpFirst_dist)[0,1]
                 Dist_split_divergence=pairwise_split_dist[-1] - pairwise_split_dist[0]
-                # assert not np.isnan(Dist_split_divergence)
+                
                 r_Variance_divergence_p1=np.corrcoef(Time, timeseries_0)[0,1]
                 r_Variance_divergence_p2=np.corrcoef(Time, timeseries_1)[0,1]
                 
+                # Variance features
                 var_p1=np.var(timeseries_0)
                 var_p2=np.var(timeseries_1)
                 var_pairwise_dist=np.var((timeseries_0 - timeseries_1))
@@ -81,23 +94,21 @@ class Syncrony:
                 RESULT_dict['Divergence[{}]_var_p1'.format(col)]=r_Variance_divergence_p1
                 RESULT_dict['Divergence[{}]_var_p2'.format(col)]=r_Variance_divergence_p2
                 
+                # Average features  (is used in Discriminative analysis )
                 RESULT_dict['Average[{}]'.format(col)]=np.mean(pairwise_dist)
                 RESULT_dict['Average[{}]_split'.format(col)]=np.mean(pairwise_split_dist)
                 # RESULT_dict['Variance[{}]_p1'.format(col)]=var_p1
                 # RESULT_dict['Variance[{}]_p2'.format(col)]=var_p2
                 # RESULT_dict['Variance[{}]_distp1p2'.format(col)]=var_pairwise_dist
-                # middlePoint=np.floor(len(timeseries_0)/2)
                 
-        
+            # Turn dict to dataframes
             df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index').T
             df_RESULT_list.index=[people]
             df_syncrony_measurement=df_syncrony_measurement.append(df_RESULT_list)
             
         self.df_syncrony_measurement=df_syncrony_measurement
         contain_nan_bool=self._checknan()
-        # if contain_nan_bool:
-        #     df_syncrony_measurement=self._dropnan()
-            
+ 
         return df_syncrony_measurement
     def _checknan(self):
         lst=[]

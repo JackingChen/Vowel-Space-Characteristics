@@ -59,8 +59,19 @@ class Multi:
         data_clipped=ma.array(data_one_dim,mask=bool_mask)
         return data_clipped
     def process_audio(self,files,silence,trnpath,functional_method_window=3,record_WavTrn=False):
+        '''
         
-        if record_WavTrn:
+            Major code in preprocessing (tracking F1 F2 and calculate middle value)
+            
+            input: trn files
+            output: Formants_utt_symb[utt] -> df[phone_str,<F1,F2,starttime,endtime>,
+                    Formants_people_symb[people] -> dict[phone] -> list of F1 F2 of certian phone
+                                                                    ex: 'f': [[529.2410234365949, 1806.8653688655065],
+                                                                               [297.604154848269, 1145.7308244254693],
+                                                                               [886.3867507979276, 1903.7683573734396]],
+        
+        '''
+        if record_WavTrn:   # Set this flag if you want to debug by inspecting it on praat
             inspect_people=list(set([os.path.basename(file)[:re.search("_[K|D]_", os.path.basename(file)).start()] for file in files]))
             if not self.phoneMappdict:
                 raise Exception('You should update self.phoneMappdict')
@@ -87,6 +98,12 @@ class Multi:
             regexp = re.compile(r'u(A|aI|ax|eI|O)_') #['uA_', 'uaI_', 'uax_', 'ueI_', 'uO_']
             u_Biphoneset = [symbbset for symbbset in self.Phoneme_sets.keys() if regexp.search(symbbset)]
             def ScanBiphone(df_segInfo,Phoneme_sets,Biphoneset):
+                '''
+                
+                    In TBME2021 we handle Biphone that we splt to left phone and right phone, ex: ueI -> u-eI
+                    This function is to scan possible biphones
+                
+                '''
                 df_bool=df_segInfo.copy()
                 for idx in df_segInfo.index:
                     Biphone_lst= [symb for symbset in u_Biphoneset for symb in Phoneme_sets[symbset]]
@@ -97,6 +114,12 @@ class Multi:
                     
                 return df_bool
             def GetmaxFormant(symb, age, sex):
+                '''
+                    In TBME2021 we use different parameters to get the F1 F2 values of female and children voices
+                    Your may Google for "female maxformant" to find why
+                    This function sets the maxformant depend on conditions
+                
+                '''
                 if age <= 12 or sex=='female':
                     maxFormant=5500
                 else:
@@ -106,6 +129,8 @@ class Multi:
                 return maxFormant
             df_u_BiphonBool=ScanBiphone(df_segInfo,self.Phoneme_sets,u_Biphoneset)
             
+            #========================================================
+            ''' Split Biphone to two separate phone here. As the Biphone is splitted we assign equal time duration for each phone'''
             for ind in df_segInfo[df_u_BiphonBool['txt']].index:
                 st,ed,symb = df_segInfo.loc[ind]
                 old_idx=df_segInfo.loc[ind].name
@@ -120,8 +145,10 @@ class Multi:
                 df_segInfo=df_segInfo.drop(index=old_idx)
             df_segInfo=df_segInfo.sort_values(by='st')
             df_segInfo=df_segInfo.reset_index(drop=True)
+            #========================================================
             
-            
+            #========================================================
+            ''' Input audio here '''
             if 'Session' in self.filepath:
                 audiofile=self.filepath+"/{name}.wav".format(name=filename[:re.search("_[K|D]_", filename).end()-1])
             elif 'Segment' in self.filepath:
@@ -129,8 +156,12 @@ class Multi:
             else:
                 raise OSError(os.strerror, 'not allowed filepath')
             audio = AudioSegment.from_wav(audiofile)
+            #========================================================
             
+            #========================================================
+            ''' We have a xlsx file that records the people's basic information (sex, age), which is stored in variable Info_name_sex'''
             gender_query_str=filename[:re.search("_[K|D]_", filename).start()]
+            
             role=filename[re.search("[K|D]", filename).start()]
             if role =='D':
                 gender='female'
@@ -139,7 +170,7 @@ class Multi:
                 series_gend=Info_name_sex[Info_name_sex['name']==gender_query_str]['sex']
                 gender=series_gend.values[0]
                 age_year=Info_name_sex[Info_name_sex['name']==gender_query_str]['age_year']
-            
+            #========================================================
             
             minf0=F0_parameter_dict[gender]['f0_min']
             maxf0=F0_parameter_dict[gender]['f0_max']
@@ -155,7 +186,8 @@ class Multi:
                 ed_ms=ed * 1000 #Works in milliseconds
                 # st_ms=st_ext * 1000 #Works in milliseconds
                 # ed_ms=ed_ext * 1000 #Works in milliseconds
-        
+                
+                # We slice the utterance audio file to phone level and output to a certain location
                 audio_segment = silence + audio[st_ms:ed_ms] + silence
                 temp_outfile=F1F2_extractor.PATH+'/../tempfiles/tempwav{}.wav'.format(utt+symb)
                 
@@ -164,7 +196,7 @@ class Multi:
                 # Formants Calculation start here
                 if self.formantmethod == 'Disvoice':
                     [F1,F2]=F1F2_extractor.extract_features_file(temp_outfile)
-                elif self.formantmethod == 'praat':
+                elif self.formantmethod == 'praat':  # We use praat methods now
                     try:
                         
                         maxFormant=GetmaxFormant(symb=symb, age=age_year.values[0], sex=gender)
@@ -176,8 +208,8 @@ class Multi:
                         error_msg_bag.append(utt+"__"+symb)
                     
                 
-                F1=self._self_constraint(F1,feat='F1')
-                F2=self._self_constraint(F2,feat='F2')
+                F1=self._self_constraint(F1,feat='F1') # constraint F1 to 0 ~ 5500 hz
+                F2=self._self_constraint(F2,feat='F2') # constraint F1 to 0 ~ 5500 hz
         
                 if len(F1) < 2 or len(F2)<2: # don't accept the data with length = 0 for 1
                     F1_static, F2_static= -1, -1
@@ -205,14 +237,14 @@ class Multi:
                     # warnings.filterwarnings('default')
                 assert math.isnan(F1_static) == False or math.isnan(F2_static) == False
                 
-                if self.MEASURE_PHONATION==True:
+                if self.MEASURE_PHONATION==True: # set this flag if you want to add phonation measurements. You should set this by calling class methods
                     # F0 Calculation start here
                     df_feat_utt=measurePitch(temp_outfile, minf0, maxf0, "Hertz")
                     df_feat_utt.index=[symb]
                     if utt not in Phonation_utt_symb.keys():
                         Phonation_utt_symb[utt]=pd.DataFrame()
                     Phonation_utt_symb[utt]=Phonation_utt_symb[utt].append(df_feat_utt)
-                    # try:
+                    # try: # In case some of the phone instances are empty
                     #     df_feat_utt=measurePitch(temp_outfile, minf0, maxf0, "Hertz")
                     #     df_feat_utt.index=[symb]
                     #     if utt not in Phonation_utt_symb.keys():
@@ -222,13 +254,12 @@ class Multi:
                     #     print("Error processing Phonation instances ",utt+"__"+symb)
                     #     error_msg_bag.append('Phonation '+utt+"__"+symb)
                     #     pass
-                    
-                
+
                 # =============================================================================
-                os.remove(temp_outfile)
-                
-                
-                def Add_FormantsUttSymb(F1_static,F2_static,F1,F2,symb,Formants_utt_symb, Formants_people_symb):
+                os.remove(temp_outfile) #Acoustic feature extraction done and delete the temporary file (sliced phone level)
+
+                def Add_FormantsUttSymb(F1_static,F2_static,F1,F2,symb,Formants_utt_symb, Formants_people_symb): 
+                    # Setting this as a function module because it may be reused to collect dictionaries
                     tmp_dict=Dict()
                     tmp_dict[symb].F1=F1_static
                     tmp_dict[symb].F2=F2_static
@@ -252,7 +283,7 @@ class Multi:
                     return Formants_utt_symb, Formants_people_symb
                 Formants_utt_symb, Formants_people_symb= Add_FormantsUttSymb(F1_static,F2_static,F1,F2,symb,Formants_utt_symb, Formants_people_symb)
         
-                if record_WavTrn:
+                if record_WavTrn: #Set this flag for debigging
                     dur=audio[st_ms:ed_ms].duration_seconds
                     if dur >=0.00001:
                         silence_real_duration=silence.duration_seconds
@@ -273,13 +304,14 @@ class Multi:
                                     Trn_collect[spkr_name][s].trn+='{0}\t{1}\t{2}:{3}\n'.format(start,end,utt,symb)
                                     Trn_collect[spkr_name][s].praat.append(tgre.Interval(start, end, str(utt+symb)))
                                     Trn_collect[spkr_name][s].basetime+=silence_real_duration + dur + silence_real_duration  
+            # In the dataprocessing pipeline, Formants_utt_symb have to contain the start and end timestamps
             Formants_utt_symb[utt] = Formants_utt_symb[utt].T
             df=pd.DataFrame(df_segInfo[['st','ed']].values,index=df_segInfo['txt'])
             Formants_utt_symb[utt]['start']=df[0]
             Formants_utt_symb[utt]['end']=df[1]
             Phonation_utt_symb[utt]['start']=df[0]
             Phonation_utt_symb[utt]['end']=df[1]
-
+            
         
         if len(error_msg_bag) !=0:
             import warnings
@@ -296,6 +328,7 @@ class Multi:
         # we need to make sure two things:
         #   1. the length of Formants_utt_symb_cmp and Formants_utt_symb are the same
         #   2. the phone sequences are aligned correctly
+        #The logic of this function is originated from alignment-human comparison and shared by the IQR filtering case
         Formants_utt_symb_limited=Dict()
         Formants_utt_symb_cmp_limited=Dict()
         for utt in tqdm(keys):
@@ -348,6 +381,17 @@ class Multi:
             Formants_utt_symb_limited[utt]=utt_hype_ali[df_True[0].values]
             Formants_utt_symb_cmp_limited[utt]=utt_human_ali[df_True[0].values]
         return Formants_utt_symb_limited,Formants_utt_symb_cmp_limited
+
+
+
+# =============================================================================
+'''
+
+    This code is not is used and is just an opening issue
+
+
+'''
+# =============================================================================
 
 class Multi_WithPosteriorgram(Multi):
     def process_audio(self,files,silence,trnpath,functional_method_window=3, AVERAGEMETHOD='middle'):

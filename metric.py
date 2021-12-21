@@ -192,6 +192,11 @@ class Evaluation_method:
                           Num_df_qualified=5,\
                           evictNamelst=[],feature_type='Session_formant'):
         '''
+            Calculate the correlation between each "index" and "label"
+            Input: df_formant_statistic[people,feature] -> df, label_choose_lst -> list
+            Output: CorreDicts[label] -> Dictionary 
+        
+        
             constrain_sex: 1 for boy, 2 for girl
             constrain_module: 3 for M3, 4 for M4
             feature_type: {Session_formant |  Syncrony_formant}
@@ -251,18 +256,5 @@ class Evaluation_method:
                     r2_adj=1-(1-r2)*(n-1)/(n-p-1)
                     df_pearsonr_table.loc[col]=[pear,pear_p, spear,spear_p, r2_adj,\
                                                 len(df_formant_qualified[col])]
-                    # if correlation_type == 'pearsonr':
-                        
-                    #     df_pearsonr_table.loc[col]=[pear,pear_p,len(df_formant_qualified[col])]
-                    #     # pear,pear_p=pearsonr(df_denan["{}_LPP_{}".format(ps,ps)],df_formant_qualified['ADOS'])
-                    #     # df_pearsonr_table_GOP.loc[ps]=[pear,pear_p,len(df_denan)]
-                    # elif correlation_type == 'spearmanr':
-                        
-                    #     df_pearsonr_table.loc[col]=[spear,spear_p,len(df_formant_qualified[col])]
-                    # elif correlation_type == 'linearregression':
-                        
-                    #     df_pearsonr_table.loc[col]=[r2_adj,np.nan,len(df_formant_qualified[col])]
-            # print("Setting N={0}, the correlation metric is: ".format(N))
-            # print("Using evaluation metric: {}".format(correlation_type))
             CorreDicts[lab_choose]=df_pearsonr_table
         return CorreDicts
