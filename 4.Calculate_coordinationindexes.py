@@ -48,7 +48,7 @@ import pathlib
 from scipy import special, stats
 import warnings
 from Syncrony import Syncrony
-from SlidingWindow import Reorder2_PER_utt
+from SlidingWindow import slidingwindow as SW
 # =============================================================================
 def get_args():
     # we add compulsary arguments as named arguments for readability
@@ -329,8 +329,9 @@ if 'emotion' in  dataset_role:
         =Reorder2Emotion_PER_utt(Formants_utt_symb, HalfDesider,PhoneOfInterest)
 
 else:
+    sliding_window=SW()
     # Formants_people_segment_role_utt_dict=Reorder2_PER_utt(Formants_utt_symb,PhoneOfInterest,MinNum=args.MinPhoneNum)
-    Formants_people_segment_role_utt_dict=Reorder2_PER_utt(Formants_utt_symb,PhoneMapp_dict,\
+    Formants_people_segment_role_utt_dict=sliding_window.Reorder2_PER_utt_formants(Formants_utt_symb,PhoneMapp_dict,\
                                                            PhoneOfInterest,args.Inspect_roles,\
                                                            MinNum=args.MinPhoneNum)            
     Formants_people_half_role_utt_dict=Dict()
