@@ -80,7 +80,7 @@ def criterion_filter(df_formant_statistic,N=10,\
     if constrain_agemin != -1:
         filter_bool=np.logical_and(filter_bool,df_formant_statistic['age']>=constrain_agemin)
     if constrain_ADOScate != -1:
-        filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS_cate']==constrain_ADOScate)
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS_cate_C']==constrain_ADOScate)
     
     # filter the names given the name list
     if len(evictNamelst)>0:
@@ -167,8 +167,8 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--poolWindowSize', default=3,
                             help='path of the base directory')
-    parser.add_argument('--dataset_role', default='kid88',
-                            help='kid_TD| kid88')
+    parser.add_argument('--dataset_role', default='KID_FromASD_DOCKID',
+                            help='kid_TD| kid88| DOC_FromASD_DOCKID | KID_FromASD_DOCKID')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
 
@@ -201,7 +201,7 @@ if not os.path.exists(outpklpath):
 
 
 Formants_utt_symb=pickle.load(open(pklpath+"/Formants_utt_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,windowsize,role),'rb'))
-
+print("Loading Formants_utt_symb from ", pklpath+"/Formants_utt_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,windowsize,role))
 
 
 
@@ -257,13 +257,28 @@ AUI_info=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,Pho
 
 
 '''
+#Continuous
+'Multi1','Multi2','Multi3','Multi4','T_ADOS_C','T_ADOS_S','T_ADOS_SC'
+'VIQ','VCI','ADOS_CSS'
+'C1','D1','D2','D3','D4','D5','E1','E2','E3'
+'BB1','BB2','BB3','BB4','BB5','BB6','BB7','BB8','BB9','BB10',
+'AA1','AA2','AA3','AA4','AA5','AA6','AA7','AA8','AA9'
+'ADOS_S','ADOS_C','C','D','C+S',
+'ADOS_cate_C'
+#Category
 # =============================================================================
 Vowels_AUI=Get_Vowels_AUI(AUI_info, args.Inspect_features,VUIsource="From__Formant_people_information")
 
 
-label_generate_choose_lst=['ADOS_C','dia_num']
-articulation=Articulation(Stat_med_str_VSA='mean')
-df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst)
+
+additional_columns=['ADOS_cate_C']
+
+label_generate_choose_lst=['ADOS_C'] + additional_columns
+
+
+
+articulation=Articulation(Stat_med_str_VSA='median')
+# df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst)
 
 # For pseudo acoustic features generation
 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
@@ -272,8 +287,8 @@ df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
 
 for i in range(len(df_formant_statistic)):
     name=df_formant_statistic.iloc[i].name
-    df_formant_statistic.loc[name,'ADOS_cate']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate'].values
-    ''' ADOS_cate, cate stands for category '''
+    df_formant_statistic.loc[name,'ADOS_cate_C']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate_C'].values
+    ''' ADOS_cate_C, cate stands for category '''
     
 # =============================================================================        
 ''' 
@@ -305,7 +320,9 @@ pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pk
 
 
 ''' Calculate correlations for Formant fetures'''
-columns=df_formant_statistic.columns
+columns=list(set(df_formant_statistic.columns) - set(additional_columns)) # Exclude added labels
+columns=list(set(columns) - set([co for co in columns if "_norm" not in co]))
+columns = columns + ['VSA1','FCR']
 
 
 
@@ -317,7 +334,8 @@ for file in condfiles:
     name=os.path.basename(file).replace(suffix,"")
     ManualCondition[name]=df_cond['Unnamed: 0'][df_cond['50%']==True]
 
-label_correlation_choose_lst=['ADOS_C',]
+label_correlation_choose_lst=label_generate_choose_lst
+# label_correlation_choose_lst=['ADOS_C']
 
 
 N=2
@@ -334,5 +352,29 @@ Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_c
 
 # =============================================================================
 
+# =============================================================================
+'''
 
+Parse through evaluation dictionary
+
+'''
+
+
+
+def Criteria(df_Corr_val):
+    pear_str='pearson_p'
+    spear_str='spearman_p'
+    
+    criteria_bool=(df_Corr_val[pear_str]<=0.05) & (df_Corr_val[spear_str]<=0.05)
+    return df_Corr_val[criteria_bool]
+
+# =============================================================================
+for key in Aaadf_spearmanr_table_NoLimit.keys():
+    df_Corr_val=Aaadf_spearmanr_table_NoLimit[key]
+    df_Corr_val_criteria=Criteria(df_Corr_val)
+    if len(df_Corr_val_criteria)>0:
+        print('Predicting label', key)
+        print("=========================")
+        print(df_Corr_val_criteria)
+        print("                         ")
 

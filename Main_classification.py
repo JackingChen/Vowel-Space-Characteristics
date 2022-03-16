@@ -85,26 +85,51 @@ experiment=args.experiment
 
 # =============================================================================
 Session_level_all=Dict()
+
+# Discriminative analysis Main
 columns=[
-    'Divergence[within_covariance_norm(A:,i:,u:)]',
-    'Divergence[within_variance_norm(A:,i:,u:)]',    
-    'Divergence[between_covariance_norm(A:,i:,u:)]',    
-    'Divergence[between_variance_norm(A:,i:,u:)]',    
-    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
+    # 'Divergence[within_covariance_norm(A:,i:,u:)]',
+    # 'Divergence[within_variance_norm(A:,i:,u:)]',    
+    # 'Divergence[between_covariance_norm(A:,i:,u:)]',    
+    # 'Divergence[between_variance_norm(A:,i:,u:)]',    
+    # 'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
     'Divergence[pillai_lin_norm(A:,i:,u:)]',
-    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
-    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
-    'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
-    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
-    'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
-    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
-    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
-    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
-    'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
-    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
-    'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
-    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
+    # 'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
+    # 'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
+    # 'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
+    # 'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
+    # 'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
+    # 'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
+    # 'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
+    # 'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
+    # 'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
+    # 'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
+    # 'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
+    # 'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
+    
+    # 'VSA1',
+    # 'FCR',
+    # 'within_covariance(A:,i:,u:)',
+    # 'between_covariance(A:,i:,u:)',
+    # 'within_variance(A:,i:,u:)',
+    # 'between_variance(A:,i:,u:)',
+    # 'sam_wilks_lin(A:,i:,u:)',
+    # 'pillai_lin(A:,i:,u:)',
     ]
+
+
+# Discriminative analysis: Side exp
+# columns=[
+# 'VSA1',
+# 'FCR',
+# 'within_covariance(A:,i:,u:)',
+# 'between_covariance(A:,i:,u:)',
+# 'within_variance(A:,i:,u:)',
+# 'between_variance(A:,i:,u:)',
+# 'sam_wilks_lin(A:,i:,u:)',
+# 'pillai_lin(A:,i:,u:)',
+# ]
+
 
 featuresOfInterest=[ [col] for col in columns]
 # featuresOfInterest=[ [col] + ['u_num+i_num+a_num'] for col in columns]
@@ -190,7 +215,7 @@ Interactionfeat_path='artuculation_AUI/Interaction'
 OtherFeat_path='Other/Static_BasicInfo'
 # for feature_paths in [Vowel_path, CtxDepPhone_path, Pseudo_CtxDepPhone_path]:
 for feature_paths in [Vowel_path]:
-# for feature_paths in [Vowel_path, CtxDepPhone_path]:
+# for feature_paths in [Vowel_path, CtxDepPhone_path]:df_best_result_allThreeClassifiers
     files = glob.glob(ados_ds.featurepath +'/'+ feature_paths+'/*.pkl')
 
     for feat_,lab_ in FeatureLabelMatch:
@@ -213,36 +238,103 @@ for feature_paths in [Vowel_path]:
 
 
 
+paper_name_map={}    
+paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]']='$Div(Norm(Pillai))$'
+paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(Pillai))_{inv}$'
+paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(Pillai))_{part}$'
+paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]']='$Div(Norm(WCC))$'
+paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCC))_{inv}$'
+paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCC))_{part}$'
+paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]']='$Div(Norm(WCV))$'
+paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCV))_{inv}$'
+paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCV))_{part}$'
+paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]']='$Div(Norm(Wilks))$'
+paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(Wilks))_{inv}$'
+paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(Wilks))_{part}$'
+paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]']='$Div(Norm(BCC))$'
+paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(BCC))_{inv}$'
+paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(BCC))_{part}$'
+paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]']='$Div(Norm(BCV))$'
+paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(BCV))_{inv}$'
+paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(BCV))_{part}$'
+paper_name_map['between_covariance(A:,i:,u:)']='$BCC$'
+paper_name_map['between_variance(A:,i:,u:)']='$BCV$'
+paper_name_map['within_covariance(A:,i:,u:)']='$WCC$'
+paper_name_map['within_variance(A:,i:,u:)']='$WCV$'
+paper_name_map['sam_wilks_lin(A:,i:,u:)']='$Wilks$'
+paper_name_map['pillai_lin(A:,i:,u:)']='$Pillai$'
+
+
 # =============================================================================
 # Model parameters
 # =============================================================================
+# C_variable=np.array([0.0001, 0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
 C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
-n_estimator=[2, 4, 8, 16, 32, 64]
+n_estimator=[2, 4, 8, 16, 32]
 
 '''
 
     Classifier
 
 '''
+
+# This is the closest 
 Classifier={}
 Classifier['SVC']={'model':sklearn.svm.SVC(),\
-                  'parameters':{'C':C_variable,\
+                  'parameters':{'random_state':[1],\
+                      'C':C_variable,\
                     'kernel': ['rbf'],\
                                 }}
 
-Classifier['LR']={'model':sklearn.linear_model.LogisticRegression(),\
-                  'parameters':{'C':C_variable,\
-                                }}
-    
-Classifier['DT']={'model':DecisionTreeClassifier(),\
-                  'parameters':{'criterion':['gini','entropy'],
-                                'splitter':['splitter','random'],\
-                                }}
     
 
+# Classifier['LR']={'model':sklearn.linear_model.LogisticRegression(),\
+#                   'parameters':{'random_state':[1],\
+#                                 'C':C_variable,\
+#                                 'solver':['liblinear','lbfgs'],\
+#                                 'class_weight':['balanced'],\
+                                
+#                                 # 'penalty':['elasticnet'],\
+#                                 # 'l1_ratio':[0.25,0.5,0.75],\
+#                                 }}
+    
+# from sklearn.neural_network import MLPClassifier
+# Classifier['MLP']={'model':MLPClassifier(),\
+#                   'parameters':{'random_state':[1],\
+#                                 'hidden_layer_sizes':[(40,),(60,),(80,),(100)],\
+#                                 'activation':['relu'],\
+#                                 'solver':['adam'],\
+#                                 'early_stopping':[True],\
+#                                 # 'penalty':['elasticnet'],\
+#                                 # 'l1_ratio':[0.25,0.5,0.75],\
+#                                 }}
+
+# Classifier['Ridge']={'model':sklearn.linear_model.RidgeClassifier(),\
+#                   'parameters':{'random_state':[1],\
+#                                 'solver':['auto'],\
+#                                 # 'penalty':['elasticnet'],\
+#                                 # 'l1_ratio':[0.25,0.5,0.75],\
+#                                 }}
+    
+# Classifier['DT']={'model':DecisionTreeClassifier(),\
+#                   'parameters':{'random_state':[1],\
+#                                 'criterion':['gini','entropy'],
+#                                 'splitter':['splitter','random'],\
+#                                 }}
+    
+# Classifier['DT']={'model':DecisionTreeClassifier(),\
+#                   'parameters':{'random_state':[1],\
+#                                 'max_depth':[3,5,8,10],\
+#                                 'criterion':['entropy'],\
+#                                 'splitter':['random'],
+#                                 'class_weight':['balanced']
+#                                 }}
+    
 
 
 loo=LeaveOneOut()
+CV_settings=loo
+# CV_settings=10
 
 # =============================================================================
 # Outputs
@@ -272,12 +364,18 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
     writer_clf = pd.ExcelWriter(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_"+final_result_file, engine = 'xlsxwriter')
     for feature_lab_str, features in Session_level_all.items():
         feature_keys, label_keys= feature_lab_str.split("::")
+        feature_rawname=feature_keys[feature_keys.find('-')+1:]
+        if feature_rawname in paper_name_map.keys():
+            featurename_paper=paper_name_map[feature_rawname]
+            feature_keys=feature_keys.replace(feature_rawname,featurename_paper)
+        
+        
         Labels = Session_level_all.X[feature_keys]
         print("=====================Cross validation start==================")
         p_grid=clf['parameters']
-        Gclf = GridSearchCV(estimator=clf['model'], param_grid=p_grid, scoring=args.selectModelScoring, cv=loo, refit=True, n_jobs=-1)
+        Gclf = GridSearchCV(estimator=clf['model'], param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
         # Score=cross_val_score(Gclf, features.X, features.y, cv=loo) 
-        CVpredict=cross_val_predict(Gclf, features.X, features.y, cv=loo)           
+        CVpredict=cross_val_predict(Gclf, features.X, features.y, cv=CV_settings)           
         Gclf.fit(features.X,features.y)
         if clf_keys == "EN":
             print('The coefficient of best estimator is: ',Gclf.best_estimator_.coef_)

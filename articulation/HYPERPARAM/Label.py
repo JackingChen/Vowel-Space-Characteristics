@@ -18,9 +18,9 @@ base_dir='/homes/ssd1/jackchen/gop_prediction/'
 # =============================================================================
 label_Bin_all={}
 
-label_path=base_dir+'ADOS_label20210721.xlsx'
+label_path=base_dir+'ADOS_label20220309.xlsx'
 label_raw=pd.read_excel(label_path)
-Labelfile_TD='/homes/ssd1/jackchen/DisVoice/data/ADOS_TD_Label22.xlsx'
+Labelfile_TD='/homes/ssd1/jackchen/DisVoice/data/ADOS_TD_Label20220219.xlsx'
 df_labels_TD=pd.read_excel(Labelfile_TD)
 label_raw=label_raw.append(df_labels_TD)
 #double check label and feature
@@ -78,7 +78,7 @@ for label_str  in label_choose:
     
     
 ''' ADD ADOS category '''
-label_raw['ADOS_cate']=np.array([0]*len(label_raw))
-label_raw.loc[label_raw['T_ADOS_C']<2,'ADOS_cate']=0
-label_raw.loc[(label_raw['T_ADOS_C']<3) & (label_raw['T_ADOS_C']>=2),'ADOS_cate']=1
-label_raw.loc[label_raw['T_ADOS_C']>=3,'ADOS_cate']=2
+label_raw['ADOS_cate_C']=np.array([0]*len(label_raw))
+label_raw.loc[label_raw['T_ADOS_C']<2,'ADOS_cate_C']=0
+label_raw.loc[(label_raw['T_ADOS_C']<3) & (label_raw['T_ADOS_C']>=2),'ADOS_cate_C']=1
+label_raw.loc[label_raw['T_ADOS_C']>=3,'ADOS_cate_C']=2

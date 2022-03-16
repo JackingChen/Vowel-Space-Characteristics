@@ -426,6 +426,14 @@ label_cols=Label.label_choose
 df_labels_ageMatchSevere=feat_getter.Get_labels_choosen(feat_getter.SevereASD_age_sex_match,Label,label_cols)
 df_labels_ageMatchMild=feat_getter.Get_labels_choosen(feat_getter.MildASD_age_sex_match,Label,label_cols)
 df_labels_TDnormal=feat_getter.Get_labels_choosen(feat_getter.TD_normal,Label,label_cols)
+df_label_ASD=pd.read_excel(Label.label_path)
+
+df_langLvl_ageMatchSevere=feat_getter.Get_labels_choosen(feat_getter.SevereASD_age_sex_match,Label,['VIQ','VCI'])
+df_langLvl_ageMatchMild=feat_getter.Get_labels_choosen(feat_getter.MildASD_age_sex_match,Label,['VIQ','VCI'])
+df_langLvl_TDnormal=feat_getter.Get_labels_choosen(feat_getter.TD_normal,Label,['VIQ','VCI'])
+
+
+
 
 df_Session_formant_statistic_ASD, df_Session_formant_statistic_TD=feat_getter.read_Sessionfeature('Formant_AUI_tVSAFCRFvals')
 df_Session_phonation_statistic_ASD, df_Session_phonation_statistic_TD=feat_getter.read_Sessionfeature('Phonation_meanvars')
@@ -732,12 +740,39 @@ TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_s
 TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_agesexmatch_ASDSevere'])
 
 
+# self_specify_cols=['between_covariance(A:,i:,u:)', 
+#                    'between_variance(A:,i:,u:)', 
+#                    'within_covariance(A:,i:,u:)', 
+#                    'within_variance(A:,i:,u:)',
+#                    'pillai_lin(A:,i:,u:)',
+#                    'sam_wilks_lin(A:,i:,u:)']
+
 self_specify_cols=['between_covariance(A:,i:,u:)', 
                    'between_variance(A:,i:,u:)', 
                    'within_covariance(A:,i:,u:)', 
                    'within_variance(A:,i:,u:)',
                    'pillai_lin(A:,i:,u:)',
-                   'sam_wilks_lin(A:,i:,u:)']
+                   'sam_wilks_lin(A:,i:,u:)',
+                   'Divergence[within_covariance_norm(A:,i:,u:)]',
+                    'Divergence[within_variance_norm(A:,i:,u:)]',    
+                    'Divergence[between_covariance_norm(A:,i:,u:)]',    
+                    'Divergence[between_variance_norm(A:,i:,u:)]',    
+                    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
+                    'Divergence[pillai_lin_norm(A:,i:,u:)]',
+                    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
+                    'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
+                    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
+                    'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
+                    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
+                    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',]
+
+
 
 
 Parameters=Measurement_basefeature
@@ -798,6 +833,8 @@ for Top_data_lst in TopTop_data_lst:
         text(0.9, 0.6, addtextvariable, ha='center', va='center', transform=ax.transAxes)
         # =============================================================================
     warnings.simplefilter('always')
+
+
 
 ASDSevere_data_lst=['df_formant_statistic_agematchASDSevere','df_formant_statistic_TD_normal']
 ASDSevereMild_data_lst=['df_formant_statistic_agematchASDSeverenMild','df_formant_statistic_TD_normal']
@@ -1079,7 +1116,7 @@ def TBMEB2Preparation_BoxplotCoordinationAnalysis(df_formant_statistic_agesexmat
     df_ASDTDpairs_total=df_ASDTDpairs_total.append(dftmp2)
     df_ASDTDpairs_total = df_ASDTDpairs_total.rename(y_axis_name_map,axis='columns')
     
-    plt.rcParams["figure.figsize"] = (9,5)
+    plt.rcParams["figure.figsize"] = (8,6)
     base_num='13'
     for i, c_s in enumerate(column_selected):
         plt_claimnum=base_num + str(i+1)
@@ -1091,12 +1128,17 @@ def TBMEB2Preparation_BoxplotCoordinationAnalysis(df_formant_statistic_agesexmat
         x = "ASDgrpTD"
         y = y_axis_name_map[c_s]
         order = ['$ASD_{Severe}$', '$ASD_{mild}$', 'TD']
-        ax = sns.boxplot(data=df, x=x, y=y, order=order)
+        ax = sns.boxplot(data=df, x=x, y=y, order=order, width=0.5)
+        ax.set_ylabel(y,fontsize=15)
         ax, test_result_list = add_stat_annotation(ax, data=df, x=x, y=y, order=order,
                             box_pairs=[("$ASD_{Severe}$", "$ASD_{mild}$"), ("$ASD_{Severe}$", "TD"), ("$ASD_{mild}$", "TD")],
                             test='Mann-Whitney', text_format='star', loc='outside', comparisons_correction=None, verbose=2)
         ax.set_xlabel('')
+        ax.set_xticklabels(order, rotation=45,fontsize=15)
+    # plt.rcParams.update({'font.size': 40})
+    
     plt.tight_layout()
+    plt.show()
     plt.clf()
 
 TBMEB2Preparation_BoxplotCoordinationAnalysis(df_formant_statistic_agesexmatch_ASDSevere,\

@@ -186,6 +186,36 @@ class Evaluation_method:
                 
         df_formant_qualified=df_formant_statistic[filter_bool]
         return df_formant_qualified
+    def _Postprocess_InCalCorr(self, lab_choose,df_formant_statistic,N,\
+                          constrain_sex=-1, constrain_module=-1, constrain_assessment=-1, constrain_ASDTD=-1,\
+                          evictNamelst=[],feature_type='Session_formant'):
+        if feature_type == 'Session_formant':
+            filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
+            filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
+        elif feature_type == 'Syncrony_formant':
+            filter_bool=df_formant_statistic['timeSeries_len']>N
+        else:
+            filter_bool=pd.Series([True]*len(df_formant_statistic),index=df_formant_statistic.index)
+            
+            
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic[lab_choose].isna()!=True)
+        if constrain_sex != -1:
+            filter_bool=np.logical_and(filter_bool,df_formant_statistic['sex']==constrain_sex)
+        if constrain_module != -1:
+            filter_bool=np.logical_and(filter_bool,df_formant_statistic['Module']==constrain_module)
+
+        if constrain_ASDTD != -1:
+            filter_bool=np.logical_and(filter_bool,df_formant_statistic['ASDTD']==constrain_ASDTD)
+        
+        if lab_choose == 'AA2':
+            filter_bool=np.logical_and(filter_bool,df_formant_statistic['AA2']<=2)
+        
+        if len(evictNamelst)>0:
+            for name in evictNamelst:
+                filter_bool.loc[name]=False
+            
+        df_formant_qualified=df_formant_statistic[filter_bool]
+        return df_formant_qualified
     
     def Calculate_correlation(self, label_choose_lst,df_formant_statistic,N,columns,\
                           constrain_sex=-1, constrain_module=-1, constrain_assessment=-1, constrain_ASDTD=-1,\
