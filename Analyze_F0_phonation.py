@@ -74,7 +74,7 @@ def criterion_filter(df_formant_statistic,N=10,\
     if constrain_agemin != -1:
         filter_bool=np.logical_and(filter_bool,df_formant_statistic['age']>=constrain_agemin)
     if constrain_ADOScate != -1:
-        filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS_cate']==constrain_ADOScate)
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS_cate_C']==constrain_ADOScate)
         
     if len(evictNamelst)>0:
         for name in evictNamelst:
@@ -105,7 +105,10 @@ def to_matrix(l, n): #Create a 2D list out of 1D list
 
 
     
-def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule, outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'):
+def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule,\
+                               outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+                               prefix='Formants_utt_symb',\
+                               suffix='Phonation_utt_symb'):
     pool = Pool(int(os.cpu_count()))
     keys=[]
     interval=20
@@ -123,8 +126,9 @@ def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule, o
         for utt, df_utt in load_file_tmp.items():
             Formants_utt_symb_limited[utt]=df_utt
     
-    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl","wb"))
-    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl")
+    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix),"wb"))
+    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix))
+
 
 # =============================================================================
 def get_args():
@@ -146,7 +150,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Stat_med_str_VSA', default='mean',
                             help='path of the base directory')
-    parser.add_argument('--dataset_role', default='kid_TD',
+    parser.add_argument('--dataset_role', default='KID_FromASD_DOCKID',
                             help='kid_TD| kid88')
     # parser.add_argument('--Inspect_features', default=['F1','F2'],
     #                         help='')
@@ -201,19 +205,28 @@ AUI_info_phonation=Gather_info_certainphones(Phonation_people_information,PhoneM
 limit_people_rule_Phonation=GetValuelimit_IQR(AUI_info_phonation,PhoneMapp_dict,args.Inspect_features_phonations)
 
 ''' multi processing start '''
-date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
+prefix,suffix = 'Phonation_utt_symb', role
+# date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
+date_now='{0}-{1}-{2}'.format(dt.now().year,dt.now().month,dt.now().day)
 outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
-filepath=outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl"
+filepath=outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix)
 if os.path.exists(filepath) and args.reFilter==False:
     fname = pathlib.Path(filepath)
     mtime = dt.fromtimestamp(fname.stat().st_mtime)
-    filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
+    # filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
+    filemtime='{0}-{1}-{2}'.format(mtime.year,mtime.month,mtime.day)
     
     # If file last modify time is not now (precisions to the hours) than we create new one
     if filemtime != date_now:
-        Process_IQRFiltering_Phonation_Multi(Phonation_utt_symb,limit_people_rule_Phonation) # the results will be output as pkl file at outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl"
+        Process_IQRFiltering_Phonation_Multi(Phonation_utt_symb,limit_people_rule_Phonation,\
+                               outpath=outpath,\
+                               prefix=prefix,\
+                               suffix=suffix) # the results will be output as pkl file at outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl"
 else:
-    Process_IQRFiltering_Phonation_Multi(Phonation_utt_symb,limit_people_rule_Phonation)
+    Process_IQRFiltering_Phonation_Multi(Phonation_utt_symb,limit_people_rule_Phonation,\
+                               outpath=outpath,\
+                               prefix=prefix,\
+                               suffix=suffix)
 
 Phonation_utt_symb_limited=pickle.load(open(filepath,"rb"))
 ''' multi processing end '''
@@ -241,7 +254,7 @@ df_phonation_statistic=phonation.calculate_features(Vowels_AUI_phonation,Label,P
 
 for i in range(len(df_phonation_statistic)):
     name=df_phonation_statistic.iloc[i].name
-    df_phonation_statistic.loc[name,'ADOS_cate']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate'].values
+    df_phonation_statistic.loc[name,'ADOS_cate_C']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate_C'].values
 pickle.dump(df_phonation_statistic,open(outpklpath+"Phonation_meanvars_{}.pkl".format(role),"wb"))
 
 sex=-1
@@ -268,16 +281,17 @@ df_phonation_statistic_77=criterion_filter(df_phonation_statistic,\
 # =============================================================================
 ''' Calculate correlations for Phonation fetures'''
 columns=[
-    'stdevF0_mean(u:)', 'localJitter_mean(u:)',
-    'localabsoluteJitter_mean(u:)', 'localShimmer_mean(u:)',
-    'stdevF0_var(u:)', 'localJitter_var(u:)', 'localabsoluteJitter_var(u:)',
-    'localShimmer_var(u:)', 'stdevF0_mean(i:)', 'localJitter_mean(i:)',
-    'localabsoluteJitter_mean(i:)', 'localShimmer_mean(i:)',
-    'stdevF0_var(i:)', 'localJitter_var(i:)', 'localabsoluteJitter_var(i:)',
-    'localShimmer_var(i:)', 'stdevF0_mean(A:)', 'localJitter_mean(A:)',
-    'localabsoluteJitter_mean(A:)', 'localShimmer_mean(A:)',
-    'stdevF0_var(A:)', 'localJitter_var(A:)', 'localabsoluteJitter_var(A:)',
-    'localShimmer_var(A:)', 'stdevF0_mean(A:,i:,u:)',
+    # 'stdevF0_mean(u:)', 'localJitter_mean(u:)',
+    # 'localabsoluteJitter_mean(u:)', 'localShimmer_mean(u:)',
+    # 'stdevF0_var(u:)', 'localJitter_var(u:)', 'localabsoluteJitter_var(u:)',
+    # 'localShimmer_var(u:)', 'stdevF0_mean(i:)', 'localJitter_mean(i:)',
+    # 'localabsoluteJitter_mean(i:)', 'localShimmer_mean(i:)',
+    # 'stdevF0_var(i:)', 'localJitter_var(i:)', 'localabsoluteJitter_var(i:)',
+    # 'localShimmer_var(i:)', 'stdevF0_mean(A:)', 'localJitter_mean(A:)',
+    # 'localabsoluteJitter_mean(A:)', 'localShimmer_mean(A:)',
+    # 'stdevF0_var(A:)', 'localJitter_var(A:)', 'localabsoluteJitter_var(A:)',
+    # 'localShimmer_var(A:)', 
+    'stdevF0_mean(A:,i:,u:)',
     'localJitter_mean(A:,i:,u:)', 'localabsoluteJitter_mean(A:,i:,u:)',
     'localShimmer_mean(A:,i:,u:)', 'stdevF0_var(A:,i:,u:)',
     'localJitter_var(A:,i:,u:)', 'localabsoluteJitter_var(A:,i:,u:)',
@@ -288,13 +302,30 @@ df_phonation_statistic_77['u_num+i_num+a_num']=df_phonation_statistic_77['u_num'
                                             df_phonation_statistic_77['i_num'] +\
                                             df_phonation_statistic_77['a_num']
 
-N=0
+N=2
 Eval_med=Evaluation_method()
 Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_choose_lst,df_phonation_statistic_77,N,columns,constrain_sex=-1, constrain_module=-1)
 
+def TBMEB1Preparation_SaveForClassifyData(dfFormantStatisticpath,\
+                        df_phonation_statistic_77):
+    '''
+        
+        We generate data for nested cross-valated analysis in Table.5 in TBME2021
+        
+        The data will be stored at Pickles/Session_formants_people_vowel_feat
+    
+    '''
+    dfFormantStatisticFractionpath='Pickles/Session_formants_people_vowel_feat'
+    if not os.path.exists(dfFormantStatisticFractionpath):
+        os.makedirs(dfFormantStatisticFractionpath)
+    pickle.dump(df_phonation_statistic_77,open(dfFormantStatisticFractionpath+'/df_phonation_statistic_77.pkl','wb'))
+
+TBMEB1Preparation_SaveForClassifyData(pklpath,df_phonation_statistic_77)
 
 # =============================================================================
 ''' Not presented in TBME2021 '''
-# localJitter_mean(u:)                0.300436   0.005211  ...  0.079301         85.0
-# localabsoluteJitter_mean(u:)        0.397684   0.000164  ...  0.148010         85.0
+# localabsoluteJitter_mean(A:,i:,u:)	0.38122827488960553	0.00037688388116778577	0.3206747363851191	0.003120031808349423	0.13478357779228367	83.0
+# localJitter_mean(A:,i:,u:)	0.305461627101333	0.004982941065908693	0.27766361798609374	0.011039131388925498	0.08211306249104067	83.0
+# localabsoluteJitter_var(A:,i:,u:)	0.27595935584822306	0.011562545817772442	0.2917206509956145	0.00745363424619023	0.06474805455029153	83.0
+
 # =============================================================================

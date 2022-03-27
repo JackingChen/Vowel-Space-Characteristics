@@ -75,7 +75,7 @@ def get_args():
                         help='')
     parser.add_argument('--Plot', default=True,
                         help='')
-    parser.add_argument('--selectModelScoring', default='neg_mean_squared_error',
+    parser.add_argument('--selectModelScoring', default='accuracy',
                         help='')
     args = parser.parse_args()
     return args
@@ -87,37 +87,57 @@ experiment=args.experiment
 Session_level_all=Dict()
 
 # Discriminative analysis Main
-columns=[
-    # 'Divergence[within_covariance_norm(A:,i:,u:)]',
-    # 'Divergence[within_variance_norm(A:,i:,u:)]',    
-    # 'Divergence[between_covariance_norm(A:,i:,u:)]',    
-    # 'Divergence[between_variance_norm(A:,i:,u:)]',    
-    # 'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
-    'Divergence[pillai_lin_norm(A:,i:,u:)]',
-    # 'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
-    # 'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
-    # 'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
-    # 'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
-    # 'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
-    # 'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
-    # 'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
-    # 'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
-    # 'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
-    # 'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
-    # 'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
-    # 'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
+# columns=[
+#     'Divergence[within_covariance_norm(A:,i:,u:)]',
+#     'Divergence[within_variance_norm(A:,i:,u:)]',    
+#     'Divergence[between_covariance_norm(A:,i:,u:)]',    
+#     'Divergence[between_variance_norm(A:,i:,u:)]',    
+#     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
+#     'Divergence[pillai_lin_norm(A:,i:,u:)]',
+#     'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
+#     'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
+#     'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
+#     'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
+#     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
+#     'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
+#     'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
+#     'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
+#     'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
+#     'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
+#     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
+#     'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
     
-    # 'VSA1',
-    # 'FCR',
-    # 'within_covariance(A:,i:,u:)',
-    # 'between_covariance(A:,i:,u:)',
-    # 'within_variance(A:,i:,u:)',
-    # 'between_variance(A:,i:,u:)',
-    # 'sam_wilks_lin(A:,i:,u:)',
-    # 'pillai_lin(A:,i:,u:)',
-    ]
+#     'VSA2',
+#     'FCR2',
+#     'within_covariance_norm(A:,i:,u:)',
+#     'between_covariance_norm(A:,i:,u:)',
+#     'within_variance_norm(A:,i:,u:)',
+#     'between_variance_norm(A:,i:,u:)',
+#     'sam_wilks_lin_norm(A:,i:,u:)',
+#     'pillai_lin_norm(A:,i:,u:)',
+#     ]
 
-
+# columns=[
+#     'VSA2',
+#     'FCR2',
+#     'within_covariance_norm(A:,i:,u:)',
+#     'between_covariance_norm(A:,i:,u:)',
+#     'within_variance_norm(A:,i:,u:)',
+#     'between_variance_norm(A:,i:,u:)',
+#     'sam_wilks_lin_norm(A:,i:,u:)',
+#     'pillai_lin_norm(A:,i:,u:)',
+# ]
+columns=[
+'Norm(WC)_sam_wilks_DKRaito', 'Norm(WC)_pillai_DKRaito',
+'Norm(WC)_hotelling_DKRaito', 'Norm(WC)_roys_root_DKRaito',
+'Norm(WC)_Det_DKRaito', 'Norm(WC)_Tr_DKRaito',
+'Norm(BC)_sam_wilks_DKRaito', 'Norm(BC)_pillai_DKRaito',
+'Norm(BC)_hotelling_DKRaito', 'Norm(BC)_roys_root_DKRaito',
+'Norm(BC)_Det_DKRaito', 'Norm(BC)_Tr_DKRaito',
+'Norm(TotalVar)_sam_wilks_DKRaito', 'Norm(TotalVar)_pillai_DKRaito',
+'Norm(TotalVar)_hotelling_DKRaito', 'Norm(TotalVar)_roys_root_DKRaito',
+'Norm(TotalVar)_Det_DKRaito', 'Norm(TotalVar)_Tr_DKRaito',
+]
 # Discriminative analysis: Side exp
 # columns=[
 # 'VSA1',
@@ -143,8 +163,16 @@ label_choose=['ADOS_C']
 #                     ['Notautism vs ASD','ADOS_cate'],
 #                     ['ASD vs Autism','ADOS_cate'],
 #                     ['Notautism vs Autism','ADOS_cate']]
-FeatureLabelMatch=[['TD_normal vs ASDSevere_agesexmatch','ASDTD'],
-                    ['TD_normal vs ASDMild_agesexmatch','ASDTD'],
+# FeatureLabelMatch=[['TD_normal vs ASDSevere_agesexmatch','ASDTD'],
+#                     ['TD_normal vs ASDMild_agesexmatch','ASDTD'],
+#                     ]
+FeatureLabelMatch=[
+                    # ['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_kid','ASDTD'],
+                    # ['TD_normal vs ASDMild_agesexmatch -> FeatLOC_kid','ASDTD'],
+                    # ['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_doc','ASDTD'],
+                    # ['TD_normal vs ASDMild_agesexmatch -> FeatLOC_doc','ASDTD'],
+                    ['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_DKRatio','ASDTD'],#注意DKRatio的columns跟別人不一樣，不過是可以統一的
+                    ['TD_normal vs ASDMild_agesexmatch -> FeatLOC_DKRatio','ASDTD'],
                     ]
 df_formant_statistics_CtxPhone_collect_dict=Dict()
 # =============================================================================
@@ -155,20 +183,28 @@ class ADOSdataset():
         self.N=2
         self.LabelType=Dict()
         self.LabelType['ADOS_C']='regression'
-        self.LabelType['ADOS_cate']='classification'
+        self.LabelType['ADOS_cate_C']='classification'
         self.LabelType['ASDTD']='classification'
         self.Fractionfeatures_str='Features/artuculation_AUI/Vowels/Fraction/*.pkl'    
         self.FeatureCombs=Dict()
-        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch']=['df_formant_statistic_TD_normal', 'df_formant_statistic_agesexmatch_ASDSevere']
-        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch']=['df_formant_statistic_TD_normal', 'df_formant_statistic_agesexmatch_ASDMild']
-        self.FeatureCombs['Notautism vs ASD']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_ASD']
-        self.FeatureCombs['ASD vs Autism']=['df_formant_statistic_77_ASD', 'df_formant_statistic_77_Autism']
-        self.FeatureCombs['Notautism vs Autism']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_Autism']
+        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_kid']=['df_formant_statistic_TD_normal_kid', 'df_formant_statistic_agesexmatch_ASDSevereGrp_kid']
+        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch -> FeatLOC_kid']=['df_formant_statistic_TD_normal_kid', 'df_formant_statistic_agesexmatch_ASDMildGrp_kid']
+        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_doc']=['df_formant_statistic_TD_normal_doc', 'df_formant_statistic_agesexmatch_ASDSevereGrp_doc']
+        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch -> FeatLOC_doc']=['df_formant_statistic_TD_normal_doc', 'df_formant_statistic_agesexmatch_ASDMildGrp_doc']
+        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_DKRatio']=['df_formant_statistic_TD_normalGrp_DKRatio', 'df_formant_statistic_agesexmatch_ASDSevereGrp_DKRatio']
+        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch -> FeatLOC_DKRatio']=['df_formant_statistic_TD_normalGrp_DKRatio', 'df_formant_statistic_agesexmatch_ASDMildGrp_DKRatio']
+        # self.FeatureCombs['Notautism vs ASD']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_ASD']
+        # self.FeatureCombs['ASD vs Autism']=['df_formant_statistic_77_ASD', 'df_formant_statistic_77_Autism']
+        # self.FeatureCombs['Notautism vs Autism']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_Autism']
     
         self._FeatureBuild()
     def Get_FormantAUI_feat(self,label_choose,pickle_path,featuresOfInterest=['MSB_f1','MSB_f2','MSB_mix'],filterbyNum=True,**kwargs):
         self.featuresOfInterest=featuresOfInterest
         arti=articulation.articulation.Articulation()
+        
+        
+        #如果path有放的話字串的話，就使用path的字串，不然就使用「feat_」等於的東西，在function裡面會以kwargs的形式出現
+        
         if not kwargs and len(pickle_path)>0:
             df_tmp=pickle.load(open(pickle_path,"rb"))
         elif len(kwargs)>0: # usage Get_FormantAUI_feat(...,key1=values1):
@@ -214,16 +250,16 @@ Vowel_path='artuculation_AUI/Vowels'
 Interactionfeat_path='artuculation_AUI/Interaction'
 OtherFeat_path='Other/Static_BasicInfo'
 # for feature_paths in [Vowel_path, CtxDepPhone_path, Pseudo_CtxDepPhone_path]:
-for feature_paths in [Vowel_path]:
+for feature_paths in [Interactionfeat_path]:
 # for feature_paths in [Vowel_path, CtxDepPhone_path]:df_best_result_allThreeClassifiers
-    files = glob.glob(ados_ds.featurepath +'/'+ feature_paths+'/*.pkl')
+    # files = glob.glob(ados_ds.featurepath +'/'+ feature_paths+'/*.pkl')
 
     for feat_,lab_ in FeatureLabelMatch:
         # feat_=key
         for feat_col in featuresOfInterest:
             feat_col_ = list(feat_col) # ex: ['MSB_f1']
             
-            X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path='',featuresOfInterest=feat_col_,feat_=ados_ds.Features_comb[feat_])
+            X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path='',featuresOfInterest=feat_col_,filterbyNum=False,feat_=ados_ds.Features_comb[feat_])
             
             if np.isnan(X).any() or np.isnan(y).any():
                 print("Feat: ",feat_col_,'Contains nan')
@@ -268,8 +304,8 @@ paper_name_map['pillai_lin(A:,i:,u:)']='$Pillai$'
 # =============================================================================
 # Model parameters
 # =============================================================================
-# C_variable=np.array([0.0001, 0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
-C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
+C_variable=np.array([0.0001, 0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
+# C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
 n_estimator=[2, 4, 8, 16, 32]
 
 '''
@@ -288,15 +324,10 @@ Classifier['SVC']={'model':sklearn.svm.SVC(),\
 
     
 
-# Classifier['LR']={'model':sklearn.linear_model.LogisticRegression(),\
-#                   'parameters':{'random_state':[1],\
-#                                 'C':C_variable,\
-#                                 'solver':['liblinear','lbfgs'],\
-#                                 'class_weight':['balanced'],\
-                                
-#                                 # 'penalty':['elasticnet'],\
-#                                 # 'l1_ratio':[0.25,0.5,0.75],\
-#                                 }}
+Classifier['LR']={'model':sklearn.linear_model.LogisticRegression(),\
+                  'parameters':{'random_state':[1],\
+                                'C':C_variable,\
+                                }}
     
 # from sklearn.neural_network import MLPClassifier
 # Classifier['MLP']={'model':MLPClassifier(),\
@@ -322,19 +353,15 @@ Classifier['SVC']={'model':sklearn.svm.SVC(),\
 #                                 'splitter':['splitter','random'],\
 #                                 }}
     
-# Classifier['DT']={'model':DecisionTreeClassifier(),\
-#                   'parameters':{'random_state':[1],\
-#                                 'max_depth':[3,5,8,10],\
-#                                 'criterion':['entropy'],\
-#                                 'splitter':['random'],
-#                                 'class_weight':['balanced']
-#                                 }}
+Classifier['DT']={'model':DecisionTreeClassifier(),\
+                  'parameters':{'random_state':[1],\
+                                }}
     
 
 
 loo=LeaveOneOut()
-CV_settings=loo
-# CV_settings=10
+# CV_settings=loo
+CV_settings=10
 
 # =============================================================================
 # Outputs

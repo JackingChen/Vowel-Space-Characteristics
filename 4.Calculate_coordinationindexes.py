@@ -59,7 +59,7 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--reFilter', default=True, type=bool,
+    parser.add_argument('--reFilter', default=False, type=bool,
                             help='')
     parser.add_argument('--check', default=True, type=bool,
                             help='')
@@ -73,13 +73,13 @@ def get_args():
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='TD_DOCKID',
+    parser.add_argument('--dataset_role', default='ASD_DOCKID',
                             help='[TD_DOCKID_emotion | ASD_DOCKID_emotion | kid_TD | kid88]')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
     parser.add_argument('--Inspect_roles', default=['D','K'],
                             help='')
-    parser.add_argument('--basic_columns', default=['u_num', 'a_num', 'i_num', 'ADOS_C', 'dia_num', 'sex', 'age', 'Module','ADOS_cate', 'u_num+i_num+a_num'],
+    parser.add_argument('--basic_columns', default=['u_num', 'a_num', 'i_num', 'ADOS_C', 'dia_num', 'sex', 'age', 'Module','ADOS_cate_C', 'u_num+i_num+a_num'],
                             help='')
     args = parser.parse_args()
     return args
@@ -121,10 +121,10 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
                 
                 
                 df_formant_statistic=Feature_calculator.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_choose_lst)
-                # add ADOS_cate to df_formant_statistic
+                # add ADOS_cate_C to df_formant_statistic
                 for i in range(len(df_formant_statistic)):
                     name=df_formant_statistic.iloc[i].name
-                    df_formant_statistic.loc[name,'ADOS_cate']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate'].values
+                    df_formant_statistic.loc[name,'ADOS_cate_C']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate_C'].values
                 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
                                                 df_formant_statistic['i_num'] +\
                                                 df_formant_statistic['a_num']
@@ -138,7 +138,10 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
 
     return df_person_segment_feature_dict, Vowels_AUI_info_dict, MissingSegment_bag
 
-def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule, outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'):
+def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule,\
+                               outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+                               prefix='Formants_utt_symb',\
+                               suffix='KID_FromASD_DOCKID'):
     pool = Pool(int(os.cpu_count()))
     keys=[]
     interval=20
@@ -155,8 +158,8 @@ def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule, outpath='/h
         for utt, df_utt in load_file_tmp.items():
             Formants_utt_symb_limited[utt]=df_utt
     
-    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]Formants_utt_symb_limited.pkl","wb"))
-    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]Formants_utt_symb_limited.pkl")
+    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix),"wb"))
+    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix))
     
     
 def GetValuemeanstd(AUI_info_total,PhoneMapp_dict,Inspect_features):
@@ -248,23 +251,41 @@ limit_people_rule=GetValuelimit_IQR(AUI_info_total,PhoneMapp_dict,args.Inspect_f
 
 
 ''' multi processing start '''
-date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
+prefix,suffix = 'Formants_utt_symb', dataset_role
+# date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
+date_now='{0}-{1}-{2}'.format(dt.now().year,dt.now().month,dt.now().day)
 outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
-filepath=outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
+filepath=outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix)
 if os.path.exists(filepath) and args.reFilter==False:
     fname = pathlib.Path(filepath)
     mtime = dt.fromtimestamp(fname.stat().st_mtime)
-    filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
+    # filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
+    filemtime='{0}-{1}-{2}'.format(mtime.year,mtime.month,mtime.day)
     
     # If file last modify time is not now (precisions to the hours) than we create new one
     if filemtime != date_now:
-        Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
+        Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,\
+                               outpath=outpath,\
+                               prefix=prefix,\
+                               suffix=suffix) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
 else:
-    Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule)
+    Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,\
+                               outpath=outpath,\
+                               prefix=prefix,\
+                               suffix=suffix)
 Formants_utt_symb_limited=pickle.load(open(filepath,"rb"))
 ''' multi processing end '''
 if len(limit_people_rule) >0:
     Formants_utt_symb=Formants_utt_symb_limited
+
+
+
+
+
+Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
+AUI_info=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
+
+
 
 Formants_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
 AUI_info_total=Gather_info_certainphones(Formants_people_information,PhoneMapp_dict,PhoneOfInterest)
@@ -361,7 +382,7 @@ Input:  Formants_people_segment_role_utt_dict
 Output: df_person_segment_feature_dict[people][role]=df_person_segment_feature
 
 df_person_segment_feature=
-        u_num  a_num  ...  linear_discriminant_covariance(A:,i:)  ADOS_cate
+        u_num  a_num  ...  linear_discriminant_covariance(A:,i:)  ADOS_cate_C
 happy     5.0    6.0  ...                          -4.877535e-15        1.0
 afraid    3.0    3.0  ...                           8.829873e-18        1.0
 angry     6.0   13.0  ...                           1.658604e-17        1.0
@@ -446,25 +467,21 @@ pickle.dump(df_person_segment_feature_dict,open(outpklpath+"df_person_segment_fe
 
 
 
-features=[
-        'FCR',
-       'VSA1', 'between_variance_f1(A:,i:,u:)', 'within_variance_f1(A:,i:,u:)',
-       'between_variance_f1_norm(A:,i:,u:)',
-       'within_variance_f1_norm(A:,i:,u:)', 'between_variance_f2(A:,i:,u:)',
-       'within_variance_f2(A:,i:,u:)', 'between_variance_f2_norm(A:,i:,u:)',
-       'within_variance_f2_norm(A:,i:,u:)',
-       'between_covariance_norm(A:,i:,u:)', 'between_variance_norm(A:,i:,u:)',
-       'between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)',
-       'within_covariance_norm(A:,i:,u:)', 'within_variance_norm(A:,i:,u:)',
-       'within_covariance(A:,i:,u:)', 'within_variance(A:,i:,u:)',
-       'total_covariance_norm(A:,i:,u:)', 'total_variance_norm(A:,i:,u:)',
-       'total_covariance(A:,i:,u:)', 'total_variance(A:,i:,u:)',
-       'sam_wilks_lin(A:,i:,u:)', 'pillai_lin(A:,i:,u:)',
-       'hotelling_lin(A:,i:,u:)', 'roys_root_lin(A:,i:,u:)',
-       'sam_wilks_lin_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)',
-       'hotelling_lin_norm(A:,i:,u:)', 'roys_root_lin_norm(A:,i:,u:)',
-        'u_num+i_num+a_num']
-exclude_cols=['ADOS_cate']   # To avoid labels that will cause errors 
+features=['VSA2',
+       'FCR2', 'between_covariance_norm(A:,i:,u:)',
+       'between_variance_norm(A:,i:,u:)', 'between_covariance(A:,i:,u:)',
+       'between_variance(A:,i:,u:)', 'within_covariance_norm(A:,i:,u:)',
+       'within_variance_norm(A:,i:,u:)', 'within_covariance(A:,i:,u:)',
+       'within_variance(A:,i:,u:)', 'total_covariance_norm(A:,i:,u:)',
+       'total_variance_norm(A:,i:,u:)', 'sam_wilks_lin_norm(A:,i:,u:)',
+       'pillai_lin_norm(A:,i:,u:)', 'hotelling_lin_norm(A:,i:,u:)',
+       'roys_root_lin_norm(A:,i:,u:)',
+       'Between_Within_Det_ratio_norm(A:,i:,u:)',
+       'Between_Within_Tr_ratio_norm(A:,i:,u:)', 'ConvexHull', 'MeanVFD',
+       'SumVFD',  'dcov_12', 'dcorr_12', 'dvar_1', 'dvar_2',
+       'pear_12', 'pointDistsTotal', 'repulsive_force',
+       'ADOS_cate_C', 'u_num+i_num+a_num']
+exclude_cols=['ADOS_cate_C']   # To avoid labels that will cause errors 
                              # Covariance of only two classes are easily to be zero
 FilteredFeatures = [c for c in features if c not in exclude_cols]
 # =============================================================================

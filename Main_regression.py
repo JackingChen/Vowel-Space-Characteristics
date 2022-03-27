@@ -88,49 +88,57 @@ experiment=args.experiment
 # Feature
 Session_level_all=Dict()
 columns=[
-    'FCR+AUINum',
-    'VSA1+AUINum',
-    'FCR*AUINum',
-    'VSA1*AUINum',
-    'FCR',
-    'VSA1',
-    'between_covariance(A:,i:,u:)',
-    'between_variance(A:,i:,u:)',
-    'within_covariance(A:,i:,u:)',
-    'within_variance(A:,i:,u:)',
-    'sam_wilks_lin(A:,i:,u:)',
-    'pillai_lin(A:,i:,u:)',
-    'u_num+i_num+a_num',
+    # 'FCR2+AUINum',
+    # 'VSA2+AUINum',
+    # 'FCR2*AUINum',
+    # 'VSA2*AUINum',
+    # 'FCR2',
+    # 'VSA2',
+    # 'between_covariance_norm(A:,i:,u:)', 'between_variance_norm(A:,i:,u:)',
+    # 'between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)',
+    # 'within_covariance_norm(A:,i:,u:)', 'within_variance_norm(A:,i:,u:)',
+    # 'within_covariance(A:,i:,u:)', 'within_variance(A:,i:,u:)',
+    # 'total_covariance_norm(A:,i:,u:)', 'total_variance_norm(A:,i:,u:)',
+    # 'sam_wilks_lin_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)',
+    # 'hotelling_lin_norm(A:,i:,u:)', 'roys_root_lin_norm(A:,i:,u:)',
+    # 'Between_Within_Det_ratio_norm(A:,i:,u:)',
+    # 'Between_Within_Tr_ratio_norm(A:,i:,u:)'
+    # 'u_num+i_num+a_num',
     ]
-# columns=[
-#     'between_covariance_norm(A:,i:,u:)',
-#     'between_variance_norm(A:,i:,u:)',
-#     'within_covariance_norm(A:,i:,u:)',
-#     'within_variance_norm(A:,i:,u:)',
-#     'sam_wilks_lin(A:,i:,u:)',
-#     'pillai_lin(A:,i:,u:)',
-#     'u_num+i_num+a_num',
-#     ]
-# columns=[
-#     'Divergence[within_covariance_norm(A:,i:,u:)]',
-#     'Divergence[within_variance_norm(A:,i:,u:)]',    
-#     'Divergence[between_covariance_norm(A:,i:,u:)]',    
-#     'Divergence[between_variance_norm(A:,i:,u:)]',    
-#     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
-#     'Divergence[pillai_lin_norm(A:,i:,u:)]',
-#     'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
-#     'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
-#     'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
-#     'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
-#     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
-#     'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
-# ]
+columns=[
+    # 'Norm(WC)_sam_wilks_DKRaito', 'Norm(WC)_pillai_DKRaito',
+    # 'Norm(WC)_hotelling_DKRaito', 'Norm(WC)_roys_root_DKRaito',
+    # 'Norm(WC)_Det_DKRaito', 'Norm(WC)_Tr_DKRaito',
+    # 'Norm(BC)_sam_wilks_DKRaito', 'Norm(BC)_pillai_DKRaito',
+    # 'Norm(BC)_hotelling_DKRaito', 'Norm(BC)_roys_root_DKRaito',
+    # 'Norm(BC)_Det_DKRaito', 'Norm(BC)_Tr_DKRaito',
+    # # 'Norm(B_CRatio)_sam_wilks_DKRaito', 'Norm(B_CRatio)_pillai_DKRaito',
+    # # 'Norm(B_CRatio)_hotelling_DKRaito', 'Norm(B_CRatio)_roys_root_DKRaito',
+    # # 'Norm(B_CRatio)_Det_DKRaito', 'Norm(B_CRatio)_Tr_DKRaito',
+    # 'Norm(TotalVar)_sam_wilks_DKRaito', 'Norm(TotalVar)_pillai_DKRaito',
+    # 'Norm(TotalVar)_hotelling_DKRaito', 'Norm(TotalVar)_roys_root_DKRaito',
+    # 'Norm(TotalVar)_Det_DKRaito', 'Norm(TotalVar)_Tr_DKRaito'
+]
+columns=[
+    'Divergence[within_covariance_norm(A:,i:,u:)]',
+    'Divergence[within_variance_norm(A:,i:,u:)]',    
+    'Divergence[between_covariance_norm(A:,i:,u:)]',    
+    'Divergence[between_variance_norm(A:,i:,u:)]',    
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
+    'Divergence[pillai_lin_norm(A:,i:,u:)]',
+    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
+    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
+    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
+    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
+]
 
 featuresOfInterest=[ [col] for col in columns]
 # featuresOfInterest=[ [col] + ['u_num+i_num+a_num'] for col in columns]
@@ -151,13 +159,13 @@ class ADOSdataset():
         self.LabelType['ASDTD']='classification'
         self.Fractionfeatures_str='Features/artuculation_AUI/Vowels/Fraction/*.pkl'    
         self.FeatureCombs=Dict()
-        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch']=['df_formant_statistic_TD_normal', 'df_formant_statistic_agesexmatch_ASDSevere']
-        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch']=['df_formant_statistic_TD_normal', 'df_formant_statistic_agesexmatch_ASDMild']
-        self.FeatureCombs['Notautism vs ASD']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_ASD']
-        self.FeatureCombs['ASD vs Autism']=['df_formant_statistic_77_ASD', 'df_formant_statistic_77_Autism']
-        self.FeatureCombs['Notautism vs Autism']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_Autism']
+        # self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch']=['df_formant_statistic_TD_normal', 'df_formant_statistic_agesexmatch_ASDSevere']
+        # self.FeatureCombs['TD_normal vs ASDMild_agesexmatch']=['df_formant_statistic_TD_normal', 'df_formant_statistic_agesexmatch_ASDMild']
+        # self.FeatureCombs['Notautism vs ASD']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_ASD']
+        # self.FeatureCombs['ASD vs Autism']=['df_formant_statistic_77_ASD', 'df_formant_statistic_77_Autism']
+        # self.FeatureCombs['Notautism vs Autism']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_Autism']
     
-        self._FeatureBuild()
+        # self._FeatureBuild()
     def Get_FormantAUI_feat(self,label_choose,pickle_path,featuresOfInterest=['MSB_f1','MSB_f2','MSB_mix'],filterbyNum=True,**kwargs):
         self.featuresOfInterest=featuresOfInterest
         arti=articulation.articulation.Articulation()
@@ -202,12 +210,13 @@ ErrorFeat_bookeep=Dict()
 
 Pseudo_CtxDepPhone_path='artuculation_AUI/Pseudo_CtxDepVowels'
 CtxDepPhone_path='artuculation_AUI/CtxDepVowels/bkup0729'
-Vowel_path='artuculation_AUI/Vowels'
+# Vowel_path='artuculation_AUI/Vowels'
+Vowel_Ratio_path='artuculation_AUI/Vowels/DKRatios'
 Interactionfeat_path='artuculation_AUI/Interaction'
 OtherFeat_path='Other/Static_BasicInfo'
 # for feature_paths in [Vowel_path, CtxDepPhone_path, Pseudo_CtxDepPhone_path]:
-for feature_paths in [Vowel_path]:
-# for feature_paths in [Interactionfeat_path]:
+# for feature_paths in [Vowel_Ratio_path]:
+for feature_paths in [Interactionfeat_path]:
 # for feature_paths in [Vowel_path, CtxDepPhone_path]:
     files = glob.glob(ados_ds.featurepath +'/'+ feature_paths+'/*.pkl')
 
@@ -264,9 +273,9 @@ Classifier={}
 loo=LeaveOneOut()
 
 
-CV_settings=loo
-# CV_settings=10
-
+# CV_settings=loo
+CV_settings=10
+# CV_settings=2
 
 '''
 
@@ -300,9 +309,9 @@ Classifier['SVR']={'model':sklearn.svm.SVR(),\
                     'kernel': ['rbf'],\
                                 }}
 
-Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
-                  'parameters':{'fit_intercept':[True],\
-                                }}
+# Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
+#                   'parameters':{'fit_intercept':[True],\
+#                                 }}
 ###############################################################################
     
     

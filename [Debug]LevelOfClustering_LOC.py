@@ -67,6 +67,9 @@ def criterion_filter(df_formant_statistic,N=10,\
                      constrain_sex=-1, constrain_module=-1,constrain_agemax=-1,constrain_ADOScate=-1,constrain_agemin=-1,\
                      evictNamelst=[]):
     # filter by number of phones
+    
+    
+    
     filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
     filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
     
@@ -86,7 +89,11 @@ def criterion_filter(df_formant_statistic,N=10,\
     if len(evictNamelst)>0:
         for name in evictNamelst:
             filter_bool.loc[name]=False
-            
+    
+    # print("filter bool")
+    # print(filter_bool)
+    # print("df_formant_statistic")
+    # print(~df_formant_statistic.isna().T.any())
     # get rid of nan values
     filter_bool=np.logical_and(filter_bool,~df_formant_statistic.isna().T.any())
     return df_formant_statistic[filter_bool]
@@ -101,7 +108,10 @@ def NameMatchAssertion(Formants_people_symb,name):
 
 
 
-def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule, outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'):
+def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule,\
+                               outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+                               prefix='Formants_utt_symb',\
+                               suffix='KID_FromASD_DOCKID'):
     pool = Pool(int(os.cpu_count()))
     keys=[]
     interval=20
@@ -118,8 +128,8 @@ def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule, outpath='/h
         for utt, df_utt in load_file_tmp.items():
             Formants_utt_symb_limited[utt]=df_utt
     
-    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]Formants_utt_symb_limited.pkl","wb"))
-    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]Formants_utt_symb_limited.pkl")
+    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix),"wb"))
+    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix))
     
 '''
 Calculating FCR
@@ -226,19 +236,28 @@ limit_people_rule=GetValuelimit_IQR(AUI_info,PhoneMapp_dict,args.Inspect_feature
 
 
 ''' multi processing start '''
-date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
+prefix,suffix = 'Formants_utt_symb', role
+# date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
+date_now='{0}-{1}-{2}'.format(dt.now().year,dt.now().month,dt.now().day)
 outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
-filepath=outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
+filepath=outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix)
 if os.path.exists(filepath) and args.reFilter==False:
     fname = pathlib.Path(filepath)
     mtime = dt.fromtimestamp(fname.stat().st_mtime)
-    filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
+    # filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
+    filemtime='{0}-{1}-{2}'.format(mtime.year,mtime.month,mtime.day)
     
     # If file last modify time is not now (precisions to the hours) than we create new one
     if filemtime != date_now:
-        Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
+        Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,\
+                               outpath=outpath,\
+                               prefix=prefix,\
+                               suffix=suffix) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
 else:
-    Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule)
+    Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,\
+                               outpath=outpath,\
+                               prefix=prefix,\
+                               suffix=suffix)
 Formants_utt_symb_limited=pickle.load(open(filepath,"rb"))
 ''' multi processing end '''
 if len(limit_people_rule) >0:
@@ -288,7 +307,8 @@ additional_columns=['ADOS_cate_C','T_ADOS_C','T_ADOS_S','T_ADOS_SC','ADOS_S','AD
 #                     'ADOS_cate_C']
 
 
-label_generate_choose_lst=['ADOS_C','dia_num'] + additional_columns
+# label_generate_choose_lst=['ADOS_C','dia_num'] + additional_columns
+label_generate_choose_lst=['ADOS_C']
 
 
 
@@ -296,7 +316,10 @@ articulation=Articulation(Stat_med_str_VSA='mean')
 # df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst)
 # df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst,FILTER_overlap_thrld=0)
 # df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst, FILTERING_method='Silhouette',FILTER_overlap_thrld=0)
-df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst, FILTERING_method='KDE', KDE_THRESHOLD=40)
+# df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst, FILTERING_method='KDE', KDE_THRESHOLD=40)
+df_formant_statistic, SCATTER_matrixBookeep_dict=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst, FILTERING_method='KDE', KDE_THRESHOLD=40,RETURN_scatter_matrix=True)
+
+
 
 # For pseudo acoustic features generation
 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
@@ -334,44 +357,41 @@ df_formant_statistic_77=criterion_filter(df_formant_statistic,\
                                         constrain_sex=sex,constrain_module=module,N=N,constrain_agemax=agemax,constrain_agemin=agemin,constrain_ADOScate=ADOScate,\
                                         evictNamelst=[])
 
+# pickle.dump(df_formant_statistic_77,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
 pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
+
+
+
 
 
 ''' Calculate correlations for Formant fetures'''
 columns=list(set(df_formant_statistic.columns) - set(additional_columns)) # Exclude added labels
 columns=list(set(columns) - set([co for co in columns if "_norm" not in co]))
 columns= columns + [co for co in columns if "Between_Within" in co]
-columns= columns + ['VSA1','FCR','ConvexHull', 'MeanVFD','VSA2','FCR2']
-columns= columns + ['absAng_a','absAng_u','absAng_i', 'ang_ai','ang_iu','ang_ua']
+columns= columns + ['VSA1','FCR','ConvexHull', 'MeanVFD','VSA2','FCR2','FCR2_sum']
+columns= columns + ['VSA1','FCR','VSA2','FCR2']
+columns= columns + ['absAng_a','absAng_u','absAng_i', 'ang_ai','ang_iu','ang_ua','Angles']
 columns= columns + ['dcov_12','dcorr_12','dvar_1', 'dvar_2','pear_12']
-columns= columns + ['dcor_a','dcor_u','dcor_i','dist_tot']
+columns= columns + ['dcor_a','dcor_u','dcor_i']
 columns= columns + ['pointDistsTotal','repulsive_force']
-# columns=['total_variance_norm(A:,i:,u:)',
-# 'total_covariance_norm(A:,i:,u:)',
-# 'between_variance_norm(A:,i:,u:)',
-# 'between_covariance_norm(A:,i:,u:)',
-# 'VSA2',
-# 'FCR2',
-# 'MeanVFD',
-# 'ConvexHull',
-# 'within_variance_norm(A:,i:,u:)',
-# 'within_covariance_norm(A:,i:,u:)',
-# 'sam_wilks_lin_norm(A:,i:,u:)',
-# 'roys_root_lin_norm(A:,i:,u:)',
-# 'pillai_lin_norm(A:,i:,u:)',
-# 'hotelling_lin_norm(A:,i:,u:)',
-# 'dcov_12',
-# 'dcorr_12',
-# 'ang_ua',
-# 'ang_iu',
-# 'ang_ai',
-# 'absAng_u',
-# 'absAng_i',
-# 'absAng_a',]
+# columns= columns + ['FCR2_uF2','FCR2_aF2','FCR2_iF1','FCR2_uF1','aF2']
 
 
 
-
+# def Known_featuresAddition(df_formant_statistic ,columns, comb_features_collections=['between_covariance_norm(A:,i:,u:)','ang_ua','ang_ai','absAng_a','hotelling_lin_norm(A:,i:,u:)']):
+#     comb2=combinations(comb_features_collections,2)
+#     comb3=combinations(comb_features_collections,3)
+#     comb4=combinations(comb_features_collections,4)
+#     comb5=combinations(comb_features_collections,5)
+#     combs=list(comb2)+list(comb3)+list(comb4)+list(comb5)
+#     for comb in combs:
+#         new_variable='+'.join(comb)
+#         df_formant_statistic[new_variable]=0
+#         for element in comb:
+#             df_formant_statistic[new_variable] += df_formant_statistic[element]
+#         columns+=[new_variable]
+#     return df_formant_statistic ,columns
+# df_formant_statistic ,columns= Known_featuresAddition(df_formant_statistic ,columns , df_formant_statistic.columns)
 
 
 ManualCondition=Dict()
@@ -382,8 +402,8 @@ for file in condfiles:
     name=os.path.basename(file).replace(suffix,"")
     ManualCondition[name]=df_cond['Unnamed: 0'][df_cond['50%']==True]
 
-# label_correlation_choose_lst=label_generate_choose_lst
-label_correlation_choose_lst=['ADOS_C','T_ADOS_C','AA1','AA2','AA3','AA4','AA5','AA6','AA7','AA8','AA9']
+label_correlation_choose_lst=label_generate_choose_lst
+# label_correlation_choose_lst=['ADOS_C','T_ADOS_C','AA1','AA2','AA3','AA4','AA5','AA6','AA7','AA8','AA9']
 
 
 N=2
@@ -448,19 +468,49 @@ from sklearn.metrics import r2_score
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 
+
+def TBMEB1Preparation_LoadForFromOtherData(dfFormantStatisticpath):
+    '''
+        
+        We generate data for nested cross-valated analysis in Table.5 in TBME2021
+        
+        The data will be stored at Pickles/Session_formants_people_vowel_feat
+    
+    '''
+    dfFormantStatisticFractionpath='Pickles/Session_formants_people_vowel_feat'
+    if not os.path.exists(dfFormantStatisticFractionpath):
+        raise FileExistsError('Directory not exist')
+    df_phonation_statistic_77=pickle.load(open(dfFormantStatisticFractionpath+'/df_phonation_statistic_77.pkl','rb'))
+    return df_phonation_statistic_77
+
+df_phonation_statistic_77=TBMEB1Preparation_LoadForFromOtherData(pklpath)
+df_formant_statistic_added=pd.concat([df_phonation_statistic_77,df_formant_statistic],axis=1)
+df_formant_statistic_added=df_formant_statistic_added.loc[:,~df_formant_statistic_added.columns.duplicated()]
+
+sex=-1
+module=-1
+agemax=-1
+agemin=-1
+ADOScate=-1
+N=2
+df_formant_statistic_added=criterion_filter(df_formant_statistic_added,\
+                                        constrain_sex=sex,constrain_module=module,N=N,constrain_agemax=agemax,constrain_agemin=agemin,constrain_ADOScate=ADOScate,\
+                                        evictNamelst=[])
+
+
 ''' cross validation prediction '''
 # feature_chos_lst=['between_covariance_norm(A:,i:,u:)',
 # 'sam_wilks_lin_norm(A:,i:,u:)',
 # 'hotelling_lin_norm(A:,i:,u:)',
 # 'pillai_lin_norm(A:,i:,u:)']
 
+# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)']
+# feature_chos_lst_top=['between_variance_norm(A:,i:,u:)']
 
-feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)',\
-                      'ang_ai','ang_ua','ang_iu',\
-                      'dcorr_12']
+# feature_chos_lst_top=['roys_root_lin_norm(A:,i:,u:)', 'Angles']
+# feature_chos_lst_top=['Between_Within_Det_ratio_norm(A:,i:,u:)']
 # feature_chos_lst=['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ai']
 # feature_chos_lst=['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ua']
-# feature_chos_lst=['between_covariance_norm(A:,i:,u:)']
 # feature_chos_lst=['pillai_lin_norm(A:,i:,u:)']
 # feature_chos_lst=['ang_ai']
 # feature_chos_lst=['ang_ua']
@@ -468,15 +518,17 @@ feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i
 # feature_chos_lst=['FCR2','ang_ai']
 # feature_chos_lst=['FCR2','ang_ua']
 # feature_chos_lst=['FCR2','ang_ai','ang_ua']
-
+# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)','dcorr_12']
+feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)']
+# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','dcorr_12']
 baseline_lst=['FCR2']
 
 
 C_variable=np.array([0.001,0.01, 0.1,0.5,1.0,10.0,50,100])
 Classifier={}
 loo=LeaveOneOut()
-# CV_settings=loo
-CV_settings=10
+CV_settings=loo
+# CV_settings=10
 pca = PCA(n_components=1)
 
 # =============================================================================
@@ -499,11 +551,11 @@ Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
                                 }}
 
     
-clf=Classifier['EN']
-comb2 = combinations(feature_chos_lst_top, 2)
-comb3 = combinations(feature_chos_lst_top, 3)
-comb4 = combinations(feature_chos_lst_top, 4)
-combinations_lsts=list(comb2) + list(comb3)+ list(comb4)
+clf=Classifier['SVR']
+# comb2 = combinations(feature_chos_lst_top, 2)
+# comb3 = combinations(feature_chos_lst_top, 3)
+# comb4 = combinations(feature_chos_lst_top, 4)
+# combinations_lsts=list(comb2) + list(comb3)+ list(comb4)
 combinations_lsts=[feature_chos_lst_top]
 
 
@@ -515,15 +567,19 @@ for feature_chos_tup in combinations_lsts:
         # pipe = Pipeline(steps=[ ("pca", pca), ("model", clf['model'])])
         param_grid = {
         # "pca__n_components": [3],
-        # "model__C": C_variable,
-        "model__l1_ratio": np.arange(0,1,0.25),
-        "model__alpha": np.arange(0,1,0.25),
+        "model__C": C_variable,
+        # "model__l1_ratio": np.arange(0,1,0.25),
+        # "model__alpha": np.arange(0,1,0.25),
+        # "model__max_iter": [2000],
         }
         Gclf = GridSearchCV(pipe, param_grid=param_grid, scoring='neg_mean_squared_error', cv=CV_settings, refit=True, n_jobs=-1)
         
         features=Dict()
-        features.X=df_formant_statistic[feature_chooses]
-        features.y=df_formant_statistic[lab_chos_lst]
+        # features.X=df_formant_statistic[feature_chooses]
+        # features.y=df_formant_statistic[lab_chos_lst]
+        
+        features.X=df_formant_statistic_added[feature_chooses]
+        features.y=df_formant_statistic_added[lab_chos_lst]
         
         
         
@@ -543,7 +599,9 @@ for feature_chos_tup in combinations_lsts:
 
 df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index')
 ''' multiple regression model '''
-
+# =============================================================================
+# 
+# =============================================================================
 
 import statsmodels.api as sm
 from itertools import combinations
@@ -564,16 +622,16 @@ print(list(comb2))
 
 ['absAng_a','absAng_u','absAng_i', 'ang_ai','ang_iu','ang_ua']
 
-# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)']]
+# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)','Between_Within_Det_ratio_norm(A:,i:,u:)']]
 # X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','dcorr_12']]
 # X = df_formant_statistic[[ 'pillai_lin_norm(A:,i:,u:)','dcorr_12']]
-# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)','dcorr_12']]
-X = df_formant_statistic[['dcorr_12','dcov_12']]
+# X = df_formant_statistic[['dcorr_12','dcov_12']]
 # X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ai']]
 # X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ua']] 
 # X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ai','ang_ua']] 
 # X = df_formant_statistic[['FCR2']] 
-y = df_formant_statistic[lab_chos_lst]
+X = df_formant_statistic_added[['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)','dcorr_12']]
+y = df_formant_statistic_added[lab_chos_lst]
 ## fit a OLS model with intercept on TV and Radio
 X = sm.add_constant(X)
 est = sm.OLS(y, X).fit()
@@ -582,6 +640,7 @@ est.summary()
 ypred = est.predict(X)
 spear_result, spearman_p=spearmanr(y,ypred )
 print('Manual test , spear_result {1}'.format(feature_keys,spear_result))
+
 
 
 # =============================================================================
@@ -657,7 +716,6 @@ for cate in category_col:
 '''
 # =============================================================================
 df_formant_statistic_toy=pd.DataFrame()
-
 for people in SCATTER_matrixBookeep_dict.keys():
     Result_dict={}
     # Add basic information
@@ -783,112 +841,8 @@ Survey_nice_variable(Aaad_Correlation_toy)
 #     count+=1
 # =====================
     
-# Play code for KDE filtering
-# count=0
-# import seaborn as sns
-# from sklearn.neighbors import KernelDensity
-# from sklearn import preprocessing
 
-# THRESHOLD=50
-# scale_factor=100
-# N=2
-# # for people in list(Vowels_AUI.keys())[:3]:
-# for people in Vowels_AUI.keys():
-#     plt.figure(count)
-#     F12_raw_dict=Vowels_AUI[people]
-#     df_vowel = pd.DataFrame()
-#     for keys in F12_raw_dict.keys():
-#         if len(df_vowel) == 0:
-#             df_vowel=F12_raw_dict[keys]
-#             df_vowel['vowel']=keys
-#         else:
-#             df_=F12_raw_dict[keys]
-#             df_['vowel']=keys
-#             df_vowel=df_vowel.append(df_)
-    
-#     len_a=len(np.where(df_vowel['vowel']=='A:')[0])
-#     len_u=len(np.where(df_vowel['vowel']=='u:')[0])
-#     len_i=len(np.where(df_vowel['vowel']=='i:')[0])
-    
-    
-#     if len_a<=N or len_u<=N or len_i<=N:
-#         continue
-    
-#     def KDE_Filtering(df_vowel,THRESHOLD=10,scale_factor=100):
-#         X=df_vowel[args.Inspect_features].values
-#         labels=df_vowel['vowel']
-        
-#         df_vowel_calibrated=pd.DataFrame([])
-#         for phone in set(labels):
-            
-#             df=df_vowel[df_vowel['vowel']==phone][args.Inspect_features]
-#             data_array=df_vowel[df_vowel['vowel']==phone][args.Inspect_features].values
 
-#             x=data_array[:,0]
-#             y=data_array[:,1]
-#             xmin = x.min()
-#             xmax = x.max()        
-#             ymin = y.min()
-#             ymax = y.max()
-            
-#             image_num=1j
-#             X, Y = np.mgrid[xmin:xmax:image_num*scale_factor, ymin:ymax:image_num*scale_factor]
-            
-#             positions = np.vstack([X.ravel(), Y.ravel()])
-            
-#             values = np.vstack([x, y])
-            
-#             kernel = stats.gaussian_kde(values)
-                    
-#             Z = np.reshape(kernel(positions).T, X.shape)
-#             normalized_z = preprocessing.normalize(Z)
-            
-#             df['x_to_scale'] = (100*(x - np.min(x))/np.ptp(x)).astype(int) 
-#             df['y_to_scale'] = (100*(y - np.min(y))/np.ptp(y)).astype(int) 
-            
-#             normalized_z=(100*(Z - np.min(Z.ravel()))/np.ptp(Z.ravel())).astype(int)
-#             to_delete = zip(*np.where((normalized_z<THRESHOLD) == True))
-            
-#             # The indexes that are smaller than threshold
-#             deletepoints_bool=df.apply(lambda x: (x['x_to_scale'], x['y_to_scale']), axis=1).isin(to_delete)
-#             df_calibrated=df.loc[(deletepoints_bool==False).values]
-#             df_deleted_after_calibrated=df.loc[(deletepoints_bool==True).values]
-            
-#             df_vowel_calibrated_tmp=df_calibrated.drop(columns=['x_to_scale','y_to_scale'])
-#             df_vowel_calibrated_tmp['vowel']=phone
-#             df_vowel_output=df_vowel_calibrated_tmp.copy()
-#             df_vowel_calibrated=df_vowel_calibrated.append(df_vowel_output)
-            
-            
-#             # Data prepare for plotting 
-#             # df_calibrated_tocombine=df_calibrated.copy()
-#             # df_calibrated_tocombine['cal']='calibrated'
-#             # df_deleted_after_calibrated['cal']='deleted'
-#             # df_calibratedcombined=df_calibrated_tocombine.append(df_deleted_after_calibrated)
-            
-#             # #Plotting code
-#             # fig = plt.figure(figsize=(8,8))
-#             # ax = fig.gca()
-#             # ax.set_xlim(xmin, xmax)
-#             # ax.set_ylim(ymin, ymax)
-#             # # cfset = ax.contourf(X, Y, Z, cmap='coolwarm')
-#             # # ax.imshow(Z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
-#             # # cset = ax.contour(X, Y, Z, colors='k')
-#             # cfset = ax.contourf(X, Y, normalized_z, cmap='coolwarm')
-#             # ax.imshow(normalized_z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
-#             # cset = ax.contour(X, Y, normalized_z, colors='k')
-#             # ax.clabel(cset, inline=1, fontsize=10)
-#             # ax.set_xlabel('X')
-#             # ax.set_ylabel('Y')
-#             # plt.title('2D Gaussian Kernel density estimation')
-            
-#             # sns.scatterplot(data=df_vowel[df_vowel['vowel']==phone], x="F1", y="F2")
-#             # sns.scatterplot(data=df_calibratedcombined, x="F1", y="F2",hue='cal')
-#         return df_vowel_calibrated
-#     df_vowel_calibrated=KDE_Filtering(df_vowel,THRESHOLD=THRESHOLD,scale_factor=100)
-#     sns.scatterplot(data=df_vowel_calibrated, x="F1", y="F2", hue="vowel")
-
-#     count+=1
 
 # Play code for relative angles
 # import seaborn as sns
@@ -903,130 +857,8 @@ Survey_nice_variable(Aaad_Correlation_toy)
 #     angle = np.arccos(cosine_angle)
 #     return np.degrees(angle)
 
-count=0
-for people in list(Vowels_AUI.keys())[:10]:
-    plt.figure(count)
-    F12_raw_dict=Vowels_AUI[people]
-    df_vowel = pd.DataFrame()
-    for keys in F12_raw_dict.keys():
-        if len(df_vowel) == 0:
-            df_vowel=F12_raw_dict[keys]
-            df_vowel['vowel']=keys
-        else:
-            df_=F12_raw_dict[keys]
-            df_['vowel']=keys
-            df_vowel=df_vowel.append(df_)
-    
-    
-    def Calculate_raelative_angles(df_vowel, additional_infos=False):
-        
-        a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
-        u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
-        i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
-        
-        a_center=a.mean()
-        u_center=u.mean()
-        i_center=i.mean()
-        total_center=df_vowel.mean()
-        # gravity_center=(a_center*len(a) + u_center*len(u) + i_center*len(i)) / len(df_vowel)
-        
-        
-        
-        omega_a=np.degrees(math.atan2((a_center - total_center)[1], (a_center - total_center)[0]))
-        omega_u=np.degrees(math.atan2((u_center - total_center)[1], (u_center - total_center)[0]))
-        omega_i=np.degrees(math.atan2((i_center - total_center)[1], (i_center - total_center)[0]))
-    
-        ang_ai = cosAngle(a_center,total_center,i_center)
-        ang_iu = cosAngle(i_center,total_center,u_center)
-        ang_ua = cosAngle(u_center,total_center,a_center)
-        
-        absolute_ang=[omega_a, omega_u, omega_i]
-        relative_ang=[ang_ai, ang_iu, ang_ua]
-        addition_info=[total_center, a_center, u_center, i_center]
-        
-        if additional_infos != True:
-            return absolute_ang, relative_ang
-        else:
-            return absolute_ang, relative_ang, addition_info
-    
-    
-    absolute_ang, relative_ang, addition_info = Calculate_raelative_angles(df_vowel, additional_infos=True)
-    [omega_a, omega_u, omega_i]=absolute_ang
-    [ang_ai, ang_iu, ang_ua]=relative_ang
-    [total_center, a_center, u_center, i_center]=addition_info
-    print(sum([ang_ai,ang_iu,ang_ua]))
-    
-    # omega_a_deg=omega_a*(180/np.pi)
-    
-    center2plot=total_center
-    plt.plot(center2plot[0],center2plot[1],'*',markersize=30)
-    # dx,dy=(a_center - center2plot)
-    # origin=center2plot
-    # dest=center2plot+[dx,dy]
-    
-    
-    
-    plt.plot([center2plot[0],center2plot[0] + (a_center - center2plot)[0]],[center2plot[1],center2plot[1] + (a_center - center2plot)[1]],'ro-', color="green", linewidth=3,\
-              path_effects=[pe.Stroke(linewidth=5, foreground='black'), pe.Normal()])
-    plt.plot([center2plot[0],center2plot[0] + (u_center - center2plot)[0]],[center2plot[1],center2plot[1] + (u_center - center2plot)[1]],'ro-', color="blue", linewidth=3,\
-              path_effects=[pe.Stroke(linewidth=5, foreground='black'), pe.Normal()])
-    plt.plot([center2plot[0],center2plot[0] + (i_center - center2plot)[0]],[center2plot[1],center2plot[1] + (i_center - center2plot)[1]],'ro-', color="orange", linewidth=3,\
-              path_effects=[pe.Stroke(linewidth=5, foreground='black'), pe.Normal()])
-    sns.scatterplot(data=df_vowel, x="F1", y="F2", hue="vowel")
-    
-    at = AnchoredText(
-    "angles\na:{0}\nu:{1}\ni:{2}".format(np.round(omega_a,2),np.round(omega_u,2),np.round(omega_i,2)), prop=dict(size=15), frameon=True, loc='lower right')
-    # at = AnchoredText(
-    # "angles\nai{0}\niu{1}\nua{2}".format(np.round(ang_ai,2),np.round(ang_iu,2),np.round(ang_ua,2)), prop=dict(size=15), frameon=True, loc='lower right')
-    plt.setp(at.patch, facecolor='white', alpha=0.5)
-    plt.gca().add_artist(at)
-    
-    plt.show()
-    count+=1
-
-# Play code for Kmeans on ADOS labels
-from sklearn.cluster import KMeans
-from sklearn import manifold, datasets
-base_dir='/homes/ssd1/jackchen/gop_prediction/'
-
-label_path=base_dir+'ADOS_label20220309.xlsx'
-label_raw=pd.read_excel(label_path)
-
-# label_choose_list=['AA1','AA2','AA3','AA4','AA5','AA6','AA7','AA8','AA9']
-# label_choose_list=['AA4','AA7','AA8','AA9']
-label_choose_list=['ADOS_C']
-X = label_raw[['ADOS_C']].values.reshape(-1,1)
-
-kmeans_bag=Dict()
-count=0
-for i in range(4):
-    plt.figure(count)
-    X = label_raw[label_choose_list]
-    kmeans = KMeans(n_clusters=4)
-    kmeans.fit(X)
-    y_kmeans = kmeans.predict(X)
-    centers = kmeans.cluster_centers_
-    kmeans_bag[i]=y_kmeans
-    df_kmeans_bag=pd.DataFrame.from_dict(kmeans_bag)
-    
-    
-    All_TSNE=manifold.TSNE(n_jobs=-1).fit_transform(np.vstack([X,centers]))
-    
-    X_tsne=All_TSNE[:len(X),:]
-    centers_tsne=All_TSNE[len(X):,:]
-    
-    plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=y_kmeans, s=50, cmap='viridis')
-    plt.scatter(centers_tsne[:, 0], centers_tsne[:, 1], c='black', s=200, alpha=0.5);
-    count+=1
-
-
-
-# Play code for distance covariance
-# import dcor
-# import math
-# from scipy.stats import spearmanr,pearsonr 
 # count=0
-# for people in list(Vowels_AUI.keys())[:]:
+# for people in list(Vowels_AUI.keys())[:10]:
 #     plt.figure(count)
 #     F12_raw_dict=Vowels_AUI[people]
 #     df_vowel = pd.DataFrame()
@@ -1039,48 +871,137 @@ for i in range(4):
 #             df_['vowel']=keys
 #             df_vowel=df_vowel.append(df_)
     
-#     def Calculate_distanceCorr(df_vowel):
+    
+#     def Calculate_raelative_angles(df_vowel, additional_infos=False):
+        
 #         a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
 #         u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
 #         i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
         
-        
-#         a_1, a_2=a['F1'], a['F2']
-#         u_1, u_2=u['F1'], u['F2']
-#         i_1, i_2=i['F1'], i['F2']
-        
-#         d_stats_a=dcor.distance_stats(a_1, a_2)
-#         d_stats_u=dcor.distance_stats(u_1, u_2)
-#         d_stats_i=dcor.distance_stats(i_1, i_2)
-        
-#         pear_a=pearsonr(a_1, a_2)[0]
-#         pear_u=pearsonr(u_1, u_2)[0]
-#         pear_i=pearsonr(i_1, i_2)[0]
-        
-#         def get_values(X_stats):
-#             cov_xy, corr_xy, var_x, var_y=X_stats
-#             return cov_xy, corr_xy, var_x, var_y
+#         a_center=a.mean()
+#         u_center=u.mean()
+#         i_center=i.mean()
+#         total_center=df_vowel.mean()
+#         # gravity_center=(a_center*len(a) + u_center*len(u) + i_center*len(i)) / len(df_vowel)
         
         
-#         data_a = get_values(d_stats_a)
-#         data_u = get_values(d_stats_u)
-#         data_i = get_values(d_stats_i)
         
-#         Cov_sum=[sum(x) for x in zip(data_a,data_u,data_i)]
-#         Corr_aui=[data_a[1],data_u[1],data_i[1]]
-
-#         pear_sum=sum([pear_a,pear_u,pear_i])
-#         return Cov_sum, Corr_aui, pear_sum
-#     ADOS_lab=df_formant_statistic[df_formant_statistic.index==people]['ADOS_C'].values[0]
-#     [a,b,c,d], [dcor_a,dcor_u,dcor_i] ,pearsum=Calculate_distanceCorr(df_vowel)
+#         omega_a=np.degrees(math.atan2((a_center - total_center)[1], (a_center - total_center)[0]))
+#         omega_u=np.degrees(math.atan2((u_center - total_center)[1], (u_center - total_center)[0]))
+#         omega_i=np.degrees(math.atan2((i_center - total_center)[1], (i_center - total_center)[0]))
+    
+#         ang_ai = cosAngle(a_center,total_center,i_center)
+#         ang_iu = cosAngle(i_center,total_center,u_center)
+#         ang_ua = cosAngle(u_center,total_center,a_center)
+        
+#         absolute_ang=[omega_a, omega_u, omega_i]
+#         relative_ang=[ang_ai, ang_iu, ang_ua]
+#         addition_info=[total_center, a_center, u_center, i_center]
+        
+#         if additional_infos != True:
+#             return absolute_ang, relative_ang
+#         else:
+#             return absolute_ang, relative_ang, addition_info
+    
+    
+#     absolute_ang, relative_ang, addition_info = Calculate_raelative_angles(df_vowel, additional_infos=True)
+#     [omega_a, omega_u, omega_i]=absolute_ang
+#     [ang_ai, ang_iu, ang_ua]=relative_ang
+#     [total_center, a_center, u_center, i_center]=addition_info
+#     print(sum([ang_ai,ang_iu,ang_ua]))
+    
+#     # omega_a_deg=omega_a*(180/np.pi)
+    
+#     center2plot=total_center
+#     plt.plot(center2plot[0],center2plot[1],'*',markersize=30)
+#     # dx,dy=(a_center - center2plot)
+#     # origin=center2plot
+#     # dest=center2plot+[dx,dy]
+    
+    
+    
+#     plt.plot([center2plot[0],center2plot[0] + (a_center - center2plot)[0]],[center2plot[1],center2plot[1] + (a_center - center2plot)[1]],'ro-', color="green", linewidth=3,\
+#               path_effects=[pe.Stroke(linewidth=5, foreground='black'), pe.Normal()])
+#     plt.plot([center2plot[0],center2plot[0] + (u_center - center2plot)[0]],[center2plot[1],center2plot[1] + (u_center - center2plot)[1]],'ro-', color="blue", linewidth=3,\
+#               path_effects=[pe.Stroke(linewidth=5, foreground='black'), pe.Normal()])
+#     plt.plot([center2plot[0],center2plot[0] + (i_center - center2plot)[0]],[center2plot[1],center2plot[1] + (i_center - center2plot)[1]],'ro-', color="orange", linewidth=3,\
+#               path_effects=[pe.Stroke(linewidth=5, foreground='black'), pe.Normal()])
 #     sns.scatterplot(data=df_vowel, x="F1", y="F2", hue="vowel")
+    
 #     at = AnchoredText(
-#     "dcorr:{0}\nADOS:{1}".format(np.round(b,2),np.round(ADOS_lab,2)), prop=dict(size=15), frameon=True, loc='lower right')
+#     "angles\na:{0}\nu:{1}\ni:{2}".format(np.round(omega_a,2),np.round(omega_u,2),np.round(omega_i,2)), prop=dict(size=15), frameon=True, loc='lower right')
+#     # at = AnchoredText(
+#     # "angles\nai{0}\niu{1}\nua{2}".format(np.round(ang_ai,2),np.round(ang_iu,2),np.round(ang_ua,2)), prop=dict(size=15), frameon=True, loc='lower right')
 #     plt.setp(at.patch, facecolor='white', alpha=0.5)
 #     plt.gca().add_artist(at)
     
 #     plt.show()
 #     count+=1
+
+
+
+# Play code for distance covariance
+import dcor
+import math
+from scipy.stats import spearmanr,pearsonr 
+import seaborn as sns
+from matplotlib.offsetbox import AnchoredText
+count=0
+for people in list(Vowels_AUI.keys())[:]:
+    plt.figure(count)
+    F12_raw_dict=Vowels_AUI[people]
+    df_vowel = pd.DataFrame()
+    for keys in F12_raw_dict.keys():
+        if len(df_vowel) == 0:
+            df_vowel=F12_raw_dict[keys]
+            df_vowel['vowel']=keys
+        else:
+            df_=F12_raw_dict[keys]
+            df_['vowel']=keys
+            df_vowel=df_vowel.append(df_)
+    
+    def Calculate_distanceCorr(df_vowel):
+        a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
+        u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
+        i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
+        
+        
+        a_1, a_2=a['F1'], a['F2']
+        u_1, u_2=u['F1'], u['F2']
+        i_1, i_2=i['F1'], i['F2']
+        
+        d_stats_a=dcor.distance_stats(a_1, a_2)
+        d_stats_u=dcor.distance_stats(u_1, u_2)
+        d_stats_i=dcor.distance_stats(i_1, i_2)
+        
+        pear_a=pearsonr(a_1, a_2)[0]
+        pear_u=pearsonr(u_1, u_2)[0]
+        pear_i=pearsonr(i_1, i_2)[0]
+        
+        def get_values(X_stats):
+            cov_xy, corr_xy, var_x, var_y=X_stats
+            return cov_xy, corr_xy, var_x, var_y
+        
+        
+        data_a = get_values(d_stats_a)
+        data_u = get_values(d_stats_u)
+        data_i = get_values(d_stats_i)
+        
+        Cov_sum=[sum(x) for x in zip(data_a,data_u,data_i)]
+        Corr_aui=[data_a[1],data_u[1],data_i[1]]
+
+        pear_sum=sum([pear_a,pear_u,pear_i])
+        return Cov_sum, Corr_aui, pear_sum
+    ADOS_lab=df_formant_statistic[df_formant_statistic.index==people]['ADOS_C'].values[0]
+    [a,b,c,d], [dcor_a,dcor_u,dcor_i] ,pearsum=Calculate_distanceCorr(df_vowel)
+    sns.scatterplot(data=df_vowel, x="F1", y="F2", hue="vowel")
+    at = AnchoredText(
+    "dcorr:{0}\nADOS:{1}".format(np.round(b,2),np.round(ADOS_lab,2)), prop=dict(size=15), frameon=True, loc='lower right')
+    plt.setp(at.patch, facecolor='white', alpha=0.5)
+    plt.gca().add_artist(at)
+    
+    plt.show()
+    count+=1
 
 
 # Play code for scipy c distance
@@ -1131,9 +1052,9 @@ for i in range(4):
 #             df_['vowel']=keys
 #             df_vowel=df_vowel.append(df_)
             
-#     a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
-#     u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
-#     i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
+    # a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
+    # u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
+    # i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
 
 #     def calculate_betweenClusters_distrib_dist(df_vowel):
 #         def Within_matrices(df_vowel):
@@ -1197,34 +1118,520 @@ for i in range(4):
 #         return sum(dristrib_dist_au,dristrib_dist_ui,dristrib_dist_ai)
     
 # play code for repulsive force
-count=0
-import scipy
-for people in list(Vowels_AUI.keys())[:10]:
-    # plt.figure(count)
-    F12_raw_dict=Vowels_AUI[people]
-    df_vowel = pd.DataFrame()
-    for keys in F12_raw_dict.keys():
-        if len(df_vowel) == 0:
-            df_vowel=F12_raw_dict[keys]
-            df_vowel['vowel']=keys
-        else:
-            df_=F12_raw_dict[keys]
-            df_['vowel']=keys
-            df_vowel=df_vowel.append(df_)
+# count=0
+# import scipy
+# for people in list(Vowels_AUI.keys())[:10]:
+#     # plt.figure(count)
+#     F12_raw_dict=Vowels_AUI[people]
+#     df_vowel = pd.DataFrame()
+#     for keys in F12_raw_dict.keys():
+#         if len(df_vowel) == 0:
+#             df_vowel=F12_raw_dict[keys]
+#             df_vowel['vowel']=keys
+#         else:
+#             df_=F12_raw_dict[keys]
+#             df_['vowel']=keys
+#             df_vowel=df_vowel.append(df_)
     
     
-    def calculate_pair_distrib_dist(df_vowel, vowelCol_name='vowel'):
-        repuls_forc_inst_bag=[]
-        for index, row in df_vowel.iterrows():
-            phone=row[vowelCol_name]
-            formant_values=row[args.Inspect_features]
-            other_phones=df_vowel[df_vowel[vowelCol_name]!=phone]
-            other_phones_values=other_phones[args.Inspect_features]
+#     def calculate_pair_distrib_dist(df_vowel, vowelCol_name='vowel'):
+#         repuls_forc_inst_bag=[]
+#         for index, row in df_vowel.iterrows():
+#             phone=row[vowelCol_name]
+#             formant_values=row[args.Inspect_features]
+#             other_phones=df_vowel[df_vowel[vowelCol_name]!=phone]
+#             other_phones_values=other_phones[args.Inspect_features]
             
-            repuls_forc_inst=np.mean(1/scipy.spatial.distance.cdist(other_phones_values,formant_values.values.reshape(1,-1)))
-            repuls_forc_inst_bag.append(repuls_forc_inst)
-        assert len(repuls_forc_inst_bag) == len(df_vowel)
-        return np.mean(repuls_forc_inst_bag)
-    repulsive_force_norm=calculate_pair_distrib_dist(df_vowel, vowelCol_name='vowel')
-    print(repulsive_force_norm)
+#             repuls_forc_inst=np.mean(1/scipy.spatial.distance.cdist(other_phones_values,formant_values.values.reshape(1,-1)))
+#             repuls_forc_inst_bag.append(repuls_forc_inst)
+#         assert len(repuls_forc_inst_bag) == len(df_vowel)
+#         return np.mean(repuls_forc_inst_bag)
+#     repulsive_force_norm=calculate_pair_distrib_dist(df_vowel, vowelCol_name='vowel')
+#     print(repulsive_force_norm)
+
+
+
+# Play code for inner and outer 
+# from scipy.spatial import distance
+# Vowels_AUI_inner=Dict()
+# Vowels_AUI_outer=Dict()
+# for people in tqdm(list(Vowels_AUI.keys())):
+#     # plt.figure(count)
+#     F12_raw_dict=Vowels_AUI[people]
+#     df_vowel = pd.DataFrame()
+#     for keys in F12_raw_dict.keys():
+#         if len(df_vowel) == 0:
+#             df_vowel=F12_raw_dict[keys]
+#             df_vowel['vowel']=keys
+#         else:
+#             df_=F12_raw_dict[keys]
+#             df_['vowel']=keys
+#             df_vowel=df_vowel.append(df_)
     
+#     gravity_mean = df_vowel.mean() #Total mean
+#     #Class mean
+#     class_feature_means = pd.DataFrame(columns=list(set(df_vowel['vowel'])))
+#     for c, rows in df_vowel.groupby('vowel'):
+#         class_feature_means[c] = rows[args.Inspect_features].mean()
+#     groups_num=len(class_feature_means.index)
+    
+#     class_feature_means_reshape=class_feature_means.T
+#     class_feature_means_reshape.loc['gravity_mean']=gravity_mean
+
+#     a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
+#     u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
+#     i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
+    
+#     # a['distToClassMean']=np.linalg.norm(a[args.Inspect_features].values-class_feature_means_reshape[args.Inspect_features].values, axis=1)
+#     distance_matrix=distance.cdist(df_vowel[args.Inspect_features],class_feature_means_reshape[args.Inspect_features])
+    
+#     df_distance_matrix=pd.DataFrame(distance_matrix,columns=class_feature_means_reshape.index, index=df_vowel['vowel'])
+#     df_distance_matrix_forCheck=pd.DataFrame(distance_matrix,columns=class_feature_means_reshape.index, index=[df_vowel.index])
+    
+#     # unit test (check by eye)
+#     df_unittest=pd.DataFrame()
+#     for index, row in df_vowel.iterrows():
+#         needed_value=np.linalg.norm(row[args.Inspect_features].values-class_feature_means_reshape.loc[row['vowel']][args.Inspect_features].values)
+#         df_needed_value=pd.DataFrame(needed_value,columns=[row['vowel']],index=[index])
+#         df_unittest=df_unittest.append(df_needed_value)
+#     df_unittest.index=df_vowel.index
+    
+#     check_phone=df_distance_matrix.index[0]
+#     findphone=''
+#     phone_found_bool=False
+#     for phone, values in PhoneMapp_dict.items():
+#         if check_phone in values:
+#             findphone=check_phone
+#             phone_found_bool
+    
+#     df_vowel_inner=pd.DataFrame()
+#     df_vowel_outer=pd.DataFrame()
+#     for P in PhoneOfInterest:
+#         if P not in df_distance_matrix.index:
+#             Vowels_AUI_inner[people][P]=pd.DataFrame([],columns=args.Inspect_features)
+#             Vowels_AUI_outer[people][P]=pd.DataFrame([],columns=args.Inspect_features)
+#             continue
+#         VowelInner_bool=np.where(df_distance_matrix[P] >= df_distance_matrix["gravity_mean"], True, False)
+#         VowelOuter_bool=np.where(df_distance_matrix[P] > df_distance_matrix["gravity_mean"], True, False)
+        
+#         VowelBool=df_distance_matrix.index.values==P
+        
+#         Bool_innerAndvowel=np.logical_and(VowelInner_bool,VowelBool)
+#         Bool_outerAndvowel=np.logical_and(VowelOuter_bool,VowelBool)
+        
+
+#         df_vowel_inner=df_vowel_inner.append(df_vowel[Bool_innerAndvowel])
+#         df_vowel_outer=df_vowel_outer.append(df_vowel[Bool_outerAndvowel])
+        
+#         Vowels_AUI_inner[people][P]=df_vowel[Bool_innerAndvowel]
+#         Vowels_AUI_outer[people][P]=df_vowel[Bool_outerAndvowel]
+
+# df_formant_statistic_inner=articulation.calculate_features(Vowels_AUI_inner,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst)
+# df_formant_statistic_outer=articulation.calculate_features(Vowels_AUI_outer,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst)
+
+
+# columns=['between_variance_norm(A:,i:,u:)',
+#  'Minor_vector_W_norm(A:,i:,u:)',
+#  'total_covariance_norm(A:,i:,u:)',
+#  'within_variance_norm(A:,i:,u:)',
+#  'between_covariance_norm(A:,i:,u:)',
+#  'within_covariance_norm(A:,i:,u:)',
+#  'hotelling_lin_norm(A:,i:,u:)',
+#  'Minor_vector_lin_norm(A:,i:,u:)',
+#  'Major_vector_B_norm(A:,i:,u:)',
+#  'Major_vector_W_norm(A:,i:,u:)',
+#  'roys_root_lin_norm(A:,i:,u:)',
+#  'total_variance_norm(A:,i:,u:)',
+#  'Major_vector_lin_norm(A:,i:,u:)',
+#  'Minor_vector_B_norm(A:,i:,u:)',
+#  'sam_wilks_lin_norm(A:,i:,u:)',
+#  'pillai_lin_norm(A:,i:,u:)',
+#  'VSA1',
+#  'FCR',
+#  'ConvexHull',
+#  'MeanVFD',
+#  'VSA2',
+#  'FCR2',
+#  'absAng_a',
+#  'absAng_u',
+#  'absAng_i',
+#   'ang_ai',
+#  # 'ang_iu',
+#  # 'ang_ua',
+#  # 'Angles',
+#  'pointDistsTotal',
+#  'repulsive_force',
+#  ]
+
+# N=2
+# Eval_med=Evaluation_method()
+# Aaadf_spearmanr_table_outer=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_formant_statistic_outer,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
+# Aaadf_spearmanr_table_inner=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_formant_statistic_inner,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
+
+def LDA_LevelOfClustering_feats(df_vowel):
+    '''    Calculate class variance by LDA. Vowel space features are in this function 
+    
+            Suffix "_norm"" represents normalized matrix or scalar
+    '''  
+    within_class_scatter_matrix, between_class_scatter_matrix,\
+            within_class_scatter_matrix_norm, between_class_scatter_matrix_norm, linear_discriminant_norm, Total_scatter_matrix_norm = LDA_scatter_matrices(df_vowel)
+    
+    # eigen_values_lin, eigen_vectors_lin = np.linalg.eig(linear_discriminant)
+    eigen_values_lin_norm, eigen_vectors_lin_norm = np.linalg.eig(linear_discriminant_norm)
+    eigen_values_B, eigen_vectors_B = np.linalg.eig(between_class_scatter_matrix)
+    eigen_values_B_norm, eigen_vectors_B_norm = np.linalg.eig(between_class_scatter_matrix_norm)
+    eigen_values_W, eigen_vectors_W = np.linalg.eig(within_class_scatter_matrix)
+    eigen_values_W_norm, eigen_vectors_W_norm = np.linalg.eig(within_class_scatter_matrix_norm)
+    # eigen_values_T, eigen_vectors_T = np.linalg.eig(Total_scatter_matrix)
+    eigen_values_T_norm, eigen_vectors_T_norm = np.linalg.eig(Total_scatter_matrix_norm)
+
+    
+    def Covariance_representations(eigen_values):
+        sam_wilks=1
+        pillai=0
+        hotelling=0
+        for eigen_v in eigen_values:
+            wild_element=1.0/np.float(1+eigen_v)
+            sam_wilks*=wild_element
+            pillai+=wild_element * eigen_v
+            hotelling+=eigen_v
+        roys_root=np.max(eigen_values)
+        return sam_wilks, pillai, hotelling, roys_root
+    Covariances={}
+    # Covariances['sam_wilks_lin'], Covariances['pillai_lin'], Covariances['hotelling_lin'], Covariances['roys_root_lin'] = Covariance_representations(eigen_values_lin)
+    Covariances['sam_wilks_lin_norm'], Covariances['pillai_lin_norm'], Covariances['hotelling_lin_norm'], Covariances['roys_root_lin_norm'] = Covariance_representations(eigen_values_lin_norm)
+    # Covariances['sam_wilks_B'], Covariances['pillai_B'], Covariances['hotelling_B'], Covariances['roys_root_B'] = Covariance_representations(eigen_values_B)
+    # Covariances['sam_wilks_Bnorm'], Covariances['pillai_Bnorm'], Covariances['hotelling_Bnorm'], Covariances['roys_root_Bnorm'] = Covariance_representations(eigen_values_B_norm)
+    # Covariances['sam_wilks_W'], Covariances['pillai_W'], Covariances['hotelling_W'], Covariances['roys_root_W'] = Covariance_representations(eigen_values_W)
+
+    
+    Multi_Variances={}
+    Multi_Variances['between_covariance_norm'] = np.prod(eigen_values_B_norm)# product of every element
+    Multi_Variances['between_variance_norm'] = np.sum(eigen_values_B_norm)
+    # Multi_Variances['between_covariance'] = np.prod(eigen_values_B)# product of every element
+    # Multi_Variances['between_variance'] = np.sum(eigen_values_B)
+    Multi_Variances['within_covariance_norm'] = np.prod(eigen_values_W_norm)
+    Multi_Variances['within_variance_norm'] = np.sum(eigen_values_W_norm)
+    # Multi_Variances['within_covariance'] = np.prod(eigen_values_W)
+    # Multi_Variances['within_variance'] = np.sum(eigen_values_W)
+    Multi_Variances['total_covariance_norm'] = np.prod(eigen_values_T_norm)
+    Multi_Variances['total_variance_norm'] = np.sum(eigen_values_T_norm)
+    # Multi_Variances['total_covariance'] = np.prod(eigen_values_T)
+    # Multi_Variances['total_variance'] = np.sum(eigen_values_T)
+    Covariances['Between_Within_Det_ratio_norm'] = Multi_Variances['between_covariance_norm'] / Multi_Variances['within_covariance_norm']
+    Covariances['Between_Within_Tr_ratio_norm'] = Multi_Variances['between_variance_norm'] / Multi_Variances['within_variance_norm']
+    return Covariances, Multi_Variances
+
+def Store_FeatVals(RESULT_dict,df_vowel,Inspect_features=['F1','F2'], cluster_str='u:,i:,A:'):
+    Covariances, Multi_Variances\
+        =LDA_LevelOfClustering_feats(df_vowel[Inspect_features+['vowel']])
+
+    # RESULT_dict['between_covariance({0})'.format(cluster_str)]=between_covariance
+    # RESULT_dict['between_variance({0})'.format(cluster_str)]=between_variance
+    # RESULT_dict['between_covariance_norm({0})'.format(cluster_str)]=between_covariance_norm
+    # RESULT_dict['between_variance_norm({0})'.format(cluster_str)]=between_variance_norm
+    # RESULT_dict['within_covariance({0})'.format(cluster_str)]=within_covariance
+    # RESULT_dict['within_variance({0})'.format(cluster_str)]=within_variance
+    # RESULT_dict['linear_discriminant_covariance({0})'.format(cluster_str)]=linear_discriminant_covariance
+    
+    # for keys, values in Single_Variances.items():
+    #     RESULT_dict[keys+'({0})'.format(cluster_str)]=values
+    for keys, values in Multi_Variances.items():
+        RESULT_dict[keys+'({0})'.format(cluster_str)]=values
+    for keys, values in Covariances.items():
+        RESULT_dict[keys+'({0})'.format(cluster_str)]=values
+    return RESULT_dict
+
+
+# Play code for KDE filtering
+count=0
+from sklearn.neighbors import KernelDensity
+from sklearn import preprocessing
+from matplotlib.offsetbox import AnchoredText
+THRESHOLD=40
+for THRESHOLD in [40]:
+    scale_factor=100
+    N=2
+    RESULT_DICTIONARY=Dict()
+    df_simulate=pd.DataFrame()
+    # for people in list(Vowels_AUI.keys())[:3]:
+    for people in Vowels_AUI.keys():
+        # plt.figure(count)
+        F12_raw_dict=Vowels_AUI[people]
+        df_vowel = pd.DataFrame()
+        for keys in F12_raw_dict.keys():
+            if len(df_vowel) == 0:
+                df_vowel=F12_raw_dict[keys]
+                df_vowel['vowel']=keys
+            else:
+                df_=F12_raw_dict[keys]
+                df_['vowel']=keys
+                df_vowel=df_vowel.append(df_)
+        
+        len_a=len(np.where(df_vowel['vowel']=='A:')[0])
+        len_u=len(np.where(df_vowel['vowel']=='u:')[0])
+        len_i=len(np.where(df_vowel['vowel']=='i:')[0])
+        
+        
+        if len_a<=N or len_u<=N or len_i<=N:
+            continue
+        
+        def KDE_Filtering(df_vowel,THRESHOLD=10,scale_factor=100):
+            X=df_vowel[args.Inspect_features].values
+            labels=df_vowel['vowel']
+            
+            df_vowel_calibrated=pd.DataFrame([])
+            for phone in set(labels):
+                
+                df=df_vowel[df_vowel['vowel']==phone][args.Inspect_features]
+                data_array=df_vowel[df_vowel['vowel']==phone][args.Inspect_features].values
+    
+                x=data_array[:,0]
+                y=data_array[:,1]
+                xmin = x.min()
+                xmax = x.max()        
+                ymin = y.min()
+                ymax = y.max()
+                
+                image_num=1j
+                X, Y = np.mgrid[xmin:xmax:image_num*scale_factor, ymin:ymax:image_num*scale_factor]
+                
+                positions = np.vstack([X.ravel(), Y.ravel()])
+                
+                values = np.vstack([x, y])
+                
+                kernel = stats.gaussian_kde(values)
+                        
+                Z = np.reshape(kernel(positions).T, X.shape)
+                normalized_z = preprocessing.normalize(Z)
+                
+                df['x_to_scale'] = (100*(x - np.min(x))/np.ptp(x)).astype(int) 
+                df['y_to_scale'] = (100*(y - np.min(y))/np.ptp(y)).astype(int) 
+                
+                normalized_z=(100*(Z - np.min(Z.ravel()))/np.ptp(Z.ravel())).astype(int)
+                to_delete = zip(*np.where((normalized_z<THRESHOLD) == True))
+                
+                # The indexes that are smaller than threshold
+                deletepoints_bool=df.apply(lambda x: (x['x_to_scale'], x['y_to_scale']), axis=1).isin(to_delete)
+                df_calibrated=df.loc[(deletepoints_bool==False).values]
+                df_deleted_after_calibrated=df.loc[(deletepoints_bool==True).values]
+                
+                df_vowel_calibrated_tmp=df_calibrated.drop(columns=['x_to_scale','y_to_scale'])
+                df_vowel_calibrated_tmp['vowel']=phone
+                df_vowel_output=df_vowel_calibrated_tmp.copy()
+                df_vowel_calibrated=df_vowel_calibrated.append(df_vowel_output)
+                
+                
+                # Data prepare for plotting 
+                # import seaborn as sns
+                # df_calibrated_tocombine=df_calibrated.copy()
+                # df_calibrated_tocombine['cal']='calibrated'
+                # df_deleted_after_calibrated['cal']='deleted'
+                # df_calibratedcombined=df_calibrated_tocombine.append(df_deleted_after_calibrated)
+                
+                # #Plotting code
+                # fig = plt.figure(figsize=(8,8))
+                # ax = fig.gca()
+                # ax.set_xlim(xmin, xmax)
+                # ax.set_ylim(ymin, ymax)
+                # # cfset = ax.contourf(X, Y, Z, cmap='coolwarm')
+                # # ax.imshow(Z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
+                # # cset = ax.contour(X, Y, Z, colors='k')
+                # cfset = ax.contourf(X, Y, normalized_z, cmap='coolwarm')
+                # ax.imshow(normalized_z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
+                # cset = ax.contour(X, Y, normalized_z, colors='k')
+                # ax.clabel(cset, inline=1, fontsize=10)
+                # ax.set_xlabel('X')
+                # ax.set_ylabel('Y')
+                # plt.title('2D Gaussian Kernel density estimation')
+                
+                # sns.scatterplot(data=df_vowel[df_vowel['vowel']==phone], x="F1", y="F2")
+                # sns.scatterplot(data=df_calibratedcombined, x="F1", y="F2",hue='cal')
+            return df_vowel_calibrated
+        
+        
+        def Calculate_pointDistsTotal(df_vowel,dist_type='euclidean'):
+            import scipy
+            a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
+            u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
+            i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
+            
+            
+            
+            dist_au=scipy.spatial.distance.cdist(a,u,dist_type)
+            dist_ai=scipy.spatial.distance.cdist(a,i,dist_type)
+            dist_iu=scipy.spatial.distance.cdist(i,u,dist_type)
+            mean_dist_au=np.mean(dist_au)
+            mean_dist_ai=np.mean(dist_ai)
+            mean_dist_iu=np.mean(dist_iu)
+            dist_total=mean_dist_au*mean_dist_ai*mean_dist_iu
+            # return dist_total, [mean_dist_au,mean_dist_ai,mean_dist_iu]
+            return dist_total
+        
+        
+        df_vowel_calibrated=KDE_Filtering(df_vowel,THRESHOLD=THRESHOLD,scale_factor=100)
+    
+        a=df_vowel_calibrated[df_vowel_calibrated['vowel']=='A:'][args.Inspect_features].mean()
+        u=df_vowel_calibrated[df_vowel_calibrated['vowel']=='u:'][args.Inspect_features].mean()
+        i=df_vowel_calibrated[df_vowel_calibrated['vowel']=='i:'][args.Inspect_features].mean()
+    
+        numerator=u[1] + a[1] + i[0] + u[0]
+        demominator=i[1] + a[0]
+        RESULT_dict={}
+        RESULT_dict['FCR2']=np.float(numerator/demominator)
+        # RESULT_dict['FCR2_uF2']=np.float(u[1]/demominator)
+        # RESULT_dict['FCR2_aF2']=np.float(a[1]/demominator)
+        # RESULT_dict['FCR2_iF1']=np.float(i[0]/demominator)
+        # RESULT_dict['FCR2_uF1']=np.float(u[0]/demominator)
+        
+        #Get total between cluster distances
+        # distance_types=['euclidean','minkowski','cityblock','seuclidean','sqeuclidean','cosine',\
+        #      'correlation','jaccard','jensenshannon','chebyshev','canberra','braycurtis',\
+        #      'mahalanobis','sokalsneath']
+            
+        # for dst_tpe in distance_types:
+        #     # RESULT_dict[dst_tpe+" "+'pointDistsTotal'],\
+        #     #     [RESULT_dict[dst_tpe+" "+'dist_au'],RESULT_dict[dst_tpe+" "+'dist_ai'],RESULT_dict[dst_tpe+" "+'dist_iu']]\
+        #     #         =Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe)
+        #     RESULT_dict[dst_tpe+" "+'pointDistsTotal']=Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe)
+        #     RESULT_dict[dst_tpe+" "+'pointDistsTotal_norm']=Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe) / numerator
+        
+        
+        for label_choose in label_choose_lst:
+            RESULT_dict[label_choose]=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
+        RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=len_u,len_a,len_i
+        
+        cluster_str=','.join(sorted(F12_raw_dict.keys()))
+        RESULT_dict=Store_FeatVals(RESULT_dict,df_vowel_calibrated,args.Inspect_features, cluster_str=cluster_str)    
+        
+        ''' End of feature calculation '''
+        # =============================================================================
+        df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
+        df_RESULT_list.index=[people]
+        df_simulate=df_simulate.append(df_RESULT_list)
+        # sns.scatterplot(data=df_vowel_calibrated, x="F1", y="F2", hue="vowel")
+        
+        # at = AnchoredText(
+        # "FCR2:{0}\nuF2{1}\naF2{2}\niF1{3}\nuF1{4}".format(\
+        #     np.round(RESULT_dict['FCR2'],2),np.round(RESULT_dict['FCR2_uF2'],2),np.round(RESULT_dict['FCR2_aF2'],2),\
+        #     np.round(RESULT_dict['FCR2_iF1'],2),np.round(RESULT_dict['FCR2_uF1'],2)),prop=dict(size=15), frameon=True, loc='lower right')
+        # # at = AnchoredText(
+        # # "angles\nai{0}\niu{1}\nua{2}".format(np.round(ang_ai,2),np.round(ang_iu,2),np.round(ang_ua,2)), prop=dict(size=15), frameon=True, loc='lower right')
+        # plt.setp(at.patch, facecolor='white', alpha=0.5)
+        # plt.gca().add_artist(at)
+        # plt.show()
+        count+=1
+        
+    Eval_med=Evaluation_method()
+    
+    columns_sel=df_simulate.columns
+    # columns_sel=list(set(columns_sel) - set([co for co in columns_sel if " pointDistsTotal" not in co]))
+    columns_sel=list(set(columns_sel) - set(['u_num','a_num','i_num','ADOS_C']))
+    # columns_sel= columns_sel + ['FCR2']
+    
+    
+    for N in [2]:
+    # for N in [7,8,9,10]:
+        Aaadf_results=Eval_med.Calculate_correlation(['ADOS_C'],df_simulate,N,columns_sel,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
+        Survey_nice_variable(Aaadf_results)
+
+    
+
+
+def LDA_scatter_matrices(df_vowel):
+    a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features].mean()
+    u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features].mean()
+    i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features].mean()
+    
+    def Normalize_operation(df_vowel, normalized_method='TotalMin'):
+        a_raw=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
+        u_raw=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
+        i_raw=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
+    
+        a_min=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features].min()
+        u_min=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features].min()
+        i_min=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features].min()
+    
+        a_norm=a_raw/a_min
+        u_norm=u_raw/u_min
+        i_norm=i_raw/i_min
+        a_norm['vowel']='A:'
+        u_norm['vowel']='u:'
+        i_norm['vowel']='i:'
+        
+        # df_vowel_min=pd.DataFrame([],columns=args.Inspect_features)
+        df_vowel_min=df_vowel[args.Inspect_features].min()
+    
+        
+        # normalize data before Sb Sw calculation
+        if normalized_method == 'TotalMin':
+            df_vowel_normalized=df_vowel.copy()[args.Inspect_features]/df_vowel_min
+            df_vowel_normalized['vowel']=df_vowel['vowel']
+        elif normalized_method == 'WithinVowelMin':
+            df_vowel_normalized=pd.concat([u_norm,i_norm,a_norm],axis=0)
+        else:
+            raise KeyError()
+        return df_vowel_normalized
+    # df_vowel=Normalize_operation(df_vowel, normalized_method='TotalMin') 
+    
+    
+    
+    
+    numerator=u[1] + a[1] + i[0] + u[0]
+    demominator=i[1] + a[0]
+
+    
+    class_feature_means = pd.DataFrame(columns=list(set(df_vowel['vowel'])))
+    n_samples = len(df_vowel)
+    for c, rows in df_vowel.groupby('vowel'):
+        class_feature_means[c] = rows[args.Inspect_features].mean()
+    
+    groups_num=len(class_feature_means.index)
+    # Within class scatter matrix 
+    within_class_scatter_matrix = np.zeros((groups_num,groups_num))
+    for c, rows in df_vowel.groupby('vowel'):
+        rows = rows[args.Inspect_features]
+        s = np.zeros((groups_num,groups_num))
+        
+        for index, row in rows.iterrows():
+            x, mc = row.values.reshape(groups_num,1), class_feature_means[c].values.reshape(groups_num,1)
+            # class_variance=((x - mc) / mc).dot(((x - mc) / mc).T).astype(float)
+            # class_variance=((x - mc) / numerator).dot(((x - mc) / numerator).T).astype(float) #BCC norm2 + WCC norm2
+            # class_variance=((x - mc) / numerator).dot(((x - mc) ).T).astype(float) #BCC norm2 + WCC norm1
+            class_variance=((x - mc) ).dot(((x - mc) ).T).astype(float) #BCC norm2
+            # class_variance=( x  / mc).dot(( x / mc).T).astype(float) 
+            s += class_variance
+            
+        within_class_scatter_matrix += s
+    within_class_scatter_matrix_norm = within_class_scatter_matrix / n_samples
+    # within_class_scatter_matrix_norm = within_class_scatter_matrix / n_samples / numerator**2
+    within_class_scatter_matrix_norm = within_class_scatter_matrix / numerator**2
+        
+    # Between class scatter matrix 
+    feature_means = df_vowel.mean()
+    between_class_scatter_matrix = np.zeros((groups_num,groups_num))
+    for c in class_feature_means:    
+        n = len(df_vowel.loc[df_vowel['vowel'] == c].index)
+        
+        mc, m = class_feature_means[c].values.reshape(groups_num,1), feature_means[args.Inspect_features].values.reshape(groups_num,1)
+        
+        # between_class_variance = n * ( (mc - m) / m).dot(((mc - m) / m).T)
+        # between_class_variance = n * ( (mc - m) / numerator ).dot(((mc - m) / numerator ).T) #BCC norm2 + WCC norm2
+        # between_class_variance = n * ( (mc - m) / numerator ).dot(((mc - m)  ).T) #BCC norm1 + WCC norm2
+        between_class_variance = n * ( (mc - m)  ).dot(((mc - m)  ).T) #BCC norm1 + WCC norm2
+        # between_class_variance = n * ( mc/ m).dot((mc / m).T)
+        
+        between_class_scatter_matrix += between_class_variance
+    between_class_scatter_matrix_norm = between_class_scatter_matrix / n_samples
+    # between_class_scatter_matrix_norm = between_class_scatter_matrix / n_samples / numerator**2
+    between_class_scatter_matrix_norm = between_class_scatter_matrix / numerator**2
+    
+    Total_scatter_matrix_norm=within_class_scatter_matrix_norm + between_class_scatter_matrix_norm
+    
+    # Calculate eigen values
+    linear_discriminant_norm=np.linalg.inv(within_class_scatter_matrix_norm ).dot(between_class_scatter_matrix_norm )
+    # linear_discriminant=np.linalg.inv(within_class_scatter_matrix_norm ).dot(between_class_scatter_matrix )
+    
+    return within_class_scatter_matrix, between_class_scatter_matrix,\
+            within_class_scatter_matrix_norm, between_class_scatter_matrix_norm, linear_discriminant_norm, Total_scatter_matrix_norm
+

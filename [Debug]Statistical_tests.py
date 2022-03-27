@@ -125,7 +125,7 @@ def CombineMeasurefeat(Syncrony_measres,base_features):
         for sync_M in Syncrony_measres:
             lst.append(sync_M.format(basefeat))
     return lst
-def prefine_GlobalVariables(df_formant_statistic_77):
+def prefine_GlobalVariables(df_formant_statistic_77,df_formant_statistic_TD):
     '''
     
         To Get each group data and show the mean/median group data
@@ -177,7 +177,7 @@ def prefine_GlobalVariables(df_formant_statistic_77):
     global	    df_formant_statistic_TD_M4girl
     global	    df_formant_statistic_TD_M3
     global	    df_formant_statistic_TD_M4
-    global	    df_formant_statistic_TD_normal
+    # global	    df_formant_statistic_TD_normal
 
     # Subgroup dataframes
     df_formant_statistic_77_boy=df_formant_statistic_77[filter_boy]
@@ -216,8 +216,8 @@ def prefine_GlobalVariables(df_formant_statistic_77):
     df_formant_statistic_TD_M4girl=df_formant_statistic_TD[filter_M4 & filter_girl]
     df_formant_statistic_TD_M3=df_formant_statistic_TD[filter_M3 ]
     df_formant_statistic_TD_M4=df_formant_statistic_TD[filter_M4 ]
-    df_formant_statistic_TD_normal=df_formant_statistic_TD[np.logical_and(\
-                df_formant_statistic_TD['ADOS_cate_C']==0,df_formant_statistic_TD['ADOS_C'].notnull())]
+    # df_formant_statistic_TD_normal=df_formant_statistic_TD[np.logical_and(\
+    #             df_formant_statistic_TD['ADOS_cate_C']==0,df_formant_statistic_TD['ADOS_C'].notnull())]
     
     global MutualConversationLabels, Communication_labels
     MutualConversationLabels=['AA8','BB9']
@@ -266,16 +266,17 @@ class Feature_columns_collect:
         self.DurlenFeat=['dur', 'strlen', 'speed', 'totalword', 'Average_POIDur',
                'Average_phoneSpeed', 'PhoneVariety']
         self.base_variance_features=[
-        'FCR',
-        'VSA1',
-        'sam_wilks_lin_norm(A:,i:,u:)',
-        'pillai_lin_norm(A:,i:,u:)',
         'between_covariance_norm(A:,i:,u:)',
-        'within_covariance_norm(A:,i:,u:)',
-        'sam_wilks_lin(A:,i:,u:)',
-        'pillai_lin(A:,i:,u:)',
-        'between_covariance(A:,i:,u:)',
-        'within_covariance(A:,i:,u:)',
+       'between_variance_norm(A:,i:,u:)', 'between_covariance(A:,i:,u:)',
+       'between_variance(A:,i:,u:)', 'within_covariance_norm(A:,i:,u:)',
+       'within_variance_norm(A:,i:,u:)', 'within_covariance(A:,i:,u:)',
+       'within_variance(A:,i:,u:)', 'total_covariance_norm(A:,i:,u:)',
+       'total_variance_norm(A:,i:,u:)', 'sam_wilks_lin_norm(A:,i:,u:)',
+       'pillai_lin_norm(A:,i:,u:)', 'hotelling_lin_norm(A:,i:,u:)',
+       'roys_root_lin_norm(A:,i:,u:)',
+       'Between_Within_Det_ratio_norm(A:,i:,u:)',
+       'Between_Within_Tr_ratio_norm(A:,i:,u:)', 'ConvexHull', 'MeanVFD',
+       'SumVFD','pointDistsTotal', 'repulsive_force'
         ]
         
         self.base_phonation_features=['localJitter_mean(A:,i:,u:)',
@@ -316,7 +317,7 @@ class Feature_Getter:
             '2017_08_07_01_227',
             '2017_07_24_01_217_1',
             '2015_12_27_01_058fu',
-            # '2016_10_21_01_202_1',
+            '2016_10_21_01_202_1',
             ]
         self.MildASD_age_sex_match=['2017_08_11_01_300_1',
                 '2017_08_15_01_413',
@@ -338,6 +339,7 @@ class Feature_Getter:
        '2021_01_23_5841_1(醫生鏡頭對焦到前面了)_emotion',
        '2021_02_05_5856_4(醫生鏡頭模糊)_emotion',
        '2021_01_29_5848_4(醫生鏡頭模糊)_emotion']
+        
         self.SevereASD_age_sex_match_ver2=[
             '2016_11_27_01_207_1',
             '2016_03_05_01_079fu',
@@ -380,6 +382,8 @@ class Feature_Getter:
             '2021_01_23_5841_1(醫生鏡頭對焦到前面了)_emotion',
             '2020_10_24_5819_1_emotion',
        ]
+        
+        
     def read_Sessionfeature(self,feat='Formant_AUI_tVSAFCRFvals'):
         df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromASD_DOCKID')
         self.df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
@@ -464,8 +468,7 @@ feat_getter=Feature_Getter(dfFormantStatisticpath,\
                            Stat_med_str_VSA=Stat_med_str_VSA,\
                            Inspect_features=Inspect_features)
 sellect_people_define=SellectP_define()
-    
-    
+
 feat_getter._update_label(Label)
 label_cols=Label.label_choose
 df_labels_ageMatchSevere=feat_getter.Get_labels_choosen(sellect_people_define.SevereASD_age_sex_match,Label,label_cols)
@@ -481,27 +484,16 @@ df_langLvl_TDnormal=feat_getter.Get_labels_choosen(sellect_people_define.TD_norm
 
 
 df_Session_formant_statistic_ASD, df_Session_formant_statistic_TD=feat_getter.read_Sessionfeature('Formant_AUI_tVSAFCRFvals')
-df_Session_phonation_statistic_ASD, df_Session_phonation_statistic_TD=feat_getter.read_Sessionfeature('Phonation_meanvars')
+# df_Session_phonation_statistic_ASD, df_Session_phonation_statistic_TD=feat_getter.read_Sessionfeature('Phonation_meanvars')
 df_Session_formant_statistic_TD['dia_num']=100
 df_Syncrony_formant_statistic_ASD, df_Syncrony_formant_statistic_TD=feat_getter.read_Syncronyfeature('Syncrony_measure_of_variance')
-df_Syncrony_phonation_statistic_ASD, df_Syncrony_phonation_statistic_TD=feat_getter.read_Syncronyfeature('Syncrony_measure_of_variance_phonation')
+# df_Syncrony_phonation_statistic_ASD, df_Syncrony_phonation_statistic_TD=feat_getter.read_Syncronyfeature('Syncrony_measure_of_variance_phonation')
 # df_Syncrony_phonation_statistic_ASD=df_Syncrony_phonation_statistic_ASD.dropna()
 # df_Syncrony_phonation_statistic_TD=df_Syncrony_phonation_statistic_TD.dropna()
 df_dur_strlen_speed_ASD, df_dur_strlen_speed_TD=feat_getter.read_durStrlenSpeedfeature('df_speedlenBasicInfo')
 df_person_segment_feature_dict_ASD_formant, df_person_segment_feature_dict_TD_formant=feat_getter.read_dfPersonSegmentFeatureDict('formant')
 df_person_segment_feature_dict_ASD_syncronyBasicInfo, df_person_segment_feature_dict_TD_syncronyBasicInfo=feat_getter.read_dfPersonSegmentBasicInfoFeatureDict('syncronyBasicInfo')
 df_POI_person_segment_feature_dict_ASD_phonation, df_POI_person_segment_feature_dict_TD_phonation=feat_getter.read_dfPersonPOISegmentFeatureDict('phonation')
-
-
-# =============================================================================
-'''
-
-    Workspace to test between ASD and TD
-
-'''
-# =============================================================================
-
-
 
 
 '''
@@ -540,8 +532,8 @@ df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_Syncrony_formant_s
 # df_formant_statistic_77=pd.concat([df_formant_statistic_77,df_dur_strlen_speed_ASD],axis=1)
 # df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_dur_strlen_speed_TD],axis=1)
 
-df_formant_statistic_77=pd.concat([df_formant_statistic_77,df_Syncrony_phonation_statistic_ASD],axis=1) #Contains nan
-df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_Syncrony_phonation_statistic_TD],axis=1)
+# df_formant_statistic_77=pd.concat([df_formant_statistic_77,df_Syncrony_phonation_statistic_ASD],axis=1) #Contains nan
+# df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_Syncrony_phonation_statistic_TD],axis=1)
 
 df_formant_statistic_77=pd.concat([df_formant_statistic_77,df_dur_strlen_speed_ASD],axis=1) #Contains nan
 df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_dur_strlen_speed_TD],axis=1)
@@ -556,8 +548,8 @@ if '2015_12_07_02_003' in df_formant_statistic_77.index:
 df_formant_statistic_77=Add_numSums(df_formant_statistic_77)
 df_formant_statistic_TD=Add_numSums(df_formant_statistic_TD)
 
-SevereASD_age_sex_match=sellect_people_define.SevereASD_age_sex_match
-MildASD_age_sex_match=sellect_people_define.MildASD_age_sex_match
+SevereASD_age_sex_match=sellect_people_define.SevereASD_age_sex_match_ver2
+MildASD_age_sex_match=sellect_people_define.MildASD_age_sex_match_ver2
 TD_normal_ver2=sellect_people_define.TD_normal_ver2
 
 df_formant_statistic_77=DropColsContainsNan(df_formant_statistic_77,SevereASD_age_sex_match)
@@ -582,15 +574,22 @@ df_formant_statistic_TD['ASDTD']=2
 df_formant_statistic_all=df_formant_statistic_77.append(df_formant_statistic_TD)
 df_formant_statistic_all=df_formant_statistic_all[~df_formant_statistic_all[['Module','sex']].isna().any(axis=1)]
 
-prefine_GlobalVariables(df_formant_statistic_77)
+prefine_GlobalVariables(df_formant_statistic_77,df_formant_statistic_TD)
 
 
-
+# Aaa_chosen=df_formant_statistic_TD[['timeSeries_len[]','sex','age']]
+# ASD_chosen=df_formant_statistic_77[['ADOS_C','sex','age']]
+# Aaa_chosen=df_formant_statistic_TD_normal[['timeSeries_len[]','sex','age']]
+# ASDMild_chosen=df_formant_statistic_agesexmatch_ASDMild[['ADOS_C','sex','age','timeSeries_len[]']]
+# ASDSeve_chosen=df_formant_statistic_agesexmatch_ASDSevere[['ADOS_C','sex','age','timeSeries_len[]']]
+# ASDMild_chosen.describe()
+# ASDSeve_chosen.describe()
 
 ''' ASD Mild and Severe group '''
 df_formant_statistic_agesexmatch_ASDSevere=df_formant_statistic_77.copy().loc[SevereASD_age_sex_match]
 df_formant_statistic_agesexmatch_ASDMild=df_formant_statistic_77.copy().loc[MildASD_age_sex_match]
 df_formant_statistic_TD_normal=df_formant_statistic_TD.copy().loc[TD_normal_ver2]
+
 
 df_formant_statistic_agesexmatch_ASDSevere=Add_numSums(df_formant_statistic_agesexmatch_ASDSevere)
 df_formant_statistic_agesexmatch_ASDMild=Add_numSums(df_formant_statistic_agesexmatch_ASDMild)
@@ -796,22 +795,37 @@ TopTop_data_lst=[]
 TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDSevere','df_formant_statistic_TD_normal'])
 TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_TD_normal'])
 TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_agesexmatch_ASDSevere'])
+# TopTop_data_lst.append(['df_formant_statistic_77','df_formant_statistic_TD'])
 
-
+# self_specify_cols=[]
 # self_specify_cols=['between_covariance(A:,i:,u:)', 
-#                    'between_variance(A:,i:,u:)', 
-#                    'within_covariance(A:,i:,u:)', 
-#                    'within_variance(A:,i:,u:)',
-#                    'pillai_lin(A:,i:,u:)',
-#                    'sam_wilks_lin(A:,i:,u:)']
-
-self_specify_cols=['between_covariance(A:,i:,u:)', 
-                   'between_variance(A:,i:,u:)', 
-                   'within_covariance(A:,i:,u:)', 
-                   'within_variance(A:,i:,u:)',
-                   'pillai_lin(A:,i:,u:)',
-                   'sam_wilks_lin(A:,i:,u:)',
-                   'Divergence[within_covariance_norm(A:,i:,u:)]',
+#                     'between_variance(A:,i:,u:)', 
+#                     'within_covariance(A:,i:,u:)', 
+#                     'within_variance(A:,i:,u:)',
+#                     'pillai_lin(A:,i:,u:)',
+#                     'sam_wilks_lin(A:,i:,u:)']
+# self_specify_cols=['between_covariance_norm(A:,i:,u:)',
+#        'between_variance_norm(A:,i:,u:)', 'between_covariance(A:,i:,u:)',
+#        'between_variance(A:,i:,u:)', 'within_covariance_norm(A:,i:,u:)',
+#        'within_variance_norm(A:,i:,u:)', 'within_covariance(A:,i:,u:)',
+#        'within_variance(A:,i:,u:)', 'total_covariance_norm(A:,i:,u:)',
+#        'total_variance_norm(A:,i:,u:)', 'sam_wilks_lin_norm(A:,i:,u:)',
+#        'pillai_lin_norm(A:,i:,u:)', 'hotelling_lin_norm(A:,i:,u:)',
+#        'roys_root_lin_norm(A:,i:,u:)',
+#        'Between_Within_Det_ratio_norm(A:,i:,u:)',
+#        'Between_Within_Tr_ratio_norm(A:,i:,u:)', 'ConvexHull', 'MeanVFD',
+#        'SumVFD', 'absAng_a', 'absAng_u', 'absAng_i', 'ang_ai', 'ang_iu',
+#        'ang_ua', 'Angles', 'dcov_12', 'dcorr_12', 'dvar_1', 'dvar_2', 'dcor_a',
+#        'dcor_u', 'dcor_i', 'pear_12', 'pointDistsTotal', 'repulsive_force',
+#        'u_num+i_num+a_num','FCR2', 'VSA2']
+self_specify_cols=[
+                    # 'between_covariance(A:,i:,u:)', 
+                    # 'between_variance(A:,i:,u:)', 
+                    # 'within_covariance(A:,i:,u:)', 
+                    # 'within_variance(A:,i:,u:)',
+                    # 'pillai_lin(A:,i:,u:)',
+                    # 'sam_wilks_lin(A:,i:,u:)',
+                    'Divergence[within_covariance_norm(A:,i:,u:)]',
                     'Divergence[within_variance_norm(A:,i:,u:)]',    
                     'Divergence[between_covariance_norm(A:,i:,u:)]',    
                     'Divergence[between_variance_norm(A:,i:,u:)]',    
@@ -1153,6 +1167,9 @@ def TBMEB2Preparation_BoxplotCoordinationAnalysis(df_formant_statistic_agesexmat
     y_axis_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]']='$Div(Norm(Pillai))$'
     y_axis_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(Pillai))_{inv}$'
     y_axis_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(Pillai))_{part}$'
+    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]']='$Div(Norm(WCC))$'
+    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCC))_{inv}$'
+    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCC))_{part}$'
     y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]']='$Div(Norm(WCC))$'
     y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCC))_{inv}$'
     y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCC))_{part}$'

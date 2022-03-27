@@ -33,6 +33,7 @@ from addict import Dict
 import numpy as np
 import pandas as pd
 from articulation.HYPERPARAM import phonewoprosody, Label
+from articulation.HYPERPARAM.PeopleSelect import SellectP_define
 import matplotlib.pyplot as plt
 from itertools import combinations
 
@@ -62,6 +63,11 @@ from metric import Evaluation_method
 from scipy import special, stats
 import warnings
 
+def Add_label(df_formant_statistic,Label,label_choose='ADOS_cate_C'):
+    for people in df_formant_statistic.index:
+        bool_ind=Label.label_raw['name']==people
+        df_formant_statistic.loc[people,label_choose]=Label.label_raw.loc[bool_ind,label_choose].values
+    return df_formant_statistic
 
 def criterion_filter(df_formant_statistic,N=10,\
                      constrain_sex=-1, constrain_module=-1,constrain_agemax=-1,constrain_ADOScate=-1,constrain_agemin=-1,\
@@ -101,7 +107,10 @@ def NameMatchAssertion(Formants_people_symb,name):
 
 
 
-def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule, outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'):
+def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule,\
+                               outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+                               prefix='Formants_utt_symb',\
+                               suffix='KID_FromASD_DOCKID'):
     pool = Pool(int(os.cpu_count()))
     keys=[]
     interval=20
@@ -118,8 +127,8 @@ def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule, outpath='/h
         for utt, df_utt in load_file_tmp.items():
             Formants_utt_symb_limited[utt]=df_utt
     
-    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]Formants_utt_symb_limited.pkl","wb"))
-    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]Formants_utt_symb_limited.pkl")
+    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix),"wb"))
+    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix))
     
 '''
 Calculating FCR
@@ -153,9 +162,11 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
+    parser.add_argument('--dfFormantStatisticpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+                        help='path of the base directory')
     parser.add_argument('--Inspect', default=False,
                             help='path of the base directory')
-    parser.add_argument('--reFilter', default=True,
+    parser.add_argument('--reFilter', default=False,
                             help='')
     parser.add_argument('--correldf_formant_statistication_type', default='spearmanr',
                             help='spearmanr|pearsonr')
@@ -167,8 +178,8 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--poolWindowSize', default=3,
                             help='path of the base directory')
-    parser.add_argument('--dataset_role', default='KID_FromASD_DOCKID',
-                            help='kid_TD| kid88| DOC_FromASD_DOCKID | KID_FromASD_DOCKID')
+    parser.add_argument('--dataset_role', default='KID_FromTD_DOCKID',
+                            help='DOC_FromTD_DOCKID |KID_FromTD_DOCKID | DOC_FromASD_DOCKID | KID_FromASD_DOCKID')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
 
@@ -190,6 +201,7 @@ base_path=args.base_path
 args = get_args()
 base_path=args.base_path
 pklpath=args.inpklpath
+dfFormantStatisticpath=args.dfFormantStatisticpath
 INSPECT=args.Inspect
 windowsize=args.poolWindowSize
 label_choose_lst=args.label_choose_lst # labels are too biased
@@ -226,19 +238,28 @@ limit_people_rule=GetValuelimit_IQR(AUI_info,PhoneMapp_dict,args.Inspect_feature
 
 
 ''' multi processing start '''
-date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
+prefix,suffix = 'Formants_utt_symb', role
+# date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
+date_now='{0}-{1}-{2}'.format(dt.now().year,dt.now().month,dt.now().day)
 outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
-filepath=outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
+filepath=outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix)
 if os.path.exists(filepath) and args.reFilter==False:
     fname = pathlib.Path(filepath)
     mtime = dt.fromtimestamp(fname.stat().st_mtime)
-    filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
+    # filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
+    filemtime='{0}-{1}-{2}'.format(mtime.year,mtime.month,mtime.day)
     
     # If file last modify time is not now (precisions to the hours) than we create new one
     if filemtime != date_now:
-        Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
+        Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,\
+                               outpath=outpath,\
+                               prefix=prefix,\
+                               suffix=suffix) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
 else:
-    Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule)
+    Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,\
+                               outpath=outpath,\
+                               prefix=prefix,\
+                               suffix=suffix)
 Formants_utt_symb_limited=pickle.load(open(filepath,"rb"))
 ''' multi processing end '''
 if len(limit_people_rule) >0:
@@ -271,25 +292,26 @@ Vowels_AUI=Get_Vowels_AUI(AUI_info, args.Inspect_features,VUIsource="From__Forma
 
 
 
-additional_columns=['ADOS_cate_C']
+additional_columns=['ADOS_cate_C','dia_num']
 
 label_generate_choose_lst=['ADOS_C'] + additional_columns
 
 
 
-articulation=Articulation(Stat_med_str_VSA='median')
-# df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst)
+articulation=Articulation(Stat_med_str_VSA='mean')
+# df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst, FILTERING_method='KDE', KDE_THRESHOLD=40)
+df_formant_statistic, SCATTER_matrixBookeep_dict=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst, FILTERING_method='KDE', KDE_THRESHOLD=40,RETURN_scatter_matrix=True)
+pickle.dump(SCATTER_matrixBookeep_dict,open(outpklpath+"/SCATTER_matrixBookeep_dict_{}.pkl".format(role),"wb"))
 
 # For pseudo acoustic features generation
 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
                                             df_formant_statistic['i_num'] +\
                                             df_formant_statistic['a_num']
 
-for i in range(len(df_formant_statistic)):
-    name=df_formant_statistic.iloc[i].name
-    df_formant_statistic.loc[name,'ADOS_cate_C']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate_C'].values
-    ''' ADOS_cate_C, cate stands for category '''
-    
+
+
+
+df_formant_statistic=Add_label(df_formant_statistic,Label,label_choose='ADOS_cate_C')
 # =============================================================================        
 ''' 
 
@@ -316,13 +338,13 @@ df_formant_statistic_77=criterion_filter(df_formant_statistic,\
                                         constrain_sex=sex,constrain_module=module,N=N,constrain_agemax=agemax,constrain_agemin=agemin,constrain_ADOScate=ADOScate,\
                                         evictNamelst=[])
 
-pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
+pickle.dump(df_formant_statistic_77,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
 
 
 ''' Calculate correlations for Formant fetures'''
 columns=list(set(df_formant_statistic.columns) - set(additional_columns)) # Exclude added labels
 columns=list(set(columns) - set([co for co in columns if "_norm" not in co]))
-columns = columns + ['VSA1','FCR']
+columns = columns + ['VSA2','FCR2']
 
 
 
@@ -378,3 +400,185 @@ for key in Aaadf_spearmanr_table_NoLimit.keys():
         print(df_Corr_val_criteria)
         print("                         ")
 
+
+# =============================================================================
+# Generate LOC indexes for fraction people for ASD/non-ASD classification
+# =============================================================================
+
+
+dfFormantStatisticFractionpath=dfFormantStatisticpath+'/Fraction'
+if not os.path.exists(dfFormantStatisticFractionpath):
+    os.makedirs(dfFormantStatisticFractionpath)
+sellect_people_define=SellectP_define()
+if role == 'KID_FromASD_DOCKID':
+    df_formant_statistic_agesexmatch_ASDSevere=df_formant_statistic_77.loc[sellect_people_define.SevereASD_age_sex_match_ver2]
+    df_formant_statistic_agesexmatch_ASDMild=df_formant_statistic_77.loc[sellect_people_define.MildASD_age_sex_match_ver2]
+    
+    label_add='ADOS_cate_C'
+    if label_add  not in df_formant_statistic_agesexmatch_ASDSevere.columns:
+        df_formant_statistic_agesexmatch_ASDSevere=Add_label(df_formant_statistic_agesexmatch_ASDSevere,Label,label_choose=label_add)
+    if label_add  not in df_formant_statistic_agesexmatch_ASDMild.columns:
+        df_formant_statistic_agesexmatch_ASDMild=Add_label(df_formant_statistic_agesexmatch_ASDMild,Label,label_choose=label_add)
+    
+    # 1 represents ASD, 2 represents TD
+    label_add='ASDTD' 
+    if label_add not in df_formant_statistic_agesexmatch_ASDSevere.columns:
+        df_formant_statistic_agesexmatch_ASDSevere[label_add]=sellect_people_define.ASDTD_label['ASD']
+    if label_add not in df_formant_statistic_agesexmatch_ASDMild.columns:
+        df_formant_statistic_agesexmatch_ASDMild[label_add]=sellect_people_define.ASDTD_label['ASD']
+        
+    pickle.dump(df_formant_statistic_agesexmatch_ASDSevere,open(dfFormantStatisticFractionpath+'/df_formant_statistic_agesexmatch_ASDSevereGrp_kid.pkl','wb'))
+    pickle.dump(df_formant_statistic_agesexmatch_ASDMild,open(dfFormantStatisticFractionpath+'/df_formant_statistic_agesexmatch_ASDMildGrp_kid.pkl','wb'))
+    
+    
+elif role == 'DOC_FromASD_DOCKID':
+    df_formant_statistic_agesexmatch_ASDSevere=df_formant_statistic_77.loc[sellect_people_define.SevereASD_age_sex_match_ver2]
+    df_formant_statistic_agesexmatch_ASDMild=df_formant_statistic_77.loc[sellect_people_define.MildASD_age_sex_match_ver2]
+    
+    label_add='ADOS_cate_C'
+    if label_add  not in df_formant_statistic_agesexmatch_ASDSevere.columns:
+        df_formant_statistic_agesexmatch_ASDSevere=Add_label(df_formant_statistic_agesexmatch_ASDSevere,Label,label_choose=label_add)
+    if label_add  not in df_formant_statistic_agesexmatch_ASDMild.columns:
+        df_formant_statistic_agesexmatch_ASDMild=Add_label(df_formant_statistic_agesexmatch_ASDMild,Label,label_choose=label_add)
+    
+    # 1 represents ASD, 2 represents TD
+    label_add='ASDTD' 
+    if label_add not in df_formant_statistic_agesexmatch_ASDSevere.columns:
+        df_formant_statistic_agesexmatch_ASDSevere[label_add]=sellect_people_define.ASDTD_label['ASD']
+    if label_add not in df_formant_statistic_agesexmatch_ASDMild.columns:
+        df_formant_statistic_agesexmatch_ASDMild[label_add]=sellect_people_define.ASDTD_label['ASD']
+        
+    pickle.dump(df_formant_statistic_agesexmatch_ASDSevere,open(dfFormantStatisticFractionpath+'/df_formant_statistic_agesexmatch_ASDSevereGrp_doc.pkl','wb'))
+    pickle.dump(df_formant_statistic_agesexmatch_ASDMild,open(dfFormantStatisticFractionpath+'/df_formant_statistic_agesexmatch_ASDMildGrp_doc.pkl','wb'))
+    
+elif role == 'DOC_FromTD_DOCKID':
+    df_formant_TD_normal=df_formant_statistic.loc[sellect_people_define.TD_normal_ver2]
+    
+    # 1 represents ASD, 2 represents TD
+    label_add='ASDTD' 
+    if label_add not in df_formant_TD_normal.columns:
+        df_formant_TD_normal[label_add]=sellect_people_define.ASDTD_label['TD']
+        
+    pickle.dump(df_formant_TD_normal,open(dfFormantStatisticFractionpath+'/df_formant_statistic_TD_normal_doc.pkl','wb'))
+elif role == 'KID_FromTD_DOCKID':
+    df_formant_TD_normal=df_formant_statistic.loc[sellect_people_define.TD_normal_ver2]
+    
+    label_add='ASDTD' 
+    if label_add not in df_formant_TD_normal.columns:
+        df_formant_TD_normal[label_add]=sellect_people_define.ASDTD_label['TD']
+        
+    pickle.dump(df_formant_TD_normal,open(dfFormantStatisticFractionpath+'/df_formant_statistic_TD_normal_kid.pkl','wb'))
+else:
+    raise KeyError("The key has not been registered")
+
+
+# =============================================================================
+'''
+
+    Merge Doc and kid matrixes
+
+
+    This area is independent from the code above, if the "SCATTER_matrixBookeep_dict"s 
+    have been generated before, then we can merge them
+'''
+
+MERGE_INDEXES_ROLE='TD'
+scatter_matrix_path=outpklpath
+
+Scatter_mrtx_lst=['Norm(WC)', 'Norm(BC)', 'Norm(TotalVar)']
+# =============================================================================
+
+if MERGE_INDEXES_ROLE != '':
+    if MERGE_INDEXES_ROLE == 'ASD':
+        try:
+            SCATTER_matrix_KID_dict=pickle.load(open(scatter_matrix_path+"/SCATTER_matrixBookeep_dict_{}.pkl".format('KID_FromASD_DOCKID'),"rb"))
+            SCATTER_matrix_DOC_dict=pickle.load(open(scatter_matrix_path+"/SCATTER_matrixBookeep_dict_{}.pkl".format('DOC_FromASD_DOCKID'),"rb"))
+        except FileNotFoundError:
+            raise FileNotFoundError("Scatter matrices from Doc and Kid should be prepared in advance")
+    elif MERGE_INDEXES_ROLE == 'TD':
+        try:
+            SCATTER_matrix_KID_dict=pickle.load(open(scatter_matrix_path+"/SCATTER_matrixBookeep_dict_{}.pkl".format('KID_FromTD_DOCKID'),"rb"))
+            SCATTER_matrix_DOC_dict=pickle.load(open(scatter_matrix_path+"/SCATTER_matrixBookeep_dict_{}.pkl".format('DOC_FromTD_DOCKID'),"rb"))
+        except FileNotFoundError:
+            raise FileNotFoundError("Scatter matrices from Doc and Kid should be prepared in advance")
+    else:
+        raise KeyError("MERGE_INDEXES_ROLE whould be [ASD, TD, '']")
+    
+    # 1. First check the people are the same, you should take union
+    kid_people_lst=list(SCATTER_matrix_KID_dict.keys())
+    doc_people_lst=list(SCATTER_matrix_DOC_dict.keys())
+    
+    def intersection(lst1, lst2):
+        lst3 = [value for value in lst1 if value in lst2]
+        return lst3
+    
+    def Covariance_representations(eigen_values):
+        sam_wilks=1
+        pillai=0
+        hotelling=0
+        for eigen_v in eigen_values:
+            wild_element=1.0/np.float(1+eigen_v)
+            sam_wilks*=wild_element
+            pillai+=wild_element * eigen_v
+            hotelling+=eigen_v
+        roys_root=np.max(eigen_values)
+        return sam_wilks, pillai, hotelling, roys_root
+    
+    people_intersection=intersection(kid_people_lst, doc_people_lst)
+    df_FormantRatios_statistic=pd.DataFrame()
+    for people in people_intersection:
+        
+        Tmp_dict={}
+        Covariances={}
+        for e in Scatter_mrtx_lst:
+        
+            Tmp_dict[e+'_kid']=SCATTER_matrix_KID_dict[people][e] 
+            Tmp_dict[e+'_doc']=SCATTER_matrix_DOC_dict[people][e] 
+        
+            Tmp_dict['RatioMatrix_{}_D_K'.format(e)]=np.linalg.inv(Tmp_dict[e+'_kid']).dot(Tmp_dict[e+'_doc'])
+            
+            eigen_values, _ = np.linalg.eig(Tmp_dict['RatioMatrix_{}_D_K'.format(e)])
+            
+            Covariances[e+'_sam_wilks_{}'.format('DKRaito')], Covariances[e+'_pillai_{}'.format('DKRaito')],\
+                Covariances[e+'_hotelling_{}'.format('DKRaito')], Covariances[e+'_roys_root_{}'.format('DKRaito')]=Covariance_representations(eigen_values)
+            
+            # make it a list is because nothing but make the code no errors
+            Covariances[e+'_Det_DKRaito']=[np.linalg.det(Tmp_dict[e+'_doc'])/np.linalg.det(Tmp_dict[e+'_kid'])]
+            Covariances[e+'_Tr_DKRaito']=[np.trace(Tmp_dict[e+'_doc'])/np.trace(Tmp_dict[e+'_kid'])]
+        
+        df_RESULT_list=pd.DataFrame.from_dict(Covariances)
+        df_RESULT_list.index=[people]
+        df_FormantRatios_statistic=df_FormantRatios_statistic.append(df_RESULT_list)
+
+
+    pickle.dump(df_FormantRatios_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format('DKRaito'),"wb"))    
+    
+    if MERGE_INDEXES_ROLE == 'ASD':
+        df_formant_statistic_agesexmatch_ASDSevere=df_FormantRatios_statistic.loc[sellect_people_define.SevereASD_age_sex_match_ver2]
+        df_formant_statistic_agesexmatch_ASDMild=df_FormantRatios_statistic.loc[sellect_people_define.MildASD_age_sex_match_ver2]
+        
+        label_add='ADOS_cate_C'
+        if label_add  not in df_formant_statistic_agesexmatch_ASDSevere.columns:
+            df_formant_statistic_agesexmatch_ASDSevere=Add_label(df_formant_statistic_agesexmatch_ASDSevere,Label,label_choose=label_add)
+        if label_add  not in df_formant_statistic_agesexmatch_ASDMild.columns:
+            df_formant_statistic_agesexmatch_ASDMild=Add_label(df_formant_statistic_agesexmatch_ASDMild,Label,label_choose=label_add)
+        
+        # 1 represents ASD, 2 represents TD
+        label_add='ASDTD' 
+        if label_add not in df_formant_statistic_agesexmatch_ASDSevere.columns:
+            df_formant_statistic_agesexmatch_ASDSevere[label_add]=sellect_people_define.ASDTD_label['ASD']
+        if label_add not in df_formant_statistic_agesexmatch_ASDMild.columns:
+            df_formant_statistic_agesexmatch_ASDMild[label_add]=sellect_people_define.ASDTD_label['ASD']
+            
+        pickle.dump(df_formant_statistic_agesexmatch_ASDSevere,open(dfFormantStatisticFractionpath+'/df_formant_statistic_agesexmatch_ASDSevereGrp_DKRatio.pkl','wb'))
+        pickle.dump(df_formant_statistic_agesexmatch_ASDMild,open(dfFormantStatisticFractionpath+'/df_formant_statistic_agesexmatch_ASDMildGrp_DKRatio.pkl','wb'))
+    elif MERGE_INDEXES_ROLE == 'TD':
+        df_formant_TD_normal=df_FormantRatios_statistic.loc[sellect_people_define.TD_normal_ver2]
+        
+        # 1 represents ASD, 2 represents TD
+        label_add='ASDTD' 
+        if label_add not in df_formant_TD_normal.columns:
+            df_formant_TD_normal[label_add]=sellect_people_define.ASDTD_label['TD']
+            
+        pickle.dump(df_formant_TD_normal,open(dfFormantStatisticFractionpath+'/df_formant_statistic_TD_normalGrp_DKRatio.pkl','wb'))
+    

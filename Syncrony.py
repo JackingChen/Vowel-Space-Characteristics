@@ -88,6 +88,13 @@ class Syncrony:
                 var_pairwise_dist=np.var((timeseries_0 - timeseries_1))
                 
                 RESULT_dict['Divergence[{}]'.format(col)]=r_pairwise_dist
+                if np.isnan(r_pairwise_dist):
+                    print("Reproduce NaN ", col)
+                    print("Original Val ", pairwise_dist)
+                    print("Occurs at people ", people)
+                    
+                
+                
                 assert not np.isnan(r_pairwise_dist)
                 # RESULT_dict['Divergence[{}]_cmp1st'.format(col)]=r_cmpFirst_dist
                 RESULT_dict['Divergence[{}]_split'.format(col)]=Dist_split_divergence

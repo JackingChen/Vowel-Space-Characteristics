@@ -277,7 +277,11 @@ class Evaluation_method:
             df_formant_qualified=df_formant_statistic[filter_bool]
             for col in columns:
                 if len(df_formant_qualified) > Num_df_qualified:
-                    pear,pear_p=pearsonr(df_formant_qualified[col],df_formant_qualified[lab_choose])
+                    try:
+                        pear,pear_p=pearsonr(df_formant_qualified[col],df_formant_qualified[lab_choose])
+                    except ValueError:
+                        print(col)
+                        aaa=ccc
                     spear,spear_p=spearmanr(df_formant_qualified[col],df_formant_qualified[lab_choose])
                     X,y=df_formant_qualified[col].values.reshape(-1,1), df_formant_qualified[lab_choose].values.reshape(-1,1)
                     reg = LinearRegression().fit(X,y)
