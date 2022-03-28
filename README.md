@@ -1,6 +1,13 @@
 # Acoustic_Biomarker
 ---
 
+# 新增2022/03/08
+1. 生feature的兩個腳本：3.LevelOfClustering_LOC.py 、4.Calculate_coordinationindexes.py 會生出fraction的資料(df_formant_statistic_TD_normal_doc.pkl) 
+2. 這些fraction統一來自articulation/HYPERPARAM/PeopleSelect.py裡面定義
+3. Statistical_tests.py 對ASD TD人的定義也統一從articulation/HYPERPARAM/PeopleSelect.py來
+4. 資料生成到拿去跑CV會需要手動一個copy的動作
+
+
 ## 本Repo的架構
 ---
 
