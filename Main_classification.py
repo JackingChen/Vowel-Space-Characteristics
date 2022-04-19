@@ -35,14 +35,13 @@ import torch
 import re
 import matplotlib.pyplot as plt
 from sklearn import preprocessing
-from sklearn.metrics import recall_score
 
 from articulation.HYPERPARAM import phonewoprosody, Label
+from articulation.HYPERPARAM.PeopleSelect import SellectP_define
 import articulation.articulation
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import f1_score
-
-
+from sklearn.metrics import f1_score,recall_score,roc_auc_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 def Assert_labelfeature(feat_name,lab_name):
     # =============================================================================
     #     To check if the label match with feature
@@ -75,8 +74,8 @@ def get_args():
                         help='')
     parser.add_argument('--Plot', default=True,
                         help='')
-    parser.add_argument('--selectModelScoring', default='accuracy',
-                        help='')
+    parser.add_argument('--selectModelScoring', default='recall_macro',
+                        help='[recall_macro,accuracy]')
     args = parser.parse_args()
     return args
 args = get_args()
@@ -84,38 +83,65 @@ start_point=args.start_point
 experiment=args.experiment
 
 # =============================================================================
-Session_level_all=Dict()
 
-# Discriminative analysis Main
-# columns=[
-#     'Divergence[within_covariance_norm(A:,i:,u:)]',
-#     'Divergence[within_variance_norm(A:,i:,u:)]',    
-#     'Divergence[between_covariance_norm(A:,i:,u:)]',    
-#     'Divergence[between_variance_norm(A:,i:,u:)]',    
-#     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
-#     'Divergence[pillai_lin_norm(A:,i:,u:)]',
-#     'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
-#     'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
-#     'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
-#     'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
-#     'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
-#     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
-#     'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
+#[tmp] should remove soon
+# Check the input data  are all right
+
+# sellect_people_define=SellectP_define()
+# selected_columns=['Divergence[sam_wilks_lin_norm(A:,i:,u:)]',\
+#                                               'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',\
+#                                               'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1']
     
-#     'VSA2',
-#     'FCR2',
-#     'within_covariance_norm(A:,i:,u:)',
-#     'between_covariance_norm(A:,i:,u:)',
-#     'within_variance_norm(A:,i:,u:)',
-#     'between_variance_norm(A:,i:,u:)',
-#     'sam_wilks_lin_norm(A:,i:,u:)',
-#     'pillai_lin_norm(A:,i:,u:)',
-#     ]
+# Aaa_data=ados_ds.Features_comb['TD_normal vs ASDMild_agesexmatch -> FeatCoor']
+
+
+# Aaa_df_formant_statistic_agesexmatch_ASDMild=\
+#     Aaa_data.loc[sellect_people_define.MildASD_age_sex_match_ver2,selected_columns]
+# df_formant_statistic_TD_normal=\
+#     Aaa_data.loc[sellect_people_define.TD_normal_ver2,selected_columns]
+
+# =============================================================================
+
+Session_level_all=Dict()
+# Discriminative analysis Main
+columns=[
+    'Divergence[within_covariance_norm(A:,i:,u:)]',
+    'Divergence[within_variance_norm(A:,i:,u:)]',    
+    'Divergence[between_covariance_norm(A:,i:,u:)]',    
+    'Divergence[between_variance_norm(A:,i:,u:)]',    
+    'Divergence[total_covariance_norm(A:,i:,u:)]', 
+    'Divergence[total_variance_norm(A:,i:,u:)]',
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
+    'Divergence[pillai_lin_norm(A:,i:,u:)]',
+    'Divergence[roys_root_lin_norm(A:,i:,u:)]',
+    'Divergence[hotelling_lin_norm(A:,i:,u:)]',
+    'Divergence[Between_Within_Det_ratio_norm(A:,i:,u:)]',
+    'Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]',
+    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[total_covariance_norm(A:,i:,u:)]_var_p1', 
+    'Divergence[total_variance_norm(A:,i:,u:)]_var_p1',
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
+    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
+    'Divergence[roys_root_lin_norm(A:,i:,u:)]_var_p1',
+    'Divergence[hotelling_lin_norm(A:,i:,u:)]_var_p1',
+    'Divergence[Between_Within_Det_ratio_norm(A:,i:,u:)]_var_p1',
+    'Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]_var_p1',
+    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
+    'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',
+    'Divergence[total_covariance_norm(A:,i:,u:)]_var_p2', 
+    'Divergence[total_variance_norm(A:,i:,u:)]_var_p2',
+    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
+    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
+    'Divergence[roys_root_lin_norm(A:,i:,u:)]_var_p2',
+    'Divergence[hotelling_lin_norm(A:,i:,u:)]_var_p2',
+    'Divergence[Between_Within_Det_ratio_norm(A:,i:,u:)]_var_p2',
+    'Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]_var_p2',
+    ]
 
 # columns=[
 #     'VSA2',
@@ -124,20 +150,25 @@ Session_level_all=Dict()
 #     'between_covariance_norm(A:,i:,u:)',
 #     'within_variance_norm(A:,i:,u:)',
 #     'between_variance_norm(A:,i:,u:)',
+#     'total_covariance_norm(A:,i:,u:)',
+#     'total_variance_norm(A:,i:,u:)',
 #     'sam_wilks_lin_norm(A:,i:,u:)',
 #     'pillai_lin_norm(A:,i:,u:)',
+#     'Between_Within_Det_ratio_norm(A:,i:,u:)',
+#     'Between_Within_Tr_ratio_norm(A:,i:,u:)',
 # ]
-columns=[
-'Norm(WC)_sam_wilks_DKRaito', 'Norm(WC)_pillai_DKRaito',
-'Norm(WC)_hotelling_DKRaito', 'Norm(WC)_roys_root_DKRaito',
-'Norm(WC)_Det_DKRaito', 'Norm(WC)_Tr_DKRaito',
-'Norm(BC)_sam_wilks_DKRaito', 'Norm(BC)_pillai_DKRaito',
-'Norm(BC)_hotelling_DKRaito', 'Norm(BC)_roys_root_DKRaito',
-'Norm(BC)_Det_DKRaito', 'Norm(BC)_Tr_DKRaito',
-'Norm(TotalVar)_sam_wilks_DKRaito', 'Norm(TotalVar)_pillai_DKRaito',
-'Norm(TotalVar)_hotelling_DKRaito', 'Norm(TotalVar)_roys_root_DKRaito',
-'Norm(TotalVar)_Det_DKRaito', 'Norm(TotalVar)_Tr_DKRaito',
-]
+# columns=[
+# 'Norm(WC)_sam_wilks_DKRaito', 
+# 'Norm(WC)_pillai_DKRaito',
+# 'Norm(WC)_hotelling_DKRaito', 'Norm(WC)_roys_root_DKRaito',
+# 'Norm(WC)_Det_DKRaito', 'Norm(WC)_Tr_DKRaito',
+# 'Norm(BC)_sam_wilks_DKRaito', 'Norm(BC)_pillai_DKRaito',
+# 'Norm(BC)_hotelling_DKRaito', 'Norm(BC)_roys_root_DKRaito',
+# 'Norm(BC)_Det_DKRaito', 'Norm(BC)_Tr_DKRaito',
+# 'Norm(TotalVar)_sam_wilks_DKRaito', 'Norm(TotalVar)_pillai_DKRaito',
+# 'Norm(TotalVar)_hotelling_DKRaito', 'Norm(TotalVar)_roys_root_DKRaito',
+# 'Norm(TotalVar)_Det_DKRaito', 'Norm(TotalVar)_Tr_DKRaito',
+# ]
 # Discriminative analysis: Side exp
 # columns=[
 # 'VSA1',
@@ -167,12 +198,14 @@ label_choose=['ADOS_C']
 #                     ['TD_normal vs ASDMild_agesexmatch','ASDTD'],
 #                     ]
 FeatureLabelMatch=[
-                    # ['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_kid','ASDTD'],
-                    # ['TD_normal vs ASDMild_agesexmatch -> FeatLOC_kid','ASDTD'],
-                    # ['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_doc','ASDTD'],
-                    # ['TD_normal vs ASDMild_agesexmatch -> FeatLOC_doc','ASDTD'],
-                    ['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_DKRatio','ASDTD'],#注意DKRatio的columns跟別人不一樣，不過是可以統一的
-                    ['TD_normal vs ASDMild_agesexmatch -> FeatLOC_DKRatio','ASDTD'],
+                    # ['TD_normal vs ASDSevere_agesexmatch >> FeatLOC_kid','ASDTD'],
+                    # ['TD_normal vs ASDMild_agesexmatch >> FeatLOC_kid','ASDTD'],
+                    # ['TD_normal vs ASDSevere_agesexmatch >> FeatLOC_doc','ASDTD'],
+                    # ['TD_normal vs ASDMild_agesexmatch >> FeatLOC_doc','ASDTD'],
+                    # ['TD_normal vs ASDSevere_agesexmatch >> FeatLOC_DKRatio','ASDTD'],#注意DKRatio的columns跟別人不一樣，不過是可以統一的
+                    # ['TD_normal vs ASDMild_agesexmatch >> FeatLOC_DKRatio','ASDTD'],
+                    ['TD_normal vs ASDSevere_agesexmatch >> FeatCoor','ASDTD'],#注意DKRatio的columns跟別人不一樣，不過是可以統一的
+                    ['TD_normal vs ASDMild_agesexmatch >> FeatCoor','ASDTD'],
                     ]
 df_formant_statistics_CtxPhone_collect_dict=Dict()
 # =============================================================================
@@ -187,12 +220,15 @@ class ADOSdataset():
         self.LabelType['ASDTD']='classification'
         self.Fractionfeatures_str='Features/artuculation_AUI/Vowels/Fraction/*.pkl'    
         self.FeatureCombs=Dict()
-        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_kid']=['df_formant_statistic_TD_normal_kid', 'df_formant_statistic_agesexmatch_ASDSevereGrp_kid']
-        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch -> FeatLOC_kid']=['df_formant_statistic_TD_normal_kid', 'df_formant_statistic_agesexmatch_ASDMildGrp_kid']
-        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_doc']=['df_formant_statistic_TD_normal_doc', 'df_formant_statistic_agesexmatch_ASDSevereGrp_doc']
-        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch -> FeatLOC_doc']=['df_formant_statistic_TD_normal_doc', 'df_formant_statistic_agesexmatch_ASDMildGrp_doc']
-        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch -> FeatLOC_DKRatio']=['df_formant_statistic_TD_normalGrp_DKRatio', 'df_formant_statistic_agesexmatch_ASDSevereGrp_DKRatio']
-        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch -> FeatLOC_DKRatio']=['df_formant_statistic_TD_normalGrp_DKRatio', 'df_formant_statistic_agesexmatch_ASDMildGrp_DKRatio']
+        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch >> FeatLOC_kid']=['df_formant_statistic_TD_normal_kid', 'df_formant_statistic_agesexmatch_ASDSevereGrp_kid']
+        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch >> FeatLOC_kid']=['df_formant_statistic_TD_normal_kid', 'df_formant_statistic_agesexmatch_ASDMildGrp_kid']
+        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch >> FeatLOC_doc']=['df_formant_statistic_TD_normal_doc', 'df_formant_statistic_agesexmatch_ASDSevereGrp_doc']
+        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch >> FeatLOC_doc']=['df_formant_statistic_TD_normal_doc', 'df_formant_statistic_agesexmatch_ASDMildGrp_doc']
+        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch >> FeatLOC_DKRatio']=['df_formant_statistic_TD_normalGrp_DKRatio', 'df_formant_statistic_agesexmatch_ASDSevereGrp_DKRatio']
+        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch >> FeatLOC_DKRatio']=['df_formant_statistic_TD_normalGrp_DKRatio', 'df_formant_statistic_agesexmatch_ASDMildGrp_DKRatio']
+        
+        self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch >> FeatCoor']=['df_syncrony_statistic_TD_normalGrp', 'df_syncrony_statistic_agesexmatch_ASDSevereGrp']
+        self.FeatureCombs['TD_normal vs ASDMild_agesexmatch >> FeatCoor']=['df_syncrony_statistic_TD_normalGrp', 'df_syncrony_statistic_agesexmatch_ASDMildGrp']
         # self.FeatureCombs['Notautism vs ASD']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_ASD']
         # self.FeatureCombs['ASD vs Autism']=['df_formant_statistic_77_ASD', 'df_formant_statistic_77_Autism']
         # self.FeatureCombs['Notautism vs Autism']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_Autism']
@@ -206,10 +242,10 @@ class ADOSdataset():
         #如果path有放的話字串的話，就使用path的字串，不然就使用「feat_」等於的東西，在function裡面會以kwargs的形式出現
         
         if not kwargs and len(pickle_path)>0:
-            df_tmp=pickle.load(open(pickle_path,"rb"))
+            df_tmp=pickle.load(open(pickle_path,"rb")).sort_index()
         elif len(kwargs)>0: # usage Get_FormantAUI_feat(...,key1=values1):
             for k, v in kwargs.items(): #there will be only one element
-                df_tmp=kwargs[k]
+                df_tmp=kwargs[k].sort_index()
 
         if filterbyNum:
             df_tmp=arti.BasicFilter_byNum(df_tmp,N=self.N)
@@ -232,7 +268,7 @@ class ADOSdataset():
         files = glob.glob(self.Fractionfeatures_str)
         for file in files:
             feat_name=os.path.basename(file).replace(".pkl","")
-            df_tmp=pickle.load(open(file,"rb"))
+            df_tmp=pickle.load(open(file,"rb")).sort_index()
             Features[feat_name]=df_tmp
         for keys in self.FeatureCombs.keys():
             combF=[Features[k] for k in self.FeatureCombs[keys]]
@@ -275,38 +311,47 @@ for feature_paths in [Interactionfeat_path]:
 
 
 paper_name_map={}    
-paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]']='$Div(Norm(Pillai))$'
-paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(Pillai))_{inv}$'
-paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(Pillai))_{part}$'
-paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]']='$Div(Norm(WCC))$'
-paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCC))_{inv}$'
-paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCC))_{part}$'
-paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]']='$Div(Norm(WCV))$'
-paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCV))_{inv}$'
-paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCV))_{part}$'
-paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]']='$Div(Norm(Wilks))$'
-paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(Wilks))_{inv}$'
-paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(Wilks))_{part}$'
-paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]']='$Div(Norm(BCC))$'
-paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(BCC))_{inv}$'
-paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(BCC))_{part}$'
-paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]']='$Div(Norm(BCV))$'
-paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(BCV))_{inv}$'
-paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(BCV))_{part}$'
-paper_name_map['between_covariance(A:,i:,u:)']='$BCC$'
-paper_name_map['between_variance(A:,i:,u:)']='$BCV$'
-paper_name_map['within_covariance(A:,i:,u:)']='$WCC$'
-paper_name_map['within_variance(A:,i:,u:)']='$WCV$'
-paper_name_map['sam_wilks_lin(A:,i:,u:)']='$Wilks$'
-paper_name_map['pillai_lin(A:,i:,u:)']='$Pillai$'
+paper_name_map['Divergence[pillai_lin_(A:,i:,u:)]']='$Div(Pillai)$'
+paper_name_map['Divergence[pillai_lin_(A:,i:,u:)]_var_p1']='$Inc(Pillai)_{inv}$'
+paper_name_map['Divergence[pillai_lin_(A:,i:,u:)]_var_p2']='$Inc(Pillai)_{part}$'
+paper_name_map['Divergence[within_covariance_(A:,i:,u:)]']='$Div(WCC)$'
+paper_name_map['Divergence[within_covariance_(A:,i:,u:)]_var_p1']='$Inc(WCC)_{inv}$'
+paper_name_map['Divergence[within_covariance_(A:,i:,u:)]_var_p2']='$Inc(WCC)_{part}$'
+paper_name_map['Divergence[within_variance_(A:,i:,u:)]']='$Div(WCV)$'
+paper_name_map['Divergence[within_variance_(A:,i:,u:)]_var_p1']='$Inc(WCV)_{inv}$'
+paper_name_map['Divergence[within_variance_(A:,i:,u:)]_var_p2']='$Inc(WCV)_{part}$'
+paper_name_map['Divergence[sam_wilks_lin_(A:,i:,u:)]']='$Div(Wilks)$'
+paper_name_map['Divergence[sam_wilks_lin_(A:,i:,u:)]_var_p1']='$Inc(Wilks)_{inv}$'
+paper_name_map['Divergence[sam_wilks_lin_(A:,i:,u:)]_var_p2']='$Inc(Wilks)_{part}$'
+paper_name_map['Divergence[between_covariance_(A:,i:,u:)]']='$Div(BCC)$'
+paper_name_map['Divergence[between_covariance_(A:,i:,u:)]_var_p1']='$Inc(BCC)_{inv}$'
+paper_name_map['Divergence[between_covariance_(A:,i:,u:)]_var_p2']='$Inc(BCC)_{part}$'
+paper_name_map['Divergence[between_variance_(A:,i:,u:)]']='$Div(BCV)$'
+paper_name_map['Divergence[between_variance_(A:,i:,u:)]_var_p1']='$Inc(BCV)_{inv}$'
+paper_name_map['Divergence[between_variance_(A:,i:,u:)]_var_p2']='$Inc(BCV)_{part}$'
+paper_name_map['between_covariance_norm(A:,i:,u:)']='$BCC$'
+paper_name_map['between_variance_norm(A:,i:,u:)']='$BCV$'
+paper_name_map['within_covariance_norm(A:,i:,u:)']='$WCC$'
+paper_name_map['within_variance_norm(A:,i:,u:)']='$WCV$'
+paper_name_map['total_covariance_norm(A:,i:,u:)']='$TC$'
+paper_name_map['total_variance_norm(A:,i:,u:)']='$TV$'
+paper_name_map['sam_wilks_lin_norm(A:,i:,u:)']='$Wilks$'
+paper_name_map['pillai_lin_norm(A:,i:,u:)']='$Pillai$'
+paper_name_map['hotelling_lin_norm(A:,i:,u:)']='$Hotel$'
+paper_name_map['roys_root_lin_norm(A:,i:,u:)']='$Roys$'
+paper_name_map['Between_Within_Det_ratio_norm(A:,i:,u:)']='$Det(W^{-1}B)$'
+paper_name_map['Between_Within_Tr_ratio_norm(A:,i:,u:)']='$Tr(W^{-1}B)$'
 
 
 # =============================================================================
 # Model parameters
 # =============================================================================
-C_variable=np.array([0.0001, 0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
-# C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
-n_estimator=[2, 4, 8, 16, 32]
+# C_variable=np.array([0.0001, 0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
+# C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0])
+C_variable=np.array(np.arange(0.1,1.5,0.1))
+# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.2))  )
+# C_variable=np.array([0.01, 0.1,0.5,1.0, 5.0])
+n_estimator=[ 32, 50, 64, 100 ,128, 256]
 
 '''
 
@@ -317,46 +362,68 @@ n_estimator=[2, 4, 8, 16, 32]
 # This is the closest 
 Classifier={}
 Classifier['SVC']={'model':sklearn.svm.SVC(),\
-                  'parameters':{'random_state':[1],\
-                      'C':C_variable,\
-                    'kernel': ['rbf'],\
+                  'parameters':{'model__random_state':[1],\
+                      'model__C':C_variable,\
+                    'model__kernel': ['rbf'],\
+                      # 'model__gamma':['auto'],\
+                    'model__probability':[True],\
                                 }}
 
     
 
-Classifier['LR']={'model':sklearn.linear_model.LogisticRegression(),\
-                  'parameters':{'random_state':[1],\
-                                'C':C_variable,\
-                                }}
-    
+# Classifier['LR']={'model':sklearn.linear_model.LogisticRegression(),\
+#                   'parameters':{'model__random_state':[1],\
+#                                 'model__C':C_variable,\
+#                                 }}
+# Classifier['SGD']={'model':sklearn.linear_model.SGDClassifier(),\
+#                   'parameters':{'model__random_state':[1],\
+#                                 'model__l1_ratio':np.arange(0,1,0.25),\
+#                                 }}
+
+
+
 # from sklearn.neural_network import MLPClassifier
 # Classifier['MLP']={'model':MLPClassifier(),\
-#                   'parameters':{'random_state':[1],\
-#                                 'hidden_layer_sizes':[(40,),(60,),(80,),(100)],\
-#                                 'activation':['relu'],\
-#                                 'solver':['adam'],\
-#                                 'early_stopping':[True],\
-#                                 # 'penalty':['elasticnet'],\
-#                                 # 'l1_ratio':[0.25,0.5,0.75],\
+#                   'parameters':{'model__random_state':[1],\
+#                                 'model__hidden_layer_sizes':[(20),(40),(60,),(80,)],\
+#                                 'model__activation':['relu'],\
+#                                 'model__batch_size':[1,2,3],\
+#                                 # 'model__solver':['sgd'],\
+#                                 'model__early_stopping':[True],\
+#                                 # 'model__penalty':['elasticnet'],\
+#                                 # 'model__l1_ratio':[0.25,0.5,0.75],\
 #                                 }}
 
 # Classifier['Ridge']={'model':sklearn.linear_model.RidgeClassifier(),\
-#                   'parameters':{'random_state':[1],\
-#                                 'solver':['auto'],\
-#                                 # 'penalty':['elasticnet'],\
-#                                 # 'l1_ratio':[0.25,0.5,0.75],\
+#                   'parameters':{'model__random_state':[1],\
+#                                 'model__solver':['auto'],\
+#                                 # 'model__penalty':['elasticnet'],\
+#                                 # 'model__l1_ratio':[0.25,0.5,0.75],\
 #                                 }}
-    
+
+# from sklearn.ensemble import GradientBoostingClassifier, AdaBoostClassifier
+# Classifier['GB']={'model':GradientBoostingClassifier(),\
+#                   'parameters':{
+#                                 'model__random_state':[1],\
+#                                 'model__n_estimators':n_estimator
+#                                 }}
+# Classifier['AdaBoostClassifier']={'model':AdaBoostClassifier(),\
+#                   'parameters':{
+#                                 'model__random_state':[1],\
+#                                 'model__n_estimators':n_estimator
+#                                 }}
 # Classifier['DT']={'model':DecisionTreeClassifier(),\
-#                   'parameters':{'random_state':[1],\
-#                                 'criterion':['gini','entropy'],
-#                                 'splitter':['splitter','random'],\
+#                   'parameters':{'model__random_state':[1],\
+#                                 'model__criterion':['gini','entropy'],
+#                                 'model__splitter':['splitter','random'],\
 #                                 }}
     
-Classifier['DT']={'model':DecisionTreeClassifier(),\
-                  'parameters':{'random_state':[1],\
-                                }}
-    
+# from sklearn.ensemble import RandomForestClassifier
+# Classifier['RF']={'model':RandomForestClassifier(),\
+#                   'parameters':{
+#                   'model__random_state':[1],\
+#                   'model__n_estimators':n_estimator
+#                                 }}
 
 
 loo=LeaveOneOut()
@@ -399,8 +466,9 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         
         Labels = Session_level_all.X[feature_keys]
         print("=====================Cross validation start==================")
+        pipe = Pipeline(steps=[('scalar',StandardScaler()),("model", clf['model'])])
         p_grid=clf['parameters']
-        Gclf = GridSearchCV(estimator=clf['model'], param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
+        Gclf = GridSearchCV(estimator=pipe, param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
         # Score=cross_val_score(Gclf, features.X, features.y, cv=loo) 
         CVpredict=cross_val_predict(Gclf, features.X, features.y, cv=CV_settings)           
         Gclf.fit(features.X,features.y)
@@ -499,3 +567,4 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
 
 writer_clf.save()
 df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"_"+args.Feature_mode+"_3clsferRESULT.xlsx")
+print(df_best_result_allThreeClassifiers)

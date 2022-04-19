@@ -151,9 +151,18 @@ def prefine_GlobalVariables(df_formant_statistic_77,df_formant_statistic_TD):
     filter_ASD=df_formant_statistic_77['ADOS_cate_C']==1
     filter_Autism=df_formant_statistic_77['ADOS_cate_C']==2
     
+    filter_Notautism_TSC=df_formant_statistic_77['ADOS_cate_SC']==0
+    filter_ASD_TSC=df_formant_statistic_77['ADOS_cate_SC']==1
+    filter_Autism_TSC=df_formant_statistic_77['ADOS_cate_SC']==2
+    
+    
+    
     filter_AD=df_formant_statistic_77['dia_num']==0
     filter_AS=df_formant_statistic_77['dia_num']==1
     filter_HFA=df_formant_statistic_77['dia_num']==2
+    
+    
+    
     
     global	    df_formant_statistic_77_boy
     global	    df_formant_statistic_77_girl
@@ -177,6 +186,10 @@ def prefine_GlobalVariables(df_formant_statistic_77,df_formant_statistic_TD):
     global	    df_formant_statistic_TD_M4girl
     global	    df_formant_statistic_TD_M3
     global	    df_formant_statistic_TD_M4
+    global      df_formant_statistic_77_TSCautism
+    global      df_formant_statistic_77_TSCASD
+    global      df_formant_statistic_77_TSCNotautism
+    global      df_formant_statistic_TD_Age10up
     # global	    df_formant_statistic_TD_normal
 
     # Subgroup dataframes
@@ -194,11 +207,15 @@ def prefine_GlobalVariables(df_formant_statistic_77,df_formant_statistic_TD):
     df_formant_statistic_77_AD=df_formant_statistic_77[filter_AD]
     df_formant_statistic_77_AS=df_formant_statistic_77[filter_AS]
     df_formant_statistic_77_HFA=df_formant_statistic_77[filter_HFA]
+    df_formant_statistic_77_TSCNotautism=df_formant_statistic_77[filter_Notautism_TSC]
+    df_formant_statistic_77_TSCASD=df_formant_statistic_77[filter_ASD_TSC]
+    df_formant_statistic_77_TSCautism=df_formant_statistic_77[filter_Autism_TSC]
 
     filter_boy=df_formant_statistic_TD['sex']==1
     filter_girl=df_formant_statistic_TD['sex']==2
     filter_M3=df_formant_statistic_TD['Module']==3
     filter_M4=df_formant_statistic_TD['Module']==4
+    
     
     filter_Notautism=df_formant_statistic_TD['ADOS_cate_C']==0
     filter_ASD=df_formant_statistic_TD['ADOS_cate_C']==1
@@ -208,6 +225,8 @@ def prefine_GlobalVariables(df_formant_statistic_77,df_formant_statistic_TD):
     filter_AS=df_formant_statistic_TD['dia_num']==1
     filter_HFA=df_formant_statistic_TD['dia_num']==2    
 
+    filter_TDage10up=df_formant_statistic_TD['age']>=10
+
     df_formant_statistic_TD_boy=df_formant_statistic_TD[filter_boy]
     df_formant_statistic_TD_girl=df_formant_statistic_TD[filter_girl]
     df_formant_statistic_TD_M3boy=df_formant_statistic_TD[filter_M3 & filter_boy]
@@ -216,6 +235,7 @@ def prefine_GlobalVariables(df_formant_statistic_77,df_formant_statistic_TD):
     df_formant_statistic_TD_M4girl=df_formant_statistic_TD[filter_M4 & filter_girl]
     df_formant_statistic_TD_M3=df_formant_statistic_TD[filter_M3 ]
     df_formant_statistic_TD_M4=df_formant_statistic_TD[filter_M4 ]
+    df_formant_statistic_TD_Age10up=df_formant_statistic_TD[filter_TDage10up]
     # df_formant_statistic_TD_normal=df_formant_statistic_TD[np.logical_and(\
     #             df_formant_statistic_TD['ADOS_cate_C']==0,df_formant_statistic_TD['ADOS_C'].notnull())]
     
@@ -306,92 +326,32 @@ class Feature_Getter:
         self.Stat_med_str_VSA=Stat_med_str_VSA
         self.Inspect_features=['F1','F2']
         self.N=3
-        self.SevereASD_age_sex_match=[
-            '2016_03_05_01_079fu',
-            '2017_08_15_01_413',
-            '2017_01_21_01_242_1',
-            '2015_12_06_01_045_1',
-            '2017_05_21_01_292_1',
-            '2017_07_25_01_172',
-            '2016_10_22_01_161_fu',
-            '2017_08_07_01_227',
-            '2017_07_24_01_217_1',
-            '2015_12_27_01_058fu',
-            '2016_10_21_01_202_1',
-            ]
-        self.MildASD_age_sex_match=['2017_08_11_01_300_1',
-                '2017_08_15_01_413',
-                '2016_03_05_01_079fu',
-                '2016_07_06_01_078_1',
-                '2016_11_27_01_207_1',
-                '2016_01_22_02_083_1',
-                '2017_05_21_01_292_1',
-                '2016_10_22_01_161_fu',
-                '2017_08_07_01_227',
-                '2015_12_13_01_153',
-                '2016_10_21_01_202_1',
-                ]
-        self.TD_normal=['2020_07_31_5595_1_emotion', '2021_01_23_5843_1(醫生鏡頭模糊)_emotion',
-       '2020_10_24_5819_1_emotion', '2020_07_30_5818_1_emotion',
-       '2021_01_09_5840_1_emotion', '2020_10_17_5633_1_emotion',
-       '2021_01_29_5843_1(醫生鏡頭模糊)_emotion',
-       '2021_02_03_5854_1(醫生鏡頭模糊)_emotion',
-       '2021_01_23_5841_1(醫生鏡頭對焦到前面了)_emotion',
-       '2021_02_05_5856_4(醫生鏡頭模糊)_emotion',
-       '2021_01_29_5848_4(醫生鏡頭模糊)_emotion']
-        
-        self.SevereASD_age_sex_match_ver2=[
-            '2016_11_27_01_207_1',
-            '2016_03_05_01_079fu',
-            '2017_08_15_01_413',
-            '2017_01_21_01_242_1',
-            '2015_12_06_01_045_1',
-            '2017_05_21_01_292_1',
-            '2017_07_25_01_172',
-            '2016_10_22_01_161_fu',
-            '2017_08_07_01_227',
-            '2017_07_24_01_217_1',
-            '2015_12_27_01_058fu',
-            '2016_10_21_01_202_1',
-            ]
-        self.MildASD_age_sex_match_ver2=[
-                '2017_08_11_01_300_1',
-                '2015_12_05_01_063_1',
-                '2017_08_15_01_413',
-                '2016_03_05_01_079fu',
-                '2016_07_06_01_078_1',
-                '2016_11_27_01_207_1',
-                '2016_01_22_02_083_1',
-                '2017_05_21_01_292_1',
-                '2016_10_22_01_161_fu',
-                '2017_08_07_01_227',
-                '2015_12_13_01_153',
-                '2016_10_21_01_202_1',
-                ]
-        self.TD_normal_ver2=[
-            '2021_02_08_5839_4(醫生鏡頭模糊)_emotion',
-            '2021_01_29_5848_4(醫生鏡頭模糊)_emotion',
-            '2021_02_03_5854_1(醫生鏡頭模糊)_emotion',
-            '2021_01_29_5843_1(醫生鏡頭模糊)_emotion',
-            '2020_07_31_5595_1_emotion',
-            '2018_05_19_5593_1_emotion',
-            '2021_01_09_5840_1_emotion',
-            '2021_01_23_5843_1(醫生鏡頭模糊)_emotion',
-            '2017_07_20_TD_emotion',
-            '2017_08_29_TD_emotion',
-            '2021_01_23_5841_1(醫生鏡頭對焦到前面了)_emotion',
-            '2020_10_24_5819_1_emotion',
-       ]
-        
-        
-    def read_Sessionfeature(self,feat='Formant_AUI_tVSAFCRFvals'):
+
+    def read_Sessionfeature_kid(self,feat='Formant_AUI_tVSAFCRFvals'):
         df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromASD_DOCKID')
         self.df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
-        df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='kid_TD')
+        df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromTD_DOCKID')
         if not os.path.exists(df_formant_statistic_ASDTD_path) or not os.path.exists(df_formant_statistic77_path):
             raise FileExistsError
         self.df_feature_TD=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))
         return self.df_feature_ASD, self.df_feature_TD
+    def read_Sessionfeature_doc(self,feat='Formant_AUI_tVSAFCRFvals'):
+        df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='DOC_FromASD_DOCKID')
+        self.df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
+        df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='DOC_FromTD_DOCKID')
+        if not os.path.exists(df_formant_statistic_ASDTD_path) or not os.path.exists(df_formant_statistic77_path):
+            raise FileExistsError
+        self.df_feature_TD=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))
+        return self.df_feature_ASD, self.df_feature_TD
+
+    def read_DKRatiofeature(self,feat='Formant_AUI_tVSAFCRFvals'):
+        df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='ASDDKRaito')
+        self.df_feature_ASD_DKRatio=pickle.load(open(df_formant_statistic77_path,'rb'))
+        df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='TDDKRaito')
+        if not os.path.exists(df_formant_statistic_ASDTD_path) or not os.path.exists(df_formant_statistic77_path):
+            raise FileExistsError
+        self.df_feature_TD_DKRatio=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))
+        return self.df_feature_ASD_DKRatio, self.df_feature_TD_DKRatio
     
     def read_Syncronyfeature(self,feat='Syncrony_measure_of_variance'):
         df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='ASD_DOCKID')
@@ -483,11 +443,14 @@ df_langLvl_TDnormal=feat_getter.Get_labels_choosen(sellect_people_define.TD_norm
 
 
 
-df_Session_formant_statistic_ASD, df_Session_formant_statistic_TD=feat_getter.read_Sessionfeature('Formant_AUI_tVSAFCRFvals')
+df_Session_formant_statistic_ASD, df_Session_formant_statistic_TD=feat_getter.read_Sessionfeature_kid('Formant_AUI_tVSAFCRFvals')
+df_Session_formant_statistic_ASD_doc, df_Session_formant_statistic_TD_doc=feat_getter.read_Sessionfeature_doc('Formant_AUI_tVSAFCRFvals')
+df_Session_formant_statistic_ASDDKRatio, df_Session_formant_statistic_TDDKRatio=feat_getter.read_DKRatiofeature('Formant_AUI_tVSAFCRFvals')
+
 # df_Session_phonation_statistic_ASD, df_Session_phonation_statistic_TD=feat_getter.read_Sessionfeature('Phonation_meanvars')
 df_Session_formant_statistic_TD['dia_num']=100
 df_Syncrony_formant_statistic_ASD, df_Syncrony_formant_statistic_TD=feat_getter.read_Syncronyfeature('Syncrony_measure_of_variance')
-# df_Syncrony_phonation_statistic_ASD, df_Syncrony_phonation_statistic_TD=feat_getter.read_Syncronyfeature('Syncrony_measure_of_variance_phonation')
+df_Syncrony_phonation_statistic_ASD, df_Syncrony_phonation_statistic_TD=feat_getter.read_Syncronyfeature('Syncrony_measure_of_variance_phonation')
 # df_Syncrony_phonation_statistic_ASD=df_Syncrony_phonation_statistic_ASD.dropna()
 # df_Syncrony_phonation_statistic_TD=df_Syncrony_phonation_statistic_TD.dropna()
 df_dur_strlen_speed_ASD, df_dur_strlen_speed_TD=feat_getter.read_durStrlenSpeedfeature('df_speedlenBasicInfo')
@@ -522,12 +485,18 @@ df_formant_statistic_TD=pd.DataFrame()
 df_formant_statistic_77=pd.concat([df_formant_statistic_77,df_Session_formant_statistic_ASD],axis=1)
 df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_Session_formant_statistic_TD],axis=1)
 
+# df_formant_statistic_77=pd.concat([df_formant_statistic_77,df_Session_formant_statistic_ASD_doc],axis=1)
+# df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_Session_formant_statistic_TD_doc],axis=1)
+
 # df_formant_statistic_77=pd.concat([df_formant_statistic_77,df_Session_phonation_statistic_ASD],axis=1)
 # df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_Session_phonation_statistic_TD],axis=1)
 
 df_formant_statistic_77=pd.concat([df_formant_statistic_77,df_Syncrony_formant_statistic_ASD],axis=1)
 df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_Syncrony_formant_statistic_TD],axis=1)
 
+
+df_formant_statistic_77=pd.concat([df_formant_statistic_77,df_Session_formant_statistic_ASDDKRatio],axis=1)
+df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_Session_formant_statistic_TDDKRatio],axis=1)
 
 # df_formant_statistic_77=pd.concat([df_formant_statistic_77,df_dur_strlen_speed_ASD],axis=1)
 # df_formant_statistic_TD=pd.concat([df_formant_statistic_TD,df_dur_strlen_speed_TD],axis=1)
@@ -559,9 +528,12 @@ df_formant_statistic=df_formant_statistic_77
 
 df_dur_strlen_speed_ASD=Add_label(df_dur_strlen_speed_ASD,Label,label_choose='ADOS_C')
 df_dur_strlen_speed_TD=Add_label(df_dur_strlen_speed_TD,Label,label_choose='ADOS_C')
+df_Session_formant_statistic_ASDDKRatio=Add_label(df_Session_formant_statistic_ASDDKRatio,Label,label_choose='ADOS_C')
 
 df_formant_statistic_77=Add_label(df_formant_statistic_77,Label,label_choose='ADOS_S')
 df_formant_statistic_77=Add_label(df_formant_statistic_77,Label,label_choose='ADOS_cate_C')
+df_formant_statistic_77=Add_label(df_formant_statistic_77,Label,label_choose='ADOS_cate_SC')
+df_formant_statistic_77=Add_label(df_formant_statistic_77,Label,label_choose='dia_num')
 df_formant_statistic_77=Add_label(df_formant_statistic_77,Label,label_choose='AA2')
 df_formant_statistic_TD=Add_label(df_formant_statistic_TD,Label,label_choose='ADOS_S')
 
@@ -578,8 +550,8 @@ prefine_GlobalVariables(df_formant_statistic_77,df_formant_statistic_TD)
 
 
 # Aaa_chosen=df_formant_statistic_TD[['timeSeries_len[]','sex','age']]
-# ASD_chosen=df_formant_statistic_77[['ADOS_C','sex','age']]
-# Aaa_chosen=df_formant_statistic_TD_normal[['timeSeries_len[]','sex','age']]
+ASD_chosen=df_formant_statistic_77_Autism[['ADOS_C','sex','age','between_variance_norm(A:,i:,u:)','FCR2']]
+Aaa_chosen=df_formant_statistic_TD[['ADOS_C','sex','age','between_variance_norm(A:,i:,u:)','FCR2']]
 # ASDMild_chosen=df_formant_statistic_agesexmatch_ASDMild[['ADOS_C','sex','age','timeSeries_len[]']]
 # ASDSeve_chosen=df_formant_statistic_agesexmatch_ASDSevere[['ADOS_C','sex','age','timeSeries_len[]']]
 # ASDMild_chosen.describe()
@@ -789,21 +761,26 @@ def InspectLabelGroupMean(df_labels_ageMatchSevere,\
 
 '''
 
+
+# selected_columns=['Divergence[sam_wilks_lin_norm(A:,i:,u:)]',\
+#                                               'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',\
+#                                               'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1']
+# [tmp] should remove soon
+# Aaa_df_formant_statistic_agesexmatch_ASDMild=\
+#     df_formant_statistic_agesexmatch_ASDMild[selected_columns]
+# df_formant_statistic_TD_normal=\
+#     df_formant_statistic_TD_normal[selected_columns]    
 # =============================================================================
 
 TopTop_data_lst=[]
-TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDSevere','df_formant_statistic_TD_normal'])
-TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_TD_normal'])
-TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_agesexmatch_ASDSevere'])
+# TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDSevere','df_formant_statistic_TD_normal'])
+# TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_TD_normal'])
+# TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_agesexmatch_ASDSevere'])
 # TopTop_data_lst.append(['df_formant_statistic_77','df_formant_statistic_TD'])
+TopTop_data_lst.append(['df_formant_statistic_77_TSCautism','df_formant_statistic_TD_Age10up'])
 
 # self_specify_cols=[]
-# self_specify_cols=['between_covariance(A:,i:,u:)', 
-#                     'between_variance(A:,i:,u:)', 
-#                     'within_covariance(A:,i:,u:)', 
-#                     'within_variance(A:,i:,u:)',
-#                     'pillai_lin(A:,i:,u:)',
-#                     'sam_wilks_lin(A:,i:,u:)']
+
 # self_specify_cols=['between_covariance_norm(A:,i:,u:)',
 #        'between_variance_norm(A:,i:,u:)', 'between_covariance(A:,i:,u:)',
 #        'between_variance(A:,i:,u:)', 'within_covariance_norm(A:,i:,u:)',
@@ -818,33 +795,83 @@ TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_s
 #        'ang_ua', 'Angles', 'dcov_12', 'dcorr_12', 'dvar_1', 'dvar_2', 'dcor_a',
 #        'dcor_u', 'dcor_i', 'pear_12', 'pointDistsTotal', 'repulsive_force',
 #        'u_num+i_num+a_num','FCR2', 'VSA2']
+# self_specify_cols=[
+#                     'Divergence[within_covariance_norm(A:,i:,u:)]',
+#                     'Divergence[within_variance_norm(A:,i:,u:)]',    
+#                     'Divergence[between_covariance_norm(A:,i:,u:)]',    
+#                     'Divergence[between_variance_norm(A:,i:,u:)]',    
+#                     'Divergence[total_covariance_norm(A:,i:,u:)]', 
+#                     'Divergence[total_variance_norm(A:,i:,u:)]',
+#                     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
+#                     'Divergence[pillai_lin_norm(A:,i:,u:)]',
+#                     'Divergence[roys_root_lin_norm(A:,i:,u:)]',
+#                     'Divergence[hotelling_lin_norm(A:,i:,u:)]',
+#                     'Divergence[Between_Within_Det_ratio_norm(A:,i:,u:)]',
+#                     'Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]',
+#                     'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
+#                     'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
+#                     'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
+#                     'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
+#                     'Divergence[total_covariance_norm(A:,i:,u:)]_var_p1', 
+#                     'Divergence[total_variance_norm(A:,i:,u:)]_var_p1',
+#                     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
+#                     'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
+#                     'Divergence[roys_root_lin_norm(A:,i:,u:)]_var_p1',
+#                     'Divergence[hotelling_lin_norm(A:,i:,u:)]_var_p1',
+#                     'Divergence[Between_Within_Det_ratio_norm(A:,i:,u:)]_var_p1',
+#                     'Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]_var_p1',
+#                     'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
+#                     'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
+#                     'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
+#                     'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',
+#                     'Divergence[total_covariance_norm(A:,i:,u:)]_var_p2', 
+#                     'Divergence[total_variance_norm(A:,i:,u:)]_var_p2',
+#                     'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
+#                     'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
+#                     'Divergence[roys_root_lin_norm(A:,i:,u:)]_var_p2',
+#                     'Divergence[hotelling_lin_norm(A:,i:,u:)]_var_p2',
+#                     'Divergence[Between_Within_Det_ratio_norm(A:,i:,u:)]_var_p2',
+#                     'Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]_var_p2',
+#                     ]
 self_specify_cols=[
-                    # 'between_covariance(A:,i:,u:)', 
-                    # 'between_variance(A:,i:,u:)', 
-                    # 'within_covariance(A:,i:,u:)', 
-                    # 'within_variance(A:,i:,u:)',
-                    # 'pillai_lin(A:,i:,u:)',
-                    # 'sam_wilks_lin(A:,i:,u:)',
-                    'Divergence[within_covariance_norm(A:,i:,u:)]',
-                    'Divergence[within_variance_norm(A:,i:,u:)]',    
-                    'Divergence[between_covariance_norm(A:,i:,u:)]',    
-                    'Divergence[between_variance_norm(A:,i:,u:)]',    
-                    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
-                    'Divergence[pillai_lin_norm(A:,i:,u:)]',
-                    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
-                    'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
-                    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
-                    'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
-                    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
-                    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
-                    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
-                    'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
-                    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
-                    'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
-                    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
-                    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',]
+    'VSA2',
+    'FCR2',
+    'within_covariance_norm(A:,i:,u:)',
+    'between_covariance_norm(A:,i:,u:)',
+    'within_variance_norm(A:,i:,u:)',
+    'between_variance_norm(A:,i:,u:)',
+    'total_covariance_norm(A:,i:,u:)',
+    'total_variance_norm(A:,i:,u:)',
+    'sam_wilks_lin_norm(A:,i:,u:)',
+    'pillai_lin_norm(A:,i:,u:)',
+    'Between_Within_Det_ratio_norm(A:,i:,u:)',
+    'Between_Within_Tr_ratio_norm(A:,i:,u:)',
+    'pear_12',
+    'spear_12',
+    'kendall_12',
+    'dcorr_12'
+]
 
-
+# self_specify_cols=[
+# 'Norm(WC)_sam_wilks_DKRaito', 
+# 'Norm(WC)_pillai_DKRaito',
+# 'Norm(WC)_hotelling_DKRaito', 
+# 'Norm(WC)_roys_root_DKRaito',
+# 'Norm(WC)_Det_DKRaito', 
+# 'Norm(WC)_Tr_DKRaito',
+# 'Norm(BC)_sam_wilks_DKRaito', 
+# 'Norm(BC)_pillai_DKRaito',
+# 'Norm(BC)_hotelling_DKRaito', 
+# 'Norm(BC)_roys_root_DKRaito',
+# 'Norm(BC)_Det_DKRaito', 
+# 'Norm(BC)_Tr_DKRaito',
+# 'Norm(TotalVar)_sam_wilks_DKRaito', 
+# 'Norm(TotalVar)_pillai_DKRaito',
+# 'Norm(TotalVar)_hotelling_DKRaito', 
+# 'Norm(TotalVar)_roys_root_DKRaito',
+# 'Norm(TotalVar)_Det_DKRaito', 
+# 'Norm(TotalVar)_Tr_DKRaito',
+# ]
 
 
 Parameters=Measurement_basefeature
@@ -979,32 +1006,131 @@ def intersection(lst1, lst2):
   
 Feature_collect=Dict()
 Feature_collect['df_Session_formant_statistic_ASD'].feature=df_Session_formant_statistic_ASD
-Feature_collect['df_Session_phonation_statistic_ASD'].feature=df_Session_phonation_statistic_ASD
+Feature_collect['df_Session_formant_statistic_ASD_doc'].feature=df_Session_formant_statistic_ASD_doc
+# Feature_collect['df_Session_phonation_statistic_ASD'].feature=df_Session_phonation_statistic_ASD
 Feature_collect['df_Syncrony_formant_statistic_ASD'].feature=df_Syncrony_formant_statistic_ASD
-Feature_collect['df_Syncrony_phonation_statistic_ASD'].feature=df_Syncrony_phonation_statistic_ASD
-Feature_collect['df_labels_ageMatchSevere'].feature=df_labels_ageMatchSevere
-Feature_collect['df_labels_ageMatchMild'].feature=df_labels_ageMatchMild
-Feature_collect['df_labels_TDnormal'].feature=df_labels_TDnormal
-Feature_collect['df_dur_strlen_speed_ASD'].feature=df_dur_strlen_speed_ASD
+Feature_collect['df_Session_formant_statistic_ASDDKRatio'].feature=df_Session_formant_statistic_ASDDKRatio
+# Feature_collect['df_Syncrony_phonation_statistic_ASD'].feature=df_Syncrony_phonation_statistic_ASD
+
+# Feature_collect['df_labels_ageMatchSevere'].feature=df_labels_ageMatchSevere
+# Feature_collect['df_labels_ageMatchMild'].feature=df_labels_ageMatchMild
+# Feature_collect['df_labels_TDnormal'].feature=df_labels_TDnormal
+# Feature_collect['df_dur_strlen_speed_ASD'].feature=df_dur_strlen_speed_ASD
 
 Feature_collect['df_Session_formant_statistic_ASD'].columns=intersection(df_formant_statistic_77.columns,df_Session_formant_statistic_ASD.columns)
-Feature_collect['df_Session_phonation_statistic_ASD'].columns=intersection(df_formant_statistic_77.columns,df_Session_phonation_statistic_ASD.columns)
+# Feature_collect['df_Session_phonation_statistic_ASD'].columns=intersection(df_formant_statistic_77.columns,df_Session_phonation_statistic_ASD.columns)
 Feature_collect['df_Syncrony_formant_statistic_ASD'].columns=intersection(df_formant_statistic_77.columns,df_Syncrony_formant_statistic_ASD.columns)
-Feature_collect['df_Syncrony_phonation_statistic_ASD'].columns=intersection(df_formant_statistic_77.columns,df_Syncrony_phonation_statistic_ASD.columns)
-Feature_collect['df_labels_ageMatchSevere'].columns=df_labels_ageMatchSevere.columns
-Feature_collect['df_labels_ageMatchMild'].columns=df_labels_ageMatchMild.columns
-Feature_collect['df_labels_TDnormal'].columns=df_labels_TDnormal.columns
-Feature_collect['df_dur_strlen_speed_ASD'].columns=df_dur_strlen_speed_ASD.columns
+# Feature_collect['df_Syncrony_phonation_statistic_ASD'].columns=intersection(df_formant_statistic_77.columns,df_Syncrony_phonation_statistic_ASD.columns)
+# Feature_collect['df_labels_ageMatchSevere'].columns=df_labels_ageMatchSevere.columns
+# Feature_collect['df_labels_ageMatchMild'].columns=df_labels_ageMatchMild.columns
+# Feature_collect['df_labels_TDnormal'].columns=df_labels_TDnormal.columns
+# Feature_collect['df_dur_strlen_speed_ASD'].columns=df_dur_strlen_speed_ASD.columns
 # =============================================================================
+Feature_collect_specify_cols_dict=Dict()
+Feature_collect_specify_cols_dict['df_Session_formant_statistic_ASD']=[
+    'VSA2',
+    'FCR2',
+    'within_covariance_norm(A:,i:,u:)',
+    'between_covariance_norm(A:,i:,u:)',
+    'within_variance_norm(A:,i:,u:)',
+    'between_variance_norm(A:,i:,u:)',
+    'total_covariance_norm(A:,i:,u:)',
+    'total_variance_norm(A:,i:,u:)',
+    'sam_wilks_lin_norm(A:,i:,u:)',
+    'pillai_lin_norm(A:,i:,u:)',
+    'hotelling_lin_norm(A:,i:,u:)', 
+    'roys_root_lin_norm(A:,i:,u:)',
+    'Between_Within_Det_ratio_norm(A:,i:,u:)',
+    'Between_Within_Tr_ratio_norm(A:,i:,u:)',
+]
+Feature_collect_specify_cols_dict['df_Session_formant_statistic_ASD_doc']=[
+    'VSA2',
+    'FCR2',
+    'within_covariance_norm(A:,i:,u:)',
+    'between_covariance_norm(A:,i:,u:)',
+    'within_variance_norm(A:,i:,u:)',
+    'between_variance_norm(A:,i:,u:)',
+    'total_covariance_norm(A:,i:,u:)',
+    'total_variance_norm(A:,i:,u:)',
+    'sam_wilks_lin_norm(A:,i:,u:)',
+    'pillai_lin_norm(A:,i:,u:)',
+    'hotelling_lin_norm(A:,i:,u:)', 
+    'roys_root_lin_norm(A:,i:,u:)',
+    'Between_Within_Det_ratio_norm(A:,i:,u:)',
+    'Between_Within_Tr_ratio_norm(A:,i:,u:)',
+]
+Feature_collect_specify_cols_dict['df_Syncrony_formant_statistic_ASD']=[
+                    'Divergence[within_covariance_norm(A:,i:,u:)]',
+                    'Divergence[within_variance_norm(A:,i:,u:)]',    
+                    'Divergence[between_covariance_norm(A:,i:,u:)]',    
+                    'Divergence[between_variance_norm(A:,i:,u:)]',    
+                    'Divergence[total_covariance_norm(A:,i:,u:)]', 
+                    'Divergence[total_variance_norm(A:,i:,u:)]',
+                    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
+                    'Divergence[pillai_lin_norm(A:,i:,u:)]',
+                    'Divergence[roys_root_lin_norm(A:,i:,u:)]',
+                    'Divergence[hotelling_lin_norm(A:,i:,u:)]',
+                    'Divergence[Between_Within_Det_ratio_norm(A:,i:,u:)]',
+                    'Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]',
+                    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[total_covariance_norm(A:,i:,u:)]_var_p1', 
+                    'Divergence[total_variance_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[roys_root_lin_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[hotelling_lin_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[Between_Within_Det_ratio_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]_var_p1',
+                    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
+                    'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
+                    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
+                    'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',
+                    'Divergence[total_covariance_norm(A:,i:,u:)]_var_p2', 
+                    'Divergence[total_variance_norm(A:,i:,u:)]_var_p2',
+                    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
+                    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
+                    'Divergence[roys_root_lin_norm(A:,i:,u:)]_var_p2',
+                    'Divergence[hotelling_lin_norm(A:,i:,u:)]_var_p2',
+                    'Divergence[Between_Within_Det_ratio_norm(A:,i:,u:)]_var_p2',
+                    'Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]_var_p2',
+                    ]
+
+Feature_collect_specify_cols_dict['df_Session_formant_statistic_ASDDKRatio']=[
+'Norm(WC)_sam_wilks_DKRaito', 
+'Norm(WC)_pillai_DKRaito',
+'Norm(WC)_hotelling_DKRaito', 
+'Norm(WC)_roys_root_DKRaito',
+'Norm(WC)_Det_DKRaito', 
+'Norm(WC)_Tr_DKRaito',
+'Norm(BC)_sam_wilks_DKRaito', 
+'Norm(BC)_pillai_DKRaito',
+'Norm(BC)_hotelling_DKRaito', 
+'Norm(BC)_roys_root_DKRaito',
+'Norm(BC)_Det_DKRaito', 
+'Norm(BC)_Tr_DKRaito',
+'Norm(TotalVar)_sam_wilks_DKRaito', 
+'Norm(TotalVar)_pillai_DKRaito',
+'Norm(TotalVar)_hotelling_DKRaito', 
+'Norm(TotalVar)_roys_root_DKRaito',
+'Norm(TotalVar)_Det_DKRaito', 
+'Norm(TotalVar)_Tr_DKRaito',
+]
 
 Correlation_dict=Dict()
 Filtered_feat=Dict()
 for feature_strs in Feature_collect.keys():
     features = Feature_collect[feature_strs].feature
-    columns = Feature_collect[feature_strs].columns
+    # columns = Feature_collect[feature_strs].columns
+    if feature_strs in Feature_collect_specify_cols_dict.keys():
+        columns = Feature_collect_specify_cols_dict[feature_strs]
+    else:
+        columns = Feature_collect[feature_strs].columns
     
     N=2
-    if 'df_Session' in feature_strs:
+    if 'df_Session' in feature_strs and 'DKRatio' not in feature_strs:
         feat_type='Session_formant' 
         features['u_num+i_num+a_num']=features['u_num'] +features['i_num'] + features['a_num']
         columns +=['u_num+i_num+a_num']       
@@ -1164,20 +1290,29 @@ def TBMEB2Preparation_BoxplotCoordinationAnalysis(df_formant_statistic_agesexmat
                                                   df_formant_statistic_TD_normal):
     
     y_axis_name_map={}    
-    y_axis_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]']='$Div(Norm(Pillai))$'
-    y_axis_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(Pillai))_{inv}$'
-    y_axis_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(Pillai))_{part}$'
-    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]']='$Div(Norm(WCC))$'
-    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCC))_{inv}$'
-    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCC))_{part}$'
-    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]']='$Div(Norm(WCC))$'
-    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCC))_{inv}$'
-    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCC))_{part}$'
+    y_axis_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]']='$Div(Wilks)$'
+    y_axis_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Wilks)_{inv}$'
+    y_axis_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Wilks)_{part}$'
+    y_axis_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]']='$Div(Pillai)$'
+    y_axis_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Pillai)_{inv}$'
+    y_axis_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Pillai)_{part}$'
+    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]']='$Div(WCC)$'
+    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(WCC)_{inv}$'
+    y_axis_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(WCC)_{part}$'
+    y_axis_name_map['Divergence[within_variance_norm(A:,i:,u:)]']='$Div(WCV)$'
+    y_axis_name_map['Divergence[within_variance_norm(A:,i:,u:)]_var_p1']='$Inc(WCV)_{inv}$'
+    y_axis_name_map['Divergence[within_variance_norm(A:,i:,u:)]_var_p2']='$Inc(WCV)_{part}$'
+    y_axis_name_map['Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]']='$Div(Tr(W^{-1}B))$'
+    y_axis_name_map['Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]_var_p1']='$Inc(Tr(W^{-1}B))_{inv}$'
+    y_axis_name_map['Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]_var_p2']='$Inc(Tr(W^{-1}B))_{part}$'
     ##############################################################################
     column_selected=[
-      'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
       'Divergence[within_covariance_norm(A:,i:,u:)]',
       'Divergence[pillai_lin_norm(A:,i:,u:)]',
+      'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',      
+      'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
+      'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
+      'Divergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]_var_p1',
      ]
     
     
@@ -1191,8 +1326,8 @@ def TBMEB2Preparation_BoxplotCoordinationAnalysis(df_formant_statistic_agesexmat
     df_ASDTDpairs_total=df_ASDTDpairs_total.append(dftmp2)
     df_ASDTDpairs_total = df_ASDTDpairs_total.rename(y_axis_name_map,axis='columns')
     
-    plt.rcParams["figure.figsize"] = (8,6)
-    base_num='13'
+    plt.rcParams["figure.figsize"] = (10,8)
+    base_num='23'
     for i, c_s in enumerate(column_selected):
         plt_claimnum=base_num + str(i+1)
         plt.subplot(int(plt_claimnum))
@@ -1292,9 +1427,12 @@ def TBMEB4_AnalysisOfNormWCCTimeseries():
     # =============================================================================
     #     
     # =============================================================================
-    Inspect_columns=[('within_covariance_norm(A:,i:,u:)',['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',\
-                                                      'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',\
-                                                      'Divergence[within_covariance_norm(A:,i:,u:)]'])]
+    # Inspect_columns=[('within_covariance_norm(A:,i:,u:)',['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',\
+    #                                                   'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',\
+    #                                                   'Divergence[within_covariance_norm(A:,i:,u:)]'])]
+    Inspect_columns=[('pillai_lin_norm(A:,i:,u:)',['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',\
+                                                      'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',\
+                                                      'Divergence[pillai_lin_norm(A:,i:,u:)]'])]
     score_df_columns=[]
     def Plot_Timeseries(df_formant_statistic, df_person_segment_feature,Inspect_columns, score_df, feat_type='formant', showDist=False):
         
@@ -1374,7 +1512,7 @@ def TBMEB4_AnalysisOfNormWCCTimeseries():
         
         # The DOCKID timeseries in TD group
         df_formant_statistic_TD_normal_sorted=df_formant_statistic_TD_normal.sort_values(Inspect_columns[0][-1])
-        Plot_Timeseries(df_formant_statistic_TD_normal_sorted,df_person_segment_feature_dict_TD,Inspect_columns,df_formant_statistic_all,\
+        Plot_Timeseries(df_formant_statistic_TD_normal_sorted,df_person_segment_feature_dict_TD,Inspect_columns,df_formant_statistic_TD,\
                         feat_type=feat_type)
 TBMEB4_AnalysisOfNormWCCTimeseries()
 

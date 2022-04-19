@@ -36,7 +36,7 @@ from scipy.spatial import ConvexHull, convex_hull_plot_2d
 import sklearn
 from sklearn.neighbors import KernelDensity
 from sklearn import preprocessing
-from scipy.stats import pearsonr 
+from scipy.stats import pearsonr , spearmanr, kendalltau
 import scipy
 def cosAngle(a, b, c):
     # angles between line segments (Python) from https://manivannan-ai.medium.com/find-the-angle-between-three-points-from-2d-using-python-348c513e2cd
@@ -138,12 +138,12 @@ class Articulation:
         for people in Vowels_AUI.keys(): #update 2021/05/27 fixed 
             RESULT_dict={}
             F12_raw_dict=Vowels_AUI[people]
-            F12_val_dict={k:[] for k in PhoneOfInterest}
-            for k,v in F12_raw_dict.items():
-                if self.Stat_med_str_VSA == 'mode':
-                    F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v,axis=0)[0].ravel()
-                else:
-                    F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v[self.Inspect_features],axis=0)
+            # F12_val_dict={k:[] for k in PhoneOfInterest}
+            # for k,v in F12_raw_dict.items():
+            #     if self.Stat_med_str_VSA == 'mode':
+            #         F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v,axis=0)[0].ravel()
+            #     else:
+            #         F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v[self.Inspect_features],axis=0)
             RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=\
                 len(Vowels_AUI[people]['u:']),len(Vowels_AUI[people]['A:']),len(Vowels_AUI[people]['i:'])
             
@@ -153,9 +153,9 @@ class Articulation:
             RESULT_dict['age']=Label.label_raw['age_year'][Label.label_raw['name']==people].values[0]
             RESULT_dict['Module']=Label.label_raw['Module'][Label.label_raw['name']==people].values[0]
             
-            u=F12_val_dict['u:'] # Get the averaged middle point formant values of the phone
-            a=F12_val_dict['A:'] # Get the averaged middle point formant values of the phone
-            i=F12_val_dict['i:'] # Get the averaged middle point formant values of the phone
+            # u=F12_val_dict['u:'] # Get the averaged middle point formant values of the phone
+            # a=F12_val_dict['A:'] # Get the averaged middle point formant values of the phone
+            # i=F12_val_dict['i:'] # Get the averaged middle point formant values of the phone
         
             # Handle the case when the sample is not enough to calculate LOC
             if RESULT_dict['u_num']<self.N or RESULT_dict['a_num']<self.N or RESULT_dict['i_num']<self.N:
@@ -167,19 +167,19 @@ class Articulation:
                 df_RESULT_list.loc[people,'u_num']=u_num
                 df_RESULT_list.loc[people,'a_num']=a_num
                 df_RESULT_list.loc[people,'i_num']=i_num
-                df_RESULT_list['FCR']=10
+                df_RESULT_list['FCR2']=10
                 for label_choose in label_choose_lst:
                     df_RESULT_list[label_choose]=RESULT_dict[label_choose][0]
                 df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
                 continue
             
-            numerator=u[1] + a[1] + i[0] + u[0]
-            demominator=i[1] + a[0]
-            RESULT_dict['FCR']=np.float(numerator/demominator)
+            # numerator=u[1] + a[1] + i[0] + u[0]
+            # demominator=i[1] + a[0]
+            # RESULT_dict['FCR']=np.float(numerator/demominator)
             # RESULT_dict['FCR+AUINum']=RESULT_dict['FCR'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
             # RESULT_dict['FCR*AUINum']=RESULT_dict['FCR'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
             
-            RESULT_dict['VSA1']=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
+            # RESULT_dict['VSA1']=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
             # RESULT_dict['VSA1+AUINum']=RESULT_dict['VSA1'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
             # RESULT_dict['VSA1*AUINum']=RESULT_dict['VSA1'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
             # =============================================================================
@@ -239,11 +239,19 @@ class Articulation:
                 pear_u=np.abs(pearsonr(u_1, u_2)[0])
                 pear_i=np.abs(pearsonr(i_1, i_2)[0])
                 
+                spear_a=np.abs(spearmanr(a_1, a_2)[0])
+                spear_u=np.abs(spearmanr(u_1, u_2)[0])
+                spear_i=np.abs(spearmanr(i_1, i_2)[0])
+                
+                kendall_a=np.abs(kendalltau(a_1, a_2)[0])
+                kendall_u=np.abs(kendalltau(u_1, u_2)[0])
+                kendall_i=np.abs(kendalltau(i_1, i_2)[0])
+                
+                
                 
                 def get_values(X_stats):
                     cov_xy, corr_xy, var_x, var_y=X_stats
                     return cov_xy, corr_xy, var_x, var_y
-                
                 
                 data_a = get_values(d_stats_a)
                 data_u = get_values(d_stats_u)
@@ -252,7 +260,9 @@ class Articulation:
                 Corr_aui=[data_a[1],data_u[1],data_i[1]]
                 Cov_sum=[sum(x) for x in zip(data_a,data_u,data_i)]
                 pear_sum=sum([pear_a,pear_u,pear_i])
-                return Cov_sum, Corr_aui, pear_sum   #Including [cov_xy, corr_xy, var_x, var_y]
+                spear_sum=sum([spear_a,spear_u,spear_i])
+                kendall_sum=sum([kendall_a,kendall_u,kendall_i])
+                return Cov_sum, Corr_aui, pear_sum, spear_sum, kendall_sum   #Including [cov_xy, corr_xy, var_x, var_y]
             
             def LDA_scatter_matrices(df_vowel):
                 a=df_vowel[df_vowel['vowel']=='A:'][self.Inspect_features].mean()
@@ -544,9 +554,9 @@ class Articulation:
             numerator=u[1] + a[1] + i[0] + u[0]
             demominator=i[1] + a[0]
             RESULT_dict['FCR2']=np.float(numerator/demominator)
-            RESULT_dict['FCR2_sum']=np.float((u_sum[1] + a_sum[1] + i_sum[0] + u_sum[0])/(i_sum[1] + a_sum[0]))
-            RESULT_dict['FCR2+AUINum']=RESULT_dict['FCR2'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
-            RESULT_dict['FCR2*AUINum']=RESULT_dict['FCR2'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            # RESULT_dict['FCR2_sum']=np.float((u_sum[1] + a_sum[1] + i_sum[0] + u_sum[0])/(i_sum[1] + a_sum[0]))
+            # RESULT_dict['FCR2+AUINum']=RESULT_dict['FCR2'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            # RESULT_dict['FCR2*AUINum']=RESULT_dict['FCR2'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
             # RESULT_dict['FCR2_uF2']=np.float(u[1]/demominator)
             # RESULT_dict['FCR2_aF2']=np.float(a[1]/demominator)
             # RESULT_dict['FCR2_iF1']=np.float(i[0]/demominator)
@@ -555,8 +565,8 @@ class Articulation:
             # RESULT_dict['aF1+iF2']=np.float(demominator)
             # RESULT_dict['VAI_aF2']=np.float(demominator/a[1])
             RESULT_dict['VSA2']=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
-            RESULT_dict['VSA2+AUINum']=RESULT_dict['VSA2'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
-            RESULT_dict['VSA2*AUINum']=RESULT_dict['VSA2'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            # RESULT_dict['VSA2+AUINum']=RESULT_dict['VSA2'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            # RESULT_dict['VSA2*AUINum']=RESULT_dict['VSA2'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
             # =============================================================================
             
             
@@ -571,12 +581,13 @@ class Articulation:
             
             #Calculate relative angles
             absolute_ang, relative_ang = Calculate_relative_angles(df_vowel, additional_infos=False)
-            [RESULT_dict['absAng_a'], RESULT_dict['absAng_u'], RESULT_dict['absAng_i']]=absolute_ang
-            [RESULT_dict['ang_ai'], RESULT_dict['ang_iu'], RESULT_dict['ang_ua']]=relative_ang
-            RESULT_dict['Angles']=RESULT_dict['ang_ai']*RESULT_dict['ang_iu']*RESULT_dict['ang_ua']
+            # [RESULT_dict['absAng_a'], RESULT_dict['absAng_u'], RESULT_dict['absAng_i']]=absolute_ang
+            # [RESULT_dict['ang_ai'], RESULT_dict['ang_iu'], RESULT_dict['ang_ua']]=relative_ang
+            # RESULT_dict['Angles']=RESULT_dict['ang_ai']*RESULT_dict['ang_iu']*RESULT_dict['ang_ua']
             
             [RESULT_dict['dcov_12'], RESULT_dict['dcorr_12'], RESULT_dict['dvar_1'], RESULT_dict['dvar_2']],\
-                [RESULT_dict['dcor_a'],RESULT_dict['dcor_u'],RESULT_dict['dcor_i']], RESULT_dict['pear_12']=Calculate_distanceCorr(df_vowel)
+                [RESULT_dict['dcor_a'],RESULT_dict['dcor_u'],RESULT_dict['dcor_i']], RESULT_dict['pear_12'],\
+                    RESULT_dict['spear_12'],RESULT_dict['kendall_12']=Calculate_distanceCorr(df_vowel)
             RESULT_dict['pointDistsTotal']=Calculate_pointDistsTotal(df_vowel)
             RESULT_dict['repulsive_force']=Calculate_pair_distrib_dist(df_vowel, vowelCol_name='vowel')
             

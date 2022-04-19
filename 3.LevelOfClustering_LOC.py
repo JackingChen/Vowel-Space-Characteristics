@@ -328,6 +328,7 @@ df_formant_statistic=Add_label(df_formant_statistic,Label,label_choose='ADOS_cat
 Eval_med=Evaluation_method()
 df_formant_statistic=Eval_med._Postprocess_dfformantstatistic(df_formant_statistic) #Filter unwanted samples
 
+
 sex=-1
 module=-1
 agemax=-1
@@ -339,6 +340,9 @@ df_formant_statistic_77=criterion_filter(df_formant_statistic,\
                                         evictNamelst=[])
 
 pickle.dump(df_formant_statistic_77,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
+if role == 'KID_FromTD_DOCKID' or role ==  'DOC_FromTD_DOCKID':
+    pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
+
 
 
 ''' Calculate correlations for Formant fetures'''
@@ -404,8 +408,6 @@ for key in Aaadf_spearmanr_table_NoLimit.keys():
 # =============================================================================
 # Generate LOC indexes for fraction people for ASD/non-ASD classification
 # =============================================================================
-
-
 dfFormantStatisticFractionpath=dfFormantStatisticpath+'/Fraction'
 if not os.path.exists(dfFormantStatisticFractionpath):
     os.makedirs(dfFormantStatisticFractionpath)
@@ -482,7 +484,8 @@ else:
     have been generated before, then we can merge them
 '''
 
-MERGE_INDEXES_ROLE='TD'
+# MERGE_INDEXES_ROLE='TD'
+MERGE_INDEXES_ROLE=''
 scatter_matrix_path=outpklpath
 
 Scatter_mrtx_lst=['Norm(WC)', 'Norm(BC)', 'Norm(TotalVar)']
@@ -551,7 +554,7 @@ if MERGE_INDEXES_ROLE != '':
         df_FormantRatios_statistic=df_FormantRatios_statistic.append(df_RESULT_list)
 
 
-    pickle.dump(df_FormantRatios_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format('DKRaito'),"wb"))    
+    pickle.dump(df_FormantRatios_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{0}{1}.pkl".format(MERGE_INDEXES_ROLE,'DKRaito'),"wb"))    
     
     if MERGE_INDEXES_ROLE == 'ASD':
         df_formant_statistic_agesexmatch_ASDSevere=df_FormantRatios_statistic.loc[sellect_people_define.SevereASD_age_sex_match_ver2]

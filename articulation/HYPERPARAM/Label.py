@@ -82,3 +82,16 @@ label_raw['ADOS_cate_C']=np.array([0]*len(label_raw))
 label_raw.loc[label_raw['T_ADOS_C']<2,'ADOS_cate_C']=0
 label_raw.loc[(label_raw['T_ADOS_C']<3) & (label_raw['T_ADOS_C']>=2),'ADOS_cate_C']=1
 label_raw.loc[label_raw['T_ADOS_C']>=3,'ADOS_cate_C']=2
+
+label_raw.loc[label_raw['T_ADOS_S']<4,'ADOS_cate_S']=0
+label_raw.loc[(label_raw['T_ADOS_S']<6) & (label_raw['T_ADOS_S']>=4),'ADOS_cate_S']=1
+label_raw.loc[label_raw['T_ADOS_S']>=6,'ADOS_cate_S']=2
+
+label_raw.loc[label_raw['T_ADOS_SC']<7,'ADOS_cate_SC']=0
+label_raw.loc[(label_raw['T_ADOS_SC']<10) & (label_raw['T_ADOS_SC']>=7),'ADOS_cate_SC']=1
+label_raw.loc[label_raw['T_ADOS_SC']>=10,'ADOS_cate_SC']=2
+
+label_raw.loc[label_raw['ADOS_CSS']<3,'ADOS_cate_CSS']=0
+label_raw.loc[(label_raw['ADOS_CSS']<5) & (label_raw['ADOS_CSS']>=3),'ADOS_cate_CSS']=1
+label_raw.loc[(label_raw['ADOS_CSS']<8) & (label_raw['ADOS_CSS']>=5),'ADOS_cate_CSS']=2
+label_raw.loc[label_raw['ADOS_CSS']>=8,'ADOS_cate_CSS']=3

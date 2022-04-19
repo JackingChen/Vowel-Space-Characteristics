@@ -25,6 +25,7 @@ from addict import Dict
 import numpy as np
 import pandas as pd
 from articulation.HYPERPARAM import phonewoprosody, Label
+from articulation.HYPERPARAM.PeopleSelect import SellectP_define
 
 import matplotlib.pyplot as plt
 from itertools import combinations
@@ -59,6 +60,8 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
+    parser.add_argument('--dfFormantStatisticpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+                        help='path of the base directory')
     parser.add_argument('--reFilter', default=False, type=bool,
                             help='')
     parser.add_argument('--check', default=True, type=bool,
@@ -73,7 +76,7 @@ def get_args():
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='ASD_DOCKID',
+    parser.add_argument('--dataset_role', default='TD_DOCKID',
                             help='[TD_DOCKID_emotion | ASD_DOCKID_emotion | kid_TD | kid88]')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
@@ -91,6 +94,40 @@ from utils_jack  import  Formant_utt2people_reshape, Gather_info_certainphones, 
                          Get_aligned_sequences, WER, Get_Vowels_AUI
 from metric import Evaluation_method     
 import random
+
+def criterion_filter(df_formant_statistic,N=10,\
+                     constrain_sex=-1, constrain_module=-1,constrain_agemax=-1,constrain_ADOScate=-1,constrain_agemin=-1,\
+                     evictNamelst=[],feature_type='Session_formant'):
+    if feature_type == 'Session_formant':
+        filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
+    elif feature_type == 'Syncrony_formant':
+        filter_bool=df_formant_statistic['timeSeries_len']>N
+    else:
+        filter_bool=pd.Series([True]*len(df_formant_statistic),index=df_formant_statistic.index)
+    if constrain_sex != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['sex']==constrain_sex)
+    if constrain_module != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['Module']==constrain_module)
+    if constrain_agemax != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['age']<=constrain_agemax)
+    if constrain_agemin != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['age']>=constrain_agemin)
+    if constrain_ADOScate != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS_cate_C']==constrain_ADOScate)
+        
+    if len(evictNamelst)>0:
+        for name in evictNamelst:
+            filter_bool.loc[name]=False
+    # get rid of nan values
+    filter_bool=np.logical_and(filter_bool,~df_formant_statistic.isna().T.any())
+    return df_formant_statistic[filter_bool]
+
+def Add_label(df_formant_statistic,Label,label_choose='ADOS_cate_C'):
+    for people in df_formant_statistic.index:
+        bool_ind=Label.label_raw['name']==people
+        df_formant_statistic.loc[people,label_choose]=Label.label_raw.loc[bool_ind,label_choose].values
+    return df_formant_statistic
 
 def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_dict, People_data_distrib,\
                               PhoneMapp_dict, PhoneOfInterest ,\
@@ -231,6 +268,7 @@ def Fill_n_Create_AUIInfo(Formants_utt_symb_SegmentRole, People_data_distrib, In
 args = get_args()
 pklpath=args.inpklpath
 windowsize=args.poolWindowSize
+dfFormantStatisticpath=args.dfFormantStatisticpath
 label_choose_lst=args.label_choose_lst # labels are too biased
 dataset_role=args.dataset_role
 # Randseed=args.Randseed
@@ -496,5 +534,53 @@ df_syncrony_measurement=syncrony.calculate_features(df_person_segment_feature_di
 timeSeries_len_columns=[col  for col in df_syncrony_measurement.columns if 'timeSeries_len' in col]
 df_syncrony_measurement['timeSeries_len']=df_syncrony_measurement[timeSeries_len_columns].min(axis=1)
     
+
+feat_type='Syncrony_formant'
+N=2
+if dataset_role == 'ASD_DOCKID':
+    df_syncrony_measurement=criterion_filter(df_syncrony_measurement,N=N,evictNamelst=[],feature_type=feat_type)
+    
+
 pickle.dump(df_syncrony_measurement,open(outpklpath+"Syncrony_measure_of_variance_{}.pkl".format(dataset_role),"wb"))
+
+
+
+# =============================================================================
+# Generate LOC indexes for fraction people for ASD/non-ASD classification
+# =============================================================================
+dfFormantStatisticFractionpath=dfFormantStatisticpath+'/Fraction'
+if not os.path.exists(dfFormantStatisticFractionpath):
+    os.makedirs(dfFormantStatisticFractionpath)
+sellect_people_define=SellectP_define()
+if dataset_role == 'ASD_DOCKID':
+    df_syncrony_statistic_agesexmatch_ASDSevere=df_syncrony_measurement.loc[sellect_people_define.SevereASD_age_sex_match_ver2]
+    df_syncrony_statistic_agesexmatch_ASDMild=df_syncrony_measurement.loc[sellect_people_define.MildASD_age_sex_match_ver2]
+    
+    label_add='ADOS_cate_C'
+    if label_add  not in df_syncrony_statistic_agesexmatch_ASDSevere.columns:
+        df_syncrony_statistic_agesexmatch_ASDSevere=Add_label(df_syncrony_statistic_agesexmatch_ASDSevere,Label,label_choose=label_add)
+    if label_add  not in df_syncrony_statistic_agesexmatch_ASDMild.columns:
+        df_syncrony_statistic_agesexmatch_ASDMild=Add_label(df_syncrony_statistic_agesexmatch_ASDMild,Label,label_choose=label_add)
+    
+    # 1 represents ASD, 2 represents TD
+    label_add='ASDTD' 
+    if label_add not in df_syncrony_statistic_agesexmatch_ASDSevere.columns:
+        df_syncrony_statistic_agesexmatch_ASDSevere[label_add]=sellect_people_define.ASDTD_label['ASD']
+    if label_add not in df_syncrony_statistic_agesexmatch_ASDMild.columns:
+        df_syncrony_statistic_agesexmatch_ASDMild[label_add]=sellect_people_define.ASDTD_label['ASD']
+        
+    pickle.dump(df_syncrony_statistic_agesexmatch_ASDSevere,open(dfFormantStatisticFractionpath+'/df_syncrony_statistic_agesexmatch_ASDSevereGrp.pkl','wb'))
+    pickle.dump(df_syncrony_statistic_agesexmatch_ASDMild,open(dfFormantStatisticFractionpath+'/df_syncrony_statistic_agesexmatch_ASDMildGrp.pkl','wb'))
+    
+elif dataset_role == 'TD_DOCKID':
+    df_syncrony_TD_normal=df_syncrony_measurement.loc[sellect_people_define.TD_normal_ver2]
+    
+    # 1 represents ASD, 2 represents TD
+    label_add='ASDTD' 
+    if label_add not in df_syncrony_TD_normal.columns:
+        df_syncrony_TD_normal[label_add]=sellect_people_define.ASDTD_label['TD']
+        
+    pickle.dump(df_syncrony_TD_normal,open(dfFormantStatisticFractionpath+'/df_syncrony_statistic_TD_normalGrp.pkl','wb'))    
+else:
+    raise KeyError("The key has not been registered")
 

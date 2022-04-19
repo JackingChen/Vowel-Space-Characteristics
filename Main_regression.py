@@ -34,14 +34,15 @@ import torch
 import re
 import matplotlib.pyplot as plt
 from sklearn import preprocessing
-from sklearn.metrics import recall_score
+from sklearn.metrics import recall_score, make_scorer
 
 from articulation.HYPERPARAM import phonewoprosody, Label
 import articulation.articulation
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import f1_score
-
-
+from sklearn.model_selection import StratifiedKFold
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 def Assert_labelfeature(feat_name,lab_name):
     # =============================================================================
     #     To check if the label match with feature
@@ -87,65 +88,156 @@ experiment=args.experiment
 # =============================================================================
 # Feature
 Session_level_all=Dict()
-columns=[
+# columns=[
     # 'FCR2+AUINum',
     # 'VSA2+AUINum',
     # 'FCR2*AUINum',
     # 'VSA2*AUINum',
     # 'FCR2',
     # 'VSA2',
-    # 'between_covariance_norm(A:,i:,u:)', 'between_variance_norm(A:,i:,u:)',
-    # 'between_covariance(A:,i:,u:)', 'between_variance(A:,i:,u:)',
-    # 'within_covariance_norm(A:,i:,u:)', 'within_variance_norm(A:,i:,u:)',
-    # 'within_covariance(A:,i:,u:)', 'within_variance(A:,i:,u:)',
-    # 'total_covariance_norm(A:,i:,u:)', 'total_variance_norm(A:,i:,u:)',
-    # 'sam_wilks_lin_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)',
-    # 'hotelling_lin_norm(A:,i:,u:)', 'roys_root_lin_norm(A:,i:,u:)',
+    # 'between_covariance_norm(A:,i:,u:)', 
+    # 'between_variance_norm(A:,i:,u:)',
+    # 'within_covariance_norm(A:,i:,u:)', 
+    # 'within_variance_norm(A:,i:,u:)',
+    # 'total_covariance_norm(A:,i:,u:)', 
+    # 'total_variance_norm(A:,i:,u:)',
+    # 'sam_wilks_lin_norm(A:,i:,u:)', 
+    # 'pillai_lin_norm(A:,i:,u:)',
+    # 'hotelling_lin_norm(A:,i:,u:)', 
+    # 'roys_root_lin_norm(A:,i:,u:)',
     # 'Between_Within_Det_ratio_norm(A:,i:,u:)',
     # 'Between_Within_Tr_ratio_norm(A:,i:,u:)'
+    # 'pear_12',
+    # 'spear_12',
+    # 'kendall_12',
+    # 'dcorr_12'
     # 'u_num+i_num+a_num',
-    ]
+    # ]
 columns=[
-    # 'Norm(WC)_sam_wilks_DKRaito', 'Norm(WC)_pillai_DKRaito',
-    # 'Norm(WC)_hotelling_DKRaito', 'Norm(WC)_roys_root_DKRaito',
-    # 'Norm(WC)_Det_DKRaito', 'Norm(WC)_Tr_DKRaito',
-    # 'Norm(BC)_sam_wilks_DKRaito', 'Norm(BC)_pillai_DKRaito',
-    # 'Norm(BC)_hotelling_DKRaito', 'Norm(BC)_roys_root_DKRaito',
-    # 'Norm(BC)_Det_DKRaito', 'Norm(BC)_Tr_DKRaito',
-    # # 'Norm(B_CRatio)_sam_wilks_DKRaito', 'Norm(B_CRatio)_pillai_DKRaito',
-    # # 'Norm(B_CRatio)_hotelling_DKRaito', 'Norm(B_CRatio)_roys_root_DKRaito',
-    # # 'Norm(B_CRatio)_Det_DKRaito', 'Norm(B_CRatio)_Tr_DKRaito',
-    # 'Norm(TotalVar)_sam_wilks_DKRaito', 'Norm(TotalVar)_pillai_DKRaito',
-    # 'Norm(TotalVar)_hotelling_DKRaito', 'Norm(TotalVar)_roys_root_DKRaito',
-    # 'Norm(TotalVar)_Det_DKRaito', 'Norm(TotalVar)_Tr_DKRaito'
+'intensity_mean_mean(A:,i:,u:)', 'meanF0_mean(A:,i:,u:)',
+       'stdevF0_mean(A:,i:,u:)', 'hnr_mean(A:,i:,u:)',
+       'localJitter_mean(A:,i:,u:)', 'localabsoluteJitter_mean(A:,i:,u:)',
+       'rapJitter_mean(A:,i:,u:)', 'ddpJitter_mean(A:,i:,u:)',
+       'localShimmer_mean(A:,i:,u:)', 'localdbShimmer_mean(A:,i:,u:)',
+       # 'intensity_mean_var(A:,i:,u:)', 'meanF0_var(A:,i:,u:)',
+       # 'stdevF0_var(A:,i:,u:)', 'hnr_var(A:,i:,u:)',
+       # 'localJitter_var(A:,i:,u:)', 'localabsoluteJitter_var(A:,i:,u:)',
+       # 'rapJitter_var(A:,i:,u:)', 'ddpJitter_var(A:,i:,u:)',
+       # 'localShimmer_var(A:,i:,u:)', 'localdbShimmer_var(A:,i:,u:)',
+       # 'intensity_mean_max(A:,i:,u:)', 'meanF0_max(A:,i:,u:)',
+       # 'stdevF0_max(A:,i:,u:)', 'hnr_max(A:,i:,u:)',
+       # 'localJitter_max(A:,i:,u:)', 'localabsoluteJitter_max(A:,i:,u:)',
+       # 'rapJitter_max(A:,i:,u:)', 'ddpJitter_max(A:,i:,u:)',
+       # 'localShimmer_max(A:,i:,u:)', 'localdbShimmer_max(A:,i:,u:)'
 ]
-columns=[
-    'Divergence[within_covariance_norm(A:,i:,u:)]',
-    'Divergence[within_variance_norm(A:,i:,u:)]',    
-    'Divergence[between_covariance_norm(A:,i:,u:)]',    
-    'Divergence[between_variance_norm(A:,i:,u:)]',    
-    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]',    
-    'Divergence[pillai_lin_norm(A:,i:,u:)]',
-    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p1',
-    'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',
-    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1',
-    'Divergence[between_variance_norm(A:,i:,u:)]_var_p1',
-    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1',
-    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1',
-    'Divergence[within_covariance_norm(A:,i:,u:)]_var_p2',    
-    'Divergence[within_variance_norm(A:,i:,u:)]_var_p2',    
-    'Divergence[between_covariance_norm(A:,i:,u:)]_var_p2',    
-    'Divergence[between_variance_norm(A:,i:,u:)]_var_p2',    
-    'Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2',
-    'Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2',
-]
+# 這些會有虛數
+# 'Norm(B_CRatio)_sam_wilks_DKRaito', 'Norm(B_CRatio)_pillai_DKRaito',
+# 'Norm(B_CRatio)_hotelling_DKRaito', 'Norm(B_CRatio)_roys_root_DKRaito',
+# 'Norm(B_CRatio)_Det_DKRaito', 'Norm(B_CRatio)_Tr_DKRaito',
+# columns=[
+#     'Norm(WC)_sam_wilks_DKRaito', 'Norm(WC)_pillai_DKRaito',
+#     'Norm(WC)_hotelling_DKRaito', 'Norm(WC)_roys_root_DKRaito',
+#     'Norm(WC)_Det_DKRaito', 'Norm(WC)_Tr_DKRaito',
+#     'Norm(BC)_sam_wilks_DKRaito', 'Norm(BC)_pillai_DKRaito',
+#     'Norm(BC)_hotelling_DKRaito', 'Norm(BC)_roys_root_DKRaito',
+#     'Norm(BC)_Det_DKRaito', 'Norm(BC)_Tr_DKRaito',
 
-featuresOfInterest=[ [col] for col in columns]
+#     'Norm(TotalVar)_sam_wilks_DKRaito', 'Norm(TotalVar)_pillai_DKRaito',
+#     'Norm(TotalVar)_hotelling_DKRaito', 'Norm(TotalVar)_roys_root_DKRaito',
+#     'Norm(TotalVar)_Det_DKRaito', 'Norm(TotalVar)_Tr_DKRaito'
+# ]
+
+
+New_prosodyF0=[
+    'F0avg',
+ 'F0std',
+ 'F0max',
+ 'F0min',
+ 'F0skew',
+ 'F0kurt',
+ 'F0tiltavg',
+ 'F0mseavg',
+ 'F0tiltstd',
+ 'F0msestd',
+ 'F0tiltmax',
+ 'F0msemax',
+ 'F0tiltmin',
+ 'F0msemin',
+ 'F0tiltskw',
+ 'F0mseskw',
+ 'F0tiltku',
+ 'F0mseku',
+    ]
+
+
+New_VoiceQuality = ['avg Jitter',
+ 'avg Shimmer',
+ # 'avg apq',
+ # 'avg ppq',
+ # 'avg logE',
+ 'std Jitter',
+ 'std Shimmer',
+ # 'std apq',
+ # 'std ppq',
+ # 'std logE',
+ 'skewness Jitter',
+ 'skewness Shimmer',
+ # 'skewness apq',
+ # 'skewness ppq',
+ # 'skewness logE',
+ 'kurtosis Jitter',
+ 'kurtosis Shimmer',
+ # 'kurtosis apq',
+ # 'kurtosis ppq',
+ # 'kurtosis logE'
+ ]
+
+New_energy = [
+    'avgEvoiced', 'stdEvoiced', 'skwEvoiced', 'kurtosisEvoiced',
+        'avgtiltEvoiced', 'stdtiltEvoiced', 'skwtiltEvoiced',
+        'kurtosistiltEvoiced', 'avgmseEvoiced', 'stdmseEvoiced',
+        'skwmseEvoiced', 'kurtosismseEvoiced', 
+        ]
+LOC_columns=[ 'between_covariance_norm(A:,i:,u:)',
+        'between_variance_norm(A:,i:,u:)',
+        'total_covariance_norm(A:,i:,u:)',
+        'total_variance_norm(A:,i:,u:)', 
+        'sam_wilks_lin_norm(A:,i:,u:)',
+        'pillai_lin_norm(A:,i:,u:)', 
+        # 'hotelling_lin_norm(A:,i:,u:)',
+        # 'roys_root_lin_norm(A:,i:,u:)',
+        'Between_Within_Det_ratio_norm(A:,i:,u:)',
+        'Between_Within_Tr_ratio_norm(A:,i:,u:)',
+       ]
+
+Comb=Dict()
+Comb[0]=New_prosodyF0
+Comb[1]=New_prosodyF0 + LOC_columns
+Comb[2]=New_VoiceQuality
+Comb[3]=New_VoiceQuality + LOC_columns
+Comb[4]=New_energy
+Comb[5]=New_energy + LOC_columns 
+Comb[6]=New_prosodyF0 + New_energy 
+Comb[7]=New_prosodyF0 + New_energy + LOC_columns
+Comb[8]=New_VoiceQuality + New_energy 
+Comb[9]=New_VoiceQuality + New_energy + LOC_columns
+Comb[10]=New_prosodyF0 + New_energy + New_VoiceQuality
+Comb[11]=New_prosodyF0 + New_energy + New_VoiceQuality+ LOC_columns
+
+# 用comb來組合multifeature fusion
+# 用[ [col] for col in columns]  來跑單feautre實驗
+featuresOfInterest=[ [col] for col in columns] 
 # featuresOfInterest=[ [col] + ['u_num+i_num+a_num'] for col in columns]
+# featuresOfInterest=[ [col] for col in columns]
+# featuresOfInterest=[ Comb[k] for k in Comb.keys()]
+
 
 # label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
 label_choose=['ADOS_C']
 # label_choose=['ADOS_cate','ASDTD']
+
+pearson_scorer = make_scorer(pearsonr, greater_is_better=False)
+
 df_formant_statistics_CtxPhone_collect_dict=Dict()
 # =============================================================================
 
@@ -170,10 +262,11 @@ class ADOSdataset():
         self.featuresOfInterest=featuresOfInterest
         arti=articulation.articulation.Articulation()
         if not kwargs and len(pickle_path)>0:
-            df_tmp=pickle.load(open(pickle_path,"rb"))
+            df_tmp=pickle.load(open(pickle_path,"rb")).sort_index()
+            # df_tmp=pickle.load(open(pickle_path,"rb"))
         elif len(kwargs)>0: # usage Get_FormantAUI_feat(...,key1=values1):
             for k, v in kwargs.items(): #there will be only one element
-                df_tmp=kwargs[k]
+                df_tmp=kwargs[k].sort_index()
 
         if filterbyNum:
             df_tmp=arti.BasicFilter_byNum(df_tmp,N=self.N)
@@ -196,7 +289,7 @@ class ADOSdataset():
         files = glob.glob(self.Fractionfeatures_str)
         for file in files:
             feat_name=os.path.basename(file).replace(".pkl","")
-            df_tmp=pickle.load(open(file,"rb"))
+            df_tmp=pickle.load(open(file,"rb")).sort_index()
             Features[feat_name]=df_tmp
         for keys in self.FeatureCombs.keys():
             combF=[Features[k] for k in self.FeatureCombs[keys]]
@@ -210,16 +303,21 @@ ErrorFeat_bookeep=Dict()
 
 Pseudo_CtxDepPhone_path='artuculation_AUI/Pseudo_CtxDepVowels'
 CtxDepPhone_path='artuculation_AUI/CtxDepVowels/bkup0729'
-# Vowel_path='artuculation_AUI/Vowels'
+Vowel_path='artuculation_AUI/Vowels'
 Vowel_Ratio_path='artuculation_AUI/Vowels/DKRatios'
 Interactionfeat_path='artuculation_AUI/Interaction'
 OtherFeat_path='Other/Static_BasicInfo'
+CombinedassistFeature_path='CombinedassistFeature'
+CheckFeat_path='checkFeatures'
+Phonation_static_path='artuculation_AUI/Vowels/Phonation'
 # for feature_paths in [Vowel_path, CtxDepPhone_path, Pseudo_CtxDepPhone_path]:
-# for feature_paths in [Vowel_Ratio_path]:
-for feature_paths in [Interactionfeat_path]:
+# for feature_paths in [Vowel_path]:
+for feature_paths in [Phonation_static_path]:
+# for feature_paths in [Interactionfeat_path]:
+# for feature_paths in [CombinedassistFeature_path]:
+# for feature_paths in [CheckFeat_path]:
 # for feature_paths in [Vowel_path, CtxDepPhone_path]:
     files = glob.glob(ados_ds.featurepath +'/'+ feature_paths+'/*.pkl')
-
     # load features from file
     for file in files: #iterate over features
         feat_=os.path.basename(file).split(".")[0]        
@@ -234,6 +332,28 @@ for feature_paths in [Interactionfeat_path]:
                 Session_level_all[Item_name].X, \
                     Session_level_all[Item_name].y, \
                         Session_level_all[Item_name].feattype = X,y, featType
+
+
+# [TMP] Should remove soon
+# Feat_path1='Features/artuculation_AUI/Vowels/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl'
+# Feat_path2='Features/CombinedassistFeature/df_SegLvl_features_PhonationEnergyLOC.pkl'
+# df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID=pickle.load(open(Feat_path1,"rb"))[columns+['u_num','a_num','i_num','ADOS_C']]
+# df_PhonationEnergyLOC=pickle.load(open(Feat_path2,"rb"))[columns+['u_num','a_num','i_num','ADOS_C']]
+
+
+# from metric import Evaluation_method 
+# label_correlation_choose_lst=['ADOS_C']
+# N=2
+# Eval_med=Evaluation_method()
+# Aaadf_spearmanr_table_NoLimit1=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
+# Aaadf_spearmanr_table_NoLimit2=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_PhonationEnergyLOC,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
+
+
+# CheckFeat_path='Features/checkFeatures'
+# pickle.dump(df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID,open(CheckFeat_path+'/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl',"wb"))
+# pickle.dump(df_PhonationEnergyLOC,open(CheckFeat_path+'/PhonationEnergyLOC.pkl',"wb"))
+# (df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID - df_PhonationEnergyLOC).sum().sum()
+
 
 paper_name_map={}    
 paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]']='$Div(Norm(Pillai))$'
@@ -254,18 +374,30 @@ paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Nor
 paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]']='$Div(Norm(BCV))$'
 paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(BCV))_{inv}$'
 paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(BCV))_{part}$'
-paper_name_map['between_covariance(A:,i:,u:)']='$BCC$'
-paper_name_map['between_variance(A:,i:,u:)']='$BCV$'
-paper_name_map['within_covariance(A:,i:,u:)']='$WCC$'
-paper_name_map['within_variance(A:,i:,u:)']='$WCV$'
-paper_name_map['sam_wilks_lin(A:,i:,u:)']='$Wilks$'
-paper_name_map['pillai_lin(A:,i:,u:)']='$Pillai$'
+paper_name_map['between_covariance_norm(A:,i:,u:)']='$BCC$'
+paper_name_map['between_variance_norm(A:,i:,u:)']='$BCV$'
+paper_name_map['within_covariance_norm(A:,i:,u:)']='$WCC$'
+paper_name_map['within_variance_norm(A:,i:,u:)']='$WCV$'
+# paper_name_map['total_covariance_norm(A:,i:,u:)']='$TC$'
+# paper_name_map['total_variance_norm(A:,i:,u:)']='$TV$'
+paper_name_map['sam_wilks_lin_norm(A:,i:,u:)']='$Wilks$'
+paper_name_map['pillai_lin_norm(A:,i:,u:)']='$Pillai$'
+paper_name_map['hotelling_lin_norm(A:,i:,u:)']='$Hotel$'
+paper_name_map['roys_root_lin_norm(A:,i:,u:)']='$Roys$'
+paper_name_map['Between_Within_Det_ratio_norm(A:,i:,u:)']='$Det(B_W)$'
+paper_name_map['Between_Within_Tr_ratio_norm(A:,i:,u:)']='$Tr(B_W)$'
 
 
 # =============================================================================
 # Model parameters
 # =============================================================================
-C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
+# C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
+# C_variable=np.array(np.arange(0.1,1.1,0.2))
+# C_variable=np.array([0.1,0.5,0.9])
+epsilon=np.array(np.arange(0.1,1.5,0.1) )
+# epsilon=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
+# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.2))  )
+# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.1))  )
 n_estimator=[2, 4, 8, 16, 32, 64]
 
 
@@ -276,6 +408,8 @@ loo=LeaveOneOut()
 # CV_settings=loo
 CV_settings=10
 # CV_settings=2
+# skf = StratifiedKFold(n_splits=CV_settings)
+
 
 '''
 
@@ -283,10 +417,10 @@ CV_settings=10
 
 '''
 ###############################################################################
-Classifier['EN']={'model':ElasticNet(random_state=0),\
-                  'parameters':{'alpha':np.arange(0,1,0.25),\
-                                'l1_ratio': np.arange(0,1,0.25)}} #Just a initial value will be changed by parameter tuning
-                                                    # l1_ratio = 1 is the lasso penalty
+# Classifier['EN']={'model':ElasticNet(random_state=0),\
+#                   'parameters':{'model__alpha':np.arange(0,1,0.25),\
+#                                 'model__l1_ratio': np.arange(0,1,0.25)}} #Just a initial value will be changed by parameter tuning
+                                                    ## l1_ratio = 1 is the lasso penalty
 # Classifier['EN']={'model':ElasticNet(random_state=0),\
 #                   'parameters':{'alpha':[0.25,],\
 #                                 'l1_ratio': [0.5]}} #Just a initial value will be changed by parameter tuning
@@ -305,8 +439,11 @@ Classifier['EN']={'model':ElasticNet(random_state=0),\
 #                                 }}
 
 Classifier['SVR']={'model':sklearn.svm.SVR(),\
-                  'parameters':{'C':C_variable,\
-                    'kernel': ['rbf'],\
+                  'parameters':{
+                    'model__epsilon': epsilon,\
+                    # 'model__C':C_variable,\
+                    'model__kernel': ['rbf'],\
+                    # 'gamma': ['auto'],\
                                 }}
 
 # Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
@@ -378,13 +515,14 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             
         Labels = Session_level_all.X[feature_keys]
         print("=====================Cross validation start==================")
+        pipe = Pipeline(steps=[('scalar',StandardScaler()),("model", clf['model'])])
         p_grid=clf['parameters']
-        Gclf = GridSearchCV(estimator=clf['model'], param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
-        # Score=cross_val_score(Gclf, features.X, features.y, cv=loo) 
+        Gclf = GridSearchCV(estimator=pipe, param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
+        # Score=cross_val_score(Gclf, features.X, features.y, cv=CV_settings, scoring=pearson_scorer) 
         CVpredict=cross_val_predict(Gclf, features.X, features.y, cv=CV_settings)           
         Gclf.fit(features.X,features.y)
-        if clf_keys == "EN":
-            print('The coefficient of best estimator is: ',Gclf.best_estimator_.coef_)
+        # if clf_keys == "EN":
+        #     print('The coefficient of best estimator is: ',Gclf.best_estimator_.coef_)
         
         print("The best score with scoring parameter: 'r2' is", Gclf.best_score_)
         print("The best parameters are :", Gclf.best_params_)
@@ -437,15 +575,15 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             Inspect the best result
         '''
         # =============================================================================
-        Best_predict_optimize[label_keys]=pd.DataFrame(np.vstack((CVpredict,features.y)).T,columns=['y_pred','y'])
-        excel_path='./Statistics/prediction_result'
-        if not os.path.exists(excel_path):
-            os.makedirs(excel_path)
-        excel_file=excel_path+"/{0}_{1}.xlsx"
-        writer = pd.ExcelWriter(excel_file.format(clf_keys,feature_keys.replace(":","")), engine = 'xlsxwriter')
-        for label_name in  Best_predict_optimize.keys():
-            Best_predict_optimize[label_name].to_excel(writer,sheet_name=label_name.replace("/","_"))
-        writer.save()
+        # Best_predict_optimize[label_keys]=pd.DataFrame(np.vstack((CVpredict,features.y)).T,columns=['y_pred','y'])
+        # excel_path='./Statistics/prediction_result'
+        # if not os.path.exists(excel_path):
+        #     os.makedirs(excel_path)
+        # excel_file=excel_path+"/{0}_{1}.xlsx"
+        # writer = pd.ExcelWriter(excel_file.format(clf_keys,feature_keys.replace(":","")), engine = 'xlsxwriter')
+        # for label_name in  Best_predict_optimize.keys():
+        #     Best_predict_optimize[label_name].to_excel(writer,sheet_name=label_name.replace("/","_"))
+        # writer.save()
                                 
         # ================================================      =============================
         if features.feattype == 'regression':
@@ -477,4 +615,5 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         df_best_result_f1.to_excel(writer_clf,sheet_name="f1")
 
 writer_clf.save()
+print(df_best_result_allThreeClassifiers)
 df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"_"+args.Feature_mode+"_3clsferRESULT.xlsx")

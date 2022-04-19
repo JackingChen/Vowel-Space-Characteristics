@@ -57,6 +57,12 @@ from metric import Evaluation_method
 import random
 from phonation.phonation import  Phonation
 from SlidingWindow import slidingwindow as SW
+
+
+required_path_app = '/homes/ssd1/jackchen/DisVoice/articulation'  # for WER module imported in metric
+sys.path.append(required_path_app)
+from HYPERPARAM import phonewoprosody, Label
+from HYPERPARAM.PeopleSelect import SellectP_define
 # =============================================================================
 def get_args():
     # we add compulsary arguments as named arguments for readability
@@ -122,7 +128,7 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
                 # add ADOS_cate to df_formant_statistic
                 for i in range(len(df_formant_statistic)):
                     name=df_formant_statistic.iloc[i].name
-                    df_formant_statistic.loc[name,'ADOS_cate']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate'].values
+                    df_formant_statistic.loc[name,'ADOS_cate_C']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate_C'].values
                 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
                                                 df_formant_statistic['i_num'] +\
                                                 df_formant_statistic['a_num']
@@ -136,7 +142,10 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
 
     return df_person_segment_feature_dict, Vowels_AUI_info_dict, MissingSegment_bag
 
-def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule, outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'):
+def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule,\
+                                         outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+                                         prefix='Phonation_utt_symb',\
+                                         suffix='KID_FromASD_DOCKID'):
     pool = Pool(int(os.cpu_count()))
     keys=[]
     interval=20
@@ -153,8 +162,8 @@ def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule, o
         for utt, df_utt in load_file_tmp.items():
             Formants_utt_symb_limited[utt]=df_utt
     
-    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl","wb"))
-    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl")
+    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix),"wb"))
+    print('Phonation_utt_symb saved to ',outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix))
     
 def GetValuemeanstd(AUI_info_total,PhoneMapp_dict,Inspect_features):
     People_data_distrib=Dict()
@@ -457,14 +466,15 @@ features=[
        'localJitter_var(A:,i:,u:)', 'localabsoluteJitter_var(A:,i:,u:)',
        'localShimmer_var(A:,i:,u:)',
        ]
-exclude_cols=['ADOS_cate']   # covariance of only two classes are easily to be zero
+exclude_cols=['ADOS_cate_C']   # covariance of only two classes are easily to be zero
 FilteredFeatures = [c for c in features if c not in exclude_cols]
 # =============================================================================
 syncrony=Syncrony()
 Phonation_temporal_poolMed=['mean','var']
 df_syncrony_measurement_phonation_all=pd.DataFrame()
 
-for PhoneOfInterest_str in df_POI_person_segment_feature_dict.keys():
+# for PhoneOfInterest_str in df_POI_person_segment_feature_dict.keys():
+for PhoneOfInterest_str in ['A:,i:,u:']:
     df_POI_person_segment_feature_PhoneOfInterest_str_dict=df_POI_person_segment_feature_dict[PhoneOfInterest_str]
     df_person_segment_feature_dict=df_POI_person_segment_feature_PhoneOfInterest_str_dict.segment
     df_person_half_feature_dict=df_POI_person_segment_feature_PhoneOfInterest_str_dict.half
@@ -493,3 +503,98 @@ for col in df_syncrony_measurement.columns:
     if df_syncrony_measurement[col].isnull().values.any():
         lst.append(col)
 
+# =============================================================================
+'''
+
+    Analysis area
+
+'''
+import seaborn as sns
+from pylab import text
+dfFormantStatisticpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
+feat='Syncrony_measure_of_variance_phonation'
+# =============================================================================
+df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='ASD_DOCKID')
+df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
+df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='TD_DOCKID')
+if not os.path.exists(df_formant_statistic_ASDTD_path) or not os.path.exists(df_formant_statistic77_path):
+    raise FileExistsError
+df_feature_TD=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))
+
+
+sellect_people_define=SellectP_define()
+SevereASD_age_sex_match=sellect_people_define.SevereASD_age_sex_match_ver2
+MildASD_age_sex_match=sellect_people_define.MildASD_age_sex_match_ver2
+TD_normal_ver2=sellect_people_define.TD_normal_ver2
+
+df_formant_statistic_agesexmatch_ASDSevere=df_feature_ASD.copy().loc[SevereASD_age_sex_match]
+df_formant_statistic_agesexmatch_ASDMild=df_feature_ASD.copy().loc[MildASD_age_sex_match]
+df_formant_statistic_TD_normal=df_feature_TD.copy().loc[TD_normal_ver2]
+
+TopTop_data_lst=[]
+TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDSevere','df_formant_statistic_TD_normal'])
+TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_TD_normal'])
+TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_agesexmatch_ASDSevere'])
+
+
+
+
+self_specify_cols=[c for c in df_syncrony_measurement_phonation_all.columns if 'Divergence' in c]
+Parameters=df_syncrony_measurement_phonation_all.columns
+if len(self_specify_cols) > 0:
+    inspect_cols=self_specify_cols
+else:
+    inspect_cols=Parameters
+
+Record_dict=Dict()
+All_cmp_dict=Dict()
+for Top_data_lst in TopTop_data_lst:
+    Record_dict[' vs '.join(Top_data_lst)]=pd.DataFrame(index=inspect_cols)
+    All_cmp_dict[' vs '.join(Top_data_lst)]=pd.DataFrame(index=inspect_cols)
+    import warnings
+    warnings.filterwarnings("ignore")
+    for columns in inspect_cols:
+        # =============================================================================
+        fig, ax = plt.subplots()
+        # =============================================================================
+        data=[]
+        dataname=[]
+        for dstr in Top_data_lst:
+            dataname.append(dstr)
+            data.append(vars()[dstr])
+        # =============================================================================
+        for i,d in enumerate(data):
+            # ax = sns.distplot(d[columns], ax=ax, kde=False)
+            ax = sns.distplot(d[columns], ax=ax, label=Top_data_lst)
+            title='{0}'.format('Inspecting feature ' + columns)
+            plt.title( title )
+        fig.legend(labels=dataname)  
+        # =============================================================================
+        for tests in [stats.mannwhitneyu, stats.ttest_ind]:
+            test_results=tests(vars()[Top_data_lst[0]][columns],vars()[Top_data_lst[1]][columns])
+            p_val=test_results[1]
+
+            if tests == stats.mannwhitneyu:
+                mean_difference=vars()[Top_data_lst[0]][columns].median() - vars()[Top_data_lst[1]][columns].median()
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+' - '.join(Top_data_lst)]=mean_difference
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+'p']=p_val
+            elif tests == stats.ttest_ind:
+                mean_difference=vars()[Top_data_lst[0]][columns].mean() - vars()[Top_data_lst[1]][columns].mean()
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+' - '.join(Top_data_lst)]=mean_difference
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+'p']=p_val
+            if p_val < 0.05:
+                print('Testing Feature: ',columns)
+                print(mean_difference , np.round(test_results[1],6))
+                if tests == stats.mannwhitneyu:
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+' - '.join(Top_data_lst)]=mean_difference
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+'p']=p_val
+                if tests == stats.ttest_ind:
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+' - '.join(Top_data_lst)]=mean_difference
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+'p']=p_val
+        # =============================================================================
+        addtext='{0}/({1})'.format(np.round(mean_difference,3),np.round(p_val,3))
+        text(0.9, 0.9, addtext, ha='center', va='center', transform=ax.transAxes)
+        addtextvariable='{0} vs {1}'.format(Top_data_lst[0],Top_data_lst[1])
+        text(0.9, 0.6, addtextvariable, ha='center', va='center', transform=ax.transAxes)
+        # =============================================================================
+    warnings.simplefilter('always')

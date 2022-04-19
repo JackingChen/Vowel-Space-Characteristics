@@ -142,7 +142,7 @@ def get_args():
                         help='path of the base directory')
     parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--reFilter', default=True,
+    parser.add_argument('--reFilter', default=False,
                             help='')
     parser.add_argument('--correlation_type', default='spearmanr',
                             help='spearmanr|pearsonr')
@@ -154,7 +154,7 @@ def get_args():
                             help='kid_TD| kid88')
     # parser.add_argument('--Inspect_features', default=['F1','F2'],
     #                         help='')
-    parser.add_argument('--Inspect_features_phonations', default=['intensity_mean', 'meanF0', 'stdevF0', 'hnr', 'localJitter', 'localabsoluteJitter', 'rapJitter', 'ddpJitter', 'localShimmer', 'localdbShimmer'],
+    parser.add_argument('--Inspect_features_phonations', default=['intensity_mean', 'meanF0', 'stdevF0', 'hnr', 'localJitter', 'localabsoluteJitter', 'rapJitter', 'localShimmer', 'localdbShimmer', 'apq3Shimmer'],
                             help="['duration', 'intensity_mean', 'meanF0', 'stdevF0', 'hnr', 'localJitter', 'localabsoluteJitter', 'rapJitter', 'ppq5Jitter', 'ddpJitter', 'localShimmer', 'localdbShimmer', 'apq3Shimmer', 'aqpq5Shimmer', 'apq11Shimmer', 'ddaShimmer']")
     
     args = parser.parse_args()
@@ -198,7 +198,7 @@ PhoneOfInterest=list(PhoneMapp_dict.keys())
 # =============================================================================
 
 
-''' Filter unqualified Phonation vowels '''
+''' Not doing the filtering '''
 Phonation_people_information=Formant_utt2people_reshape(Phonation_utt_symb,Phonation_utt_symb,Align_OrinCmp=False)
 AUI_info_phonation=Gather_info_certainphones(Phonation_people_information,PhoneMapp_dict,PhoneOfInterest)
 limit_people_rule_Phonation=GetValuelimit_IQR(AUI_info_phonation,PhoneMapp_dict,args.Inspect_features_phonations)
@@ -218,14 +218,14 @@ if os.path.exists(filepath) and args.reFilter==False:
     # If file last modify time is not now (precisions to the hours) than we create new one
     if filemtime != date_now:
         Process_IQRFiltering_Phonation_Multi(Phonation_utt_symb,limit_people_rule_Phonation,\
-                               outpath=outpath,\
-                               prefix=prefix,\
-                               suffix=suffix) # the results will be output as pkl file at outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl"
+                                outpath=outpath,\
+                                prefix=prefix,\
+                                suffix=suffix) # the results will be output as pkl file at outpath+"/[Analyzing]Phonation_utt_symb_limited.pkl"
 else:
     Process_IQRFiltering_Phonation_Multi(Phonation_utt_symb,limit_people_rule_Phonation,\
-                               outpath=outpath,\
-                               prefix=prefix,\
-                               suffix=suffix)
+                                outpath=outpath,\
+                                prefix=prefix,\
+                                suffix=suffix)
 
 Phonation_utt_symb_limited=pickle.load(open(filepath,"rb"))
 ''' multi processing end '''
@@ -262,7 +262,7 @@ module=-1
 agemax=-1
 agemin=-1
 ADOScate=-1
-N=2
+N=0
 df_phonation_statistic_77=criterion_filter(df_phonation_statistic,\
                                         constrain_sex=sex,constrain_module=module,N=N,constrain_agemax=agemax,constrain_agemin=agemin,constrain_ADOScate=ADOScate,\
                                         evictNamelst=[])
@@ -286,18 +286,13 @@ columns=[
  'intensity_mean_mean(A:,i:,u:)', 'meanF0_mean(A:,i:,u:)',
        'stdevF0_mean(A:,i:,u:)', 'hnr_mean(A:,i:,u:)',
        'localJitter_mean(A:,i:,u:)', 'localabsoluteJitter_mean(A:,i:,u:)',
-       'rapJitter_mean(A:,i:,u:)', 'ddpJitter_mean(A:,i:,u:)',
-       'localShimmer_mean(A:,i:,u:)', 'localdbShimmer_mean(A:,i:,u:)',
+       'rapJitter_mean(A:,i:,u:)', 'localShimmer_mean(A:,i:,u:)',
+       'localdbShimmer_mean(A:,i:,u:)', 'apq3Shimmer_mean(A:,i:,u:)',
        'intensity_mean_var(A:,i:,u:)', 'meanF0_var(A:,i:,u:)',
        'stdevF0_var(A:,i:,u:)', 'hnr_var(A:,i:,u:)',
        'localJitter_var(A:,i:,u:)', 'localabsoluteJitter_var(A:,i:,u:)',
-       'rapJitter_var(A:,i:,u:)', 'ddpJitter_var(A:,i:,u:)',
-       'localShimmer_var(A:,i:,u:)', 'localdbShimmer_var(A:,i:,u:)',
-       'intensity_mean_max(A:,i:,u:)', 'meanF0_max(A:,i:,u:)',
-       'stdevF0_max(A:,i:,u:)', 'hnr_max(A:,i:,u:)',
-       'localJitter_max(A:,i:,u:)', 'localabsoluteJitter_max(A:,i:,u:)',
-       'rapJitter_max(A:,i:,u:)', 'ddpJitter_max(A:,i:,u:)',
-       'localShimmer_max(A:,i:,u:)', 'localdbShimmer_max(A:,i:,u:)'
+       'rapJitter_var(A:,i:,u:)', 'localShimmer_var(A:,i:,u:)',
+       'localdbShimmer_var(A:,i:,u:)', 'apq3Shimmer_var(A:,i:,u:)'
     ]
 
 df_phonation_statistic_77['u_num+i_num+a_num']=df_phonation_statistic_77['u_num'] +\
@@ -322,7 +317,7 @@ def TBMEB1Preparation_SaveForClassifyData(dfFormantStatisticpath,\
         os.makedirs(dfFormantStatisticFractionpath)
     pickle.dump(df_phonation_statistic_77,open(dfFormantStatisticFractionpath+'/df_phonation_statistic_77.pkl','wb'))
 
-TBMEB1Preparation_SaveForClassifyData(pklpath,df_phonation_statistic_77)
+# TBMEB1Preparation_SaveForClassifyData(pklpath,df_phonation_statistic_77)
 
 # =============================================================================
 ''' Not presented in TBME2021 '''
@@ -333,3 +328,179 @@ TBMEB1Preparation_SaveForClassifyData(pklpath,df_phonation_statistic_77)
 # =============================================================================
 
 
+# =============================================================================
+# Workplace 
+# =============================================================================
+from sklearn.model_selection import GridSearchCV, cross_val_score, cross_val_predict
+import sklearn
+from sklearn.linear_model import ElasticNet
+from sklearn.model_selection import LeaveOneOut
+from sklearn.metrics import r2_score
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+
+
+def TBMEB1Preparation_LoadForFromOtherData(dfFormantStatisticpath):
+    '''
+        
+        We generate data for nested cross-valated analysis in Table.5 in TBME2021
+        
+        The data will be stored at Pickles/Session_formants_people_vowel_feat
+    
+    '''
+    dfFormantStatisticFractionpath=dfFormantStatisticpath+'/Session_formants_people_vowel_feat'
+    if not os.path.exists(dfFormantStatisticFractionpath):
+        raise FileExistsError('Directory not exist')
+    df_phonation_statistic_77=pickle.load(open(dfFormantStatisticFractionpath+'/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl','rb'))
+    return df_phonation_statistic_77
+
+df_formant_statistic_77=TBMEB1Preparation_LoadForFromOtherData(pklpath)
+df_formant_statistic_added=pd.concat([df_phonation_statistic_77,df_formant_statistic_77],axis=1)
+df_formant_statistic_added=df_formant_statistic_added.loc[:,~df_formant_statistic_added.columns.duplicated()]
+
+
+
+# Aaa_check=df_formant_statistic_added[feature_chos_lst_top]
+
+sex=-1
+module=-1
+agemax=-1
+agemin=-1
+ADOScate=-1
+N=0
+df_formant_statistic_added=criterion_filter(df_formant_statistic_added,\
+                                        constrain_sex=sex,constrain_module=module,N=N,constrain_agemax=agemax,constrain_agemin=agemin,constrain_ADOScate=ADOScate,\
+                                        evictNamelst=[])
+
+
+''' cross validation prediction '''
+
+# feature_chos_lst_top=['localabsoluteJitter_mean(A:,i:,u:)','localJitter_mean(A:,i:,u:)',\
+#                       'rapJitter_var(A:,i:,u:)']
+feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)']
+baseline_lst=['FCR2']
+
+
+# C_variable=np.array([0.001,0.01, 0.1,0.5,1.0,10.0,50,100])
+C_variable=np.array(np.arange(0.1,1.5,0.1))
+Classifier={}
+loo=LeaveOneOut()
+# CV_settings=loo
+CV_settings=10
+pca = PCA(n_components=1)
+
+# =============================================================================
+Classifier['SVR']={'model':sklearn.svm.SVR(),\
+                  'parameters':{'C':C_variable,\
+                    # 'kernel': ['rbf','sigmoid'],\
+                    'kernel': ['rbf'],\
+                    'gamma': ['scale'],\
+                    # 'gamma': ['auto'],\
+                    # 'gamma': ['scale','auto'],\
+                                }}
+Classifier['EN']={'model':ElasticNet(random_state=0),\
+                  'parameters':{'alpha':np.arange(0,1,0.25),\
+                                'l1_ratio': np.arange(0,1,0.25),\
+                                'max_iter':[2000]}} #Just a initial value will be changed by parameter tuning
+                                                    # l1_ratio = 1 is the lasso penalty
+
+Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
+                  'parameters':{'fit_intercept':[True],\
+                                }}
+
+clf_keys='SVR'
+clf=Classifier[clf_keys]
+# comb2 = combinations(feature_chos_lst_top, 2)
+# comb3 = combinations(feature_chos_lst_top, 3)
+# comb4 = combinations(feature_chos_lst_top, 4)
+# combinations_lsts=list(comb2) + list(comb3)+ list(comb4)
+combinations_lsts=[feature_chos_lst_top]
+lab_chos_lst=['ADOS_C']
+
+RESULT_dict=Dict()
+for feature_chos_tup in combinations_lsts:
+    feature_chos_lst=list(feature_chos_tup)
+    for feature_chooses in [feature_chos_lst]:
+        pipe = Pipeline(steps=[("model", clf['model'])])
+        # pipe = Pipeline(steps=[ ("pca", pca), ("model", clf['model'])])
+        param_grid = {
+        # "pca__n_components": [3],
+        "model__C": C_variable,
+        # "model__l1_ratio": np.arange(0,1,0.25),
+        # "model__alpha": np.arange(0,1,0.25),
+        # "model__max_iter": [2000],
+        }
+        features=Dict()
+        # features.X=df_formant_statistic[feature_chooses]
+        # features.y=df_formant_statistic[lab_chos_lst]
+        
+        features.X=df_formant_statistic_added[feature_chooses]
+        features.y=df_formant_statistic_added[lab_chos_lst]
+        
+        Gclf = GridSearchCV(pipe, param_grid=param_grid, scoring='r2', cv=CV_settings, refit=True, n_jobs=-1)
+        CVpredict=cross_val_predict(Gclf, features.X, features.y.values.ravel(), cv=CV_settings)  
+        Gclf.fit(features.X,features.y)
+        
+        if clf_keys == "EN":
+            print('The coefficient of best estimator is: ',Gclf.best_estimator_.coef_)
+        
+        print("The best score with scoring parameter: 'r2' is", Gclf.best_score_)
+        print("The best parameters are :", Gclf.best_params_)
+        
+        # Score=cross_val_score(Gclf, features.X, features.y, cv=10)
+        
+        r2=r2_score(features.y,CVpredict )
+        n,p=features.X.shape
+        r2_adj=1-(1-r2)*(n-1)/(n-p-1)
+        pearson_result, pearson_p=pearsonr(features.y.values.ravel(),CVpredict )
+        spear_result, spearman_p=spearmanr(features.y.values.ravel(),CVpredict )
+        
+        
+        feature_keys='+'.join(feature_chooses)
+        print('Feature {0}, r2_result {1}, pearson_result {2} ,spear_result {3}'.format(feature_keys, r2_adj, pearson_result,spear_result))
+        RESULT_dict[feature_keys]=[r2_adj,pearson_result,spear_result]
+
+
+df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index')
+''' multiple regression model '''
+# =============================================================================
+# 
+# =============================================================================
+
+import statsmodels.api as sm
+from itertools import combinations
+feature_chos_lst=['between_covariance_norm(A:,i:,u:)',
+'sam_wilks_lin_norm(A:,i:,u:)',
+'hotelling_lin_norm(A:,i:,u:)',
+'pillai_lin_norm(A:,i:,u:)']
+baseline_lst=['FCR2']
+comb2 = combinations(feature_chos_lst, 2)
+print(list(comb2))
+
+[('between_covariance_norm(A:,i:,u:)', 'sam_wilks_lin_norm(A:,i:,u:)'),
+ ('between_covariance_norm(A:,i:,u:)', 'hotelling_lin_norm(A:,i:,u:)'),
+ ('between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)'),
+ ('sam_wilks_lin_norm(A:,i:,u:)', 'hotelling_lin_norm(A:,i:,u:)'),
+ ('sam_wilks_lin_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)'),
+ ('hotelling_lin_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)')]
+
+['absAng_a','absAng_u','absAng_i', 'ang_ai','ang_iu','ang_ua']
+
+# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)','Between_Within_Det_ratio_norm(A:,i:,u:)']]
+# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','dcorr_12']]
+# X = df_formant_statistic[[ 'pillai_lin_norm(A:,i:,u:)','dcorr_12']]
+# X = df_formant_statistic[['dcorr_12','dcov_12']]
+# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ai']]
+# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ua']] 
+# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ai','ang_ua']] 
+# X = df_formant_statistic[['FCR2']] 
+X = df_formant_statistic_added[['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)','dcorr_12']]
+y = df_formant_statistic_added[lab_chos_lst]
+## fit a OLS model with intercept on TV and Radio
+X = sm.add_constant(X)
+est = sm.OLS(y, X).fit()
+est.summary()
+
+ypred = est.predict(X)
+spear_result, spearman_p=spearmanr(y,ypred )
+print('Manual test , spear_result {1}'.format(feature_keys,spear_result))

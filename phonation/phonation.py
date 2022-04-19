@@ -82,15 +82,16 @@ class Phonation:
                 # =============================================================================
                 df_mean=df_vowel[self.Inspect_features].mean(axis=0)
                 df_var=df_vowel[self.Inspect_features].var(axis=0)
+                df_max=df_vowel[self.Inspect_features].max(axis=0)
                 
-                df_Sessional_feat=pd.concat([df_mean,df_var],axis=0).T
+                df_Sessional_feat=pd.concat([df_mean,df_var,df_max],axis=0).T
                 columns=['{0}_{1}'.format(c,Sp)  for Sp in Sessional_pools for c in df_vowel[self.Inspect_features].columns]
                 df_Sessional_feat.index=columns
                 return df_Sessional_feat.to_dict()
             
             def Store_FeatVals(RESULT_dict,df_vowel,Inspect_features=['stdevF0','localJitter', 'localabsoluteJitter','localShimmer'],\
                                cluster_str='u:,i:,A:'):
-                df_Sessional_feat = MeanVar_features(df_vowel, Sessional_pools=['mean','var'])
+                df_Sessional_feat = MeanVar_features(df_vowel, Sessional_pools=['mean','var', 'max'])
                 
                 for keys, values in df_Sessional_feat.items():
                     RESULT_dict[keys+'({0})'.format(cluster_str)]=values
@@ -179,17 +180,19 @@ class Phonation_disvoice:
     >>> features3=phonation.extract_features_path(path_audios, static, plots=False, fmt="dataframe")
 
     """
-    def __init__(self):
+    def __init__(self, maxf0=350, minf0=60):
         self.pitch_method="rapt"
         self.size_frame=0.04
         self.size_step=0.02
-        self.minf0=60
-        self.maxf0=350
+        self.minf0=minf0
+        self.maxf0=maxf0
         self.voice_bias=-0.2
         self.energy_thr_percent=0.025
         self.PATH = os.path.dirname(os.path.abspath(__file__))
         self.head=["DF0", "DDF0", "Jitter", "Shimmer", "apq", "ppq", "logE"]
-
+        # self.head=["Jitter", "Shimmer", "apq", "ppq", "logE"]
+    def _update_pitch_method(self, pitch_method):
+        self.pitch_method=pitch_method
 
 
     def plot_phon(self, data_audio,fs,F0,logE):
@@ -315,6 +318,7 @@ class Phonation_disvoice:
             feat_mat=np.vstack((DF0[11:], DDF0[10:], Jitter[12:], Shimmer[12:], apq, ppq[6:], logE[12:])).T
 
         feat_v=dynamic2statict([DF0, DDF0, Jitter, Shimmer, apq, ppq, logE])
+        # feat_v=dynamic2statict([Jitter, Shimmer, apq, ppq, logE])
 
 
         if fmt=="npy" or fmt=="txt":
@@ -569,10 +573,10 @@ class Phonation_jack:
             apq=Shimmer
 
 
-        # if len(Shimmer)==len(apq):
-        #     feat_mat=np.vstack((DF0[5:], DDF0[4:], Jitter[6:], Shimmer[6:], apq[6:], ppq, logE[6:])).T
-        # else:
-        #     feat_mat=np.vstack((DF0[11:], DDF0[10:], Jitter[12:], Shimmer[12:], apq, ppq[6:], logE[12:])).T
+        if len(Shimmer)==len(apq):
+            feat_mat=np.vstack((DF0[5:], DDF0[4:], Jitter[6:], Shimmer[6:], apq[6:], ppq, logE[6:])).T
+        else:
+            feat_mat=np.vstack((DF0[11:], DDF0[10:], Jitter[12:], Shimmer[12:], apq, ppq[6:], logE[12:])).T
 
         feat_v=dynamic2statict([DF0, DDF0, Jitter, Shimmer, apq, ppq, logE])
         

@@ -357,8 +357,8 @@ df_formant_statistic_77=criterion_filter(df_formant_statistic,\
                                         constrain_sex=sex,constrain_module=module,N=N,constrain_agemax=agemax,constrain_agemin=agemin,constrain_ADOScate=ADOScate,\
                                         evictNamelst=[])
 
-# pickle.dump(df_formant_statistic_77,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
-pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
+pickle.dump(df_formant_statistic_77,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
+# pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
 
 
 
@@ -368,11 +368,9 @@ pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pk
 columns=list(set(df_formant_statistic.columns) - set(additional_columns)) # Exclude added labels
 columns=list(set(columns) - set([co for co in columns if "_norm" not in co]))
 columns= columns + [co for co in columns if "Between_Within" in co]
-columns= columns + ['VSA1','FCR','ConvexHull', 'MeanVFD','VSA2','FCR2','FCR2_sum']
-columns= columns + ['VSA1','FCR','VSA2','FCR2']
-columns= columns + ['absAng_a','absAng_u','absAng_i', 'ang_ai','ang_iu','ang_ua','Angles']
-columns= columns + ['dcov_12','dcorr_12','dvar_1', 'dvar_2','pear_12']
-columns= columns + ['dcor_a','dcor_u','dcor_i']
+columns= columns + ['ConvexHull', 'MeanVFD','VSA2','FCR2']
+# columns= columns + ['absAng_a','absAng_u','absAng_i', 'ang_ai','ang_iu','ang_ua','Angles']
+columns= columns + ['dcov_12','dcorr_12','dvar_1', 'dvar_2','pear_12','spear_12','kendall_12']
 columns= columns + ['pointDistsTotal','repulsive_force']
 # columns= columns + ['FCR2_uF2','FCR2_aF2','FCR2_iF1','FCR2_uF1','aF2']
 
@@ -405,7 +403,7 @@ for file in condfiles:
 label_correlation_choose_lst=label_generate_choose_lst
 # label_correlation_choose_lst=['ADOS_C','T_ADOS_C','AA1','AA2','AA3','AA4','AA5','AA6','AA7','AA8','AA9']
 
-
+# df_formant_statistic=df_formant_statistic.drop(index='2015_12_06_01_097')
 N=2
 Eval_med=Evaluation_method()
 Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
@@ -454,6 +452,363 @@ def Survey_nice_variable(df_result_table):
 
 Survey_nice_variable(Aaadf_spearmanr_table_NoLimit)
 aaa=ccc
+# =============================================================================
+'''
+    feature Classification 
+    
+
+'''
+from sklearn.model_selection import GridSearchCV, cross_val_score, cross_val_predict
+import sklearn
+from sklearn.linear_model import ElasticNet
+from sklearn.model_selection import LeaveOneOut
+from sklearn.metrics import r2_score
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import f1_score,recall_score,roc_auc_score
+from sklearn.tree import DecisionTreeClassifier
+import seaborn as sns
+from pylab import text
+dfFormantStatisticpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
+feat='Formant_AUI_tVSAFCRFvals'
+
+df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromASD_DOCKID')
+df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
+df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='kid_TD')
+if not os.path.exists(df_formant_statistic_ASDTD_path) or not os.path.exists(df_formant_statistic77_path):
+    raise FileExistsError
+df_feature_TD=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))
+
+
+def Add_label(df_formant_statistic,Label,label_choose='ADOS_S'):
+    for people in df_formant_statistic.index:
+        bool_ind=Label.label_raw['name']==people
+        df_formant_statistic.loc[people,label_choose]=Label.label_raw.loc[bool_ind,label_choose].values
+    return df_formant_statistic
+# =============================================================================
+# ADD label
+df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_CSS')
+df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_C')
+df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_S')
+# create different ASD cohort
+filter_Minimal_TCSS=df_feature_ASD['ADOS_cate_CSS']==0
+filter_low_TCSS=df_feature_ASD['ADOS_cate_CSS']==1
+filter_moderate_TCSS=df_feature_ASD['ADOS_cate_CSS']==2
+filter_high_TCSS=df_feature_ASD['ADOS_cate_CSS']==3
+
+filter_Notautism_TC=df_feature_ASD['ADOS_cate_C']==0
+filter_ASD_TC=df_feature_ASD['ADOS_cate_C']==1
+filter_Autism_TC=df_feature_ASD['ADOS_cate_C']==2
+
+filter_Notautism_TS=df_feature_ASD['ADOS_cate_S']==0
+filter_ASD_TS=df_feature_ASD['ADOS_cate_S']==1
+filter_Autism_TS=df_feature_ASD['ADOS_cate_S']==2
+
+df_feature_Minimal_CSS=df_feature_ASD[filter_Minimal_TCSS]
+df_feature_low_CSS=df_feature_ASD[filter_low_TCSS]
+df_feature_moderate_CSS=df_feature_ASD[filter_moderate_TCSS]
+df_feature_high_CSS=df_feature_ASD[filter_high_TCSS]
+df_feature_lowMinimal_CSS=df_feature_ASD[filter_low_TCSS | filter_Minimal_TCSS]
+df_feature_moderatehigh_CSS=df_feature_ASD[filter_moderate_TCSS | filter_high_TCSS]
+
+df_feature_Notautism_TC=df_feature_ASD[filter_Notautism_TC]
+df_feature_ASD_TC=df_feature_ASD[filter_ASD_TC]
+df_feature_NotautismandASD_TC=df_feature_ASD[filter_Notautism_TC | filter_ASD_TC]
+df_feature_Autism_TC=df_feature_ASD[filter_Autism_TC]
+
+df_feature_Notautism_TS=df_feature_ASD[filter_Notautism_TS]
+df_feature_ASD_TS=df_feature_ASD[filter_ASD_TS]
+df_feature_NotautismandASD_TS=df_feature_ASD[filter_Notautism_TS | filter_ASD_TS]
+df_feature_Autism_TS=df_feature_ASD[filter_Autism_TS]
+
+TopTop_data_lst=[]
+TopTop_data_lst.append(['df_feature_ASD','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_low_CSS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
+
+TopTop_data_lst.append(['df_feature_low_CSS','df_feature_moderate_CSS'])
+TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_high_CSS'])
+TopTop_data_lst.append(['df_feature_low_CSS','df_feature_high_CSS'])
+TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderate_CSS'])
+TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_high_CSS'])
+
+TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_Autism_TC','df_feature_TD'])
+
+TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC'])
+TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_Autism_TC'])
+TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_Autism_TC'])
+TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC','df_feature_Autism_TC'])
+
+
+TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_Autism_TS','df_feature_TD'])
+
+TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS'])
+TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_Autism_TS'])
+TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_Autism_TS'])
+TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS','df_feature_Autism_TS'])
+
+self_specify_cols=[
+    'FCR2',
+    'VSA2',
+    'between_covariance_norm(A:,i:,u:)', 
+    'between_variance_norm(A:,i:,u:)',
+    'within_covariance_norm(A:,i:,u:)', 
+    'within_variance_norm(A:,i:,u:)',
+    'total_covariance_norm(A:,i:,u:)', 
+    'total_variance_norm(A:,i:,u:)',
+    'sam_wilks_lin_norm(A:,i:,u:)', 
+    'pillai_lin_norm(A:,i:,u:)',
+    'hotelling_lin_norm(A:,i:,u:)', 
+    'roys_root_lin_norm(A:,i:,u:)',
+    'Between_Within_Det_ratio_norm(A:,i:,u:)',
+    'Between_Within_Tr_ratio_norm(A:,i:,u:)',
+    'pear_12',
+    'spear_12',
+    'kendall_12',
+    'dcorr_12'
+    ]
+
+if len(self_specify_cols) > 0:
+    inspect_cols=self_specify_cols
+else:
+    inspect_cols=columns
+
+print('Start doing U-tests and T-tests ')
+
+plot=False
+Record_dict=Dict()
+All_cmp_dict=Dict()
+for Top_data_lst in TopTop_data_lst:
+    Record_dict[' vs '.join(Top_data_lst)]=pd.DataFrame(index=inspect_cols)
+    All_cmp_dict[' vs '.join(Top_data_lst)]=pd.DataFrame(index=inspect_cols)
+    import warnings
+    warnings.filterwarnings("ignore")
+    for columns in inspect_cols:
+        # =============================================================================
+        # =============================================================================
+        for tests in [stats.mannwhitneyu, stats.ttest_ind]:
+            test_results=tests(vars()[Top_data_lst[0]][columns],vars()[Top_data_lst[1]][columns])
+            p_val=test_results[1]
+
+            if tests == stats.mannwhitneyu:
+                mean_difference=vars()[Top_data_lst[0]][columns].median() - vars()[Top_data_lst[1]][columns].median()
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+' - '.join(Top_data_lst)]=mean_difference
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+'p']=p_val
+            elif tests == stats.ttest_ind:
+                mean_difference=vars()[Top_data_lst[0]][columns].mean() - vars()[Top_data_lst[1]][columns].mean()
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+' - '.join(Top_data_lst)]=mean_difference
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+'p']=p_val
+            if p_val < 0.05:
+                print('Testing Feature: ',columns)
+                print(mean_difference , np.round(test_results[1],6))
+                if tests == stats.mannwhitneyu:
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+' - '.join(Top_data_lst)]=mean_difference
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+'p']=p_val
+                if tests == stats.ttest_ind:
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+' - '.join(Top_data_lst)]=mean_difference
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+'p']=p_val
+                
+                # =============================================================================
+                if plot:
+                    fig, ax = plt.subplots()
+                    data=[]
+                    dataname=[]
+                    for dstr in Top_data_lst:
+                        dataname.append(dstr)
+                        data.append(vars()[dstr])
+                    for i,d in enumerate(data):
+                        # ax = sns.distplot(d[columns], ax=ax, kde=False)
+                        ax = sns.distplot(d[columns], ax=ax, label=Top_data_lst)
+                        title='{0}'.format('Inspecting feature ' + columns)
+                        plt.title( title )
+                    fig.legend(labels=dataname)  
+                    
+                    addtext='{0}/({1})'.format(np.round(mean_difference,3),np.round(p_val,3))
+                    text(0.9, 0.9, addtext, ha='center', va='center', transform=ax.transAxes)
+                    addtextvariable='{0} vs {1}'.format(Top_data_lst[0],Top_data_lst[1])
+                    text(0.9, 0.6, addtextvariable, ha='center', va='center', transform=ax.transAxes)
+    warnings.simplefilter('always')
+
+# Record_certainCol_dict={}
+df_CertainCol_U=pd.DataFrame()
+df_CertainCol_T=pd.DataFrame()
+for test_name, values in Record_dict.items():
+    data_T=values.loc[:,values.columns.str.startswith("TTest")]
+    data_U=values.loc[:,values.columns.str.startswith("UTest")]
+    # Utest results
+    if len(data_U.columns) == 2:
+        df_feat=data_U.iloc[:,0]
+        df_feat.columns=[test_name]
+    elif len(data_U.columns) == 0:
+        df_feat=data_U
+        df_feat[test_name]=np.nan
+    df_CertainCol_U=pd.concat([df_CertainCol_U,df_feat],axis=1)
+    
+    # Ttest results
+    if len(data_T.columns) == 2:
+        df_feat=data_T.iloc[:,0]
+        df_feat.columns=[test_name]
+    elif len(data_T.columns) == 0:
+        df_feat=data_T
+        df_feat[test_name]=np.nan
+
+    df_CertainCol_T=pd.concat([df_CertainCol_T,df_feat],axis=1)
+df_CertainCol_U=df_CertainCol_U.T
+df_CertainCol_T=df_CertainCol_T.T
+
+#Clear Record_dict
+Record_cleaned_dict={}
+for keys, values in Record_dict.items():
+    Record_cleaned_dict[keys]=values.dropna(thresh=2,axis=0)
+
+aaa=ccc
+# =============================================================================
+# 
+# =============================================================================
+lab_chos_lst=['ASDclassify']
+# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','dcorr_12']
+
+
+# C_variable=np.array(np.arange(0.1,1.1,0.2))
+# epsilon=np.array(np.arange(0.1,1.5,0.1) )
+# epsilon=np.array(np.arange(0.01,0.15,0.02))
+# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.1)))
+C_variable=np.array([0.001,0.01,10.0,50,100])
+Classifier={}
+loo=LeaveOneOut()
+# CV_settings=loo
+CV_settings=10
+pca = PCA(n_components=1)
+
+# C_variable=np.array(np.arange(0.1,1.5,0.1))
+# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.2))  )
+# C_variable=np.array([0.01, 0.1,0.5,1.0, 5.0])
+n_estimator=[ 32, 50, 64, 100 ,128, 256]
+# =============================================================================
+Classifier={}
+Classifier['SVC']={'model':sklearn.svm.SVC(),\
+                  'parameters':{'model__random_state':[1],\
+                    'model__C':C_variable,\
+                    'model__kernel': ['rbf'],\
+                      # 'model__gamma':['auto'],\
+                    'model__probability':[True],\
+                                }}
+Classifier['DT']={'model':DecisionTreeClassifier(),\
+                  'parameters':{'model__random_state':[1],\
+                                'model__criterion':['gini','entropy'],
+                                'model__splitter':['splitter','random'],\
+                                }}
+
+    
+clf=Classifier['SVC']
+
+
+
+columns=[
+    'FCR2',
+    'VSA2',
+    'between_covariance_norm(A:,i:,u:)', 
+    'between_variance_norm(A:,i:,u:)',
+    'within_covariance_norm(A:,i:,u:)', 
+    'within_variance_norm(A:,i:,u:)',
+    'total_covariance_norm(A:,i:,u:)', 
+    'total_variance_norm(A:,i:,u:)',
+    'sam_wilks_lin_norm(A:,i:,u:)', 
+    'pillai_lin_norm(A:,i:,u:)',
+    'hotelling_lin_norm(A:,i:,u:)', 
+    'roys_root_lin_norm(A:,i:,u:)',
+    'Between_Within_Det_ratio_norm(A:,i:,u:)',
+    'Between_Within_Tr_ratio_norm(A:,i:,u:)',
+    'pear_12',
+    'spear_12',
+    'kendall_12',
+    'dcorr_12'
+    ]
+
+featuresOfInterest=[ [col] for col in columns]
+
+
+
+combinations_lsts=[ k for k in featuresOfInterest]
+combinations_keylsts=[ k[0] for k in featuresOfInterest]
+
+
+Top_RESULT_dict=Dict()
+for Top_data_lst in TopTop_data_lst:
+    print(Top_data_lst[0], ' vs ', Top_data_lst[1])
+    if len(Top_data_lst) == 2:
+        df_asdTmp, df_tdTmp=vars()[Top_data_lst[0]].copy(), vars()[Top_data_lst[1]].copy()
+        df_asdTmp["ASDclassify"]=1
+        df_tdTmp["ASDclassify"]=2
+        df_ASDcmpVombineTD=pd.concat([df_asdTmp,df_tdTmp],axis=0)
+    elif len(Top_data_lst) == 3:
+        df_adTmp, df_asdTmp, df_nonasdTmp=vars()[Top_data_lst[0]].copy(), vars()[Top_data_lst[1]].copy(), vars()[Top_data_lst[2]].copy()
+        df_adTmp["ASDclassify"]=1
+        df_asdTmp["ASDclassify"]=2
+        df_nonasdTmp["ASDclassify"]=3
+        df_ASDcmpVombineTD=pd.concat([df_adTmp,df_asdTmp,df_nonasdTmp],axis=0)
+
+    RESULT_dict=Dict()
+    for key,feature_chos_tup in zip(combinations_keylsts,combinations_lsts):
+        feature_chos_lst=list(feature_chos_tup)
+        for feature_chooses in [feature_chos_lst]:
+            # pipe = Pipeline(steps=[("model", clf['model'])])
+            pipe = Pipeline(steps=[('scalar',StandardScaler()),("model", clf['model'])])
+            # pipe = Pipeline(steps=[ ("pca", pca), ("model", clf['model'])])
+            p_grid=clf['parameters']
+    
+            Gclf = GridSearchCV(pipe, param_grid=p_grid, scoring='recall_macro', cv=CV_settings, refit=True, n_jobs=-1)
+            
+            features=Dict()
+            # 1. 要多一個columns 是ASDTD
+            features.X=df_ASDcmpVombineTD[feature_chooses]
+            features.y=df_ASDcmpVombineTD[lab_chos_lst]
+            # StandardScaler().fit_transform(features.X)
+            
+            # 2. 改成算UAR, AUC
+            # CVscore=cross_val_score(Gclf, features.X, features.y.values.ravel(), cv=CV_settings,scoring='recall_macro')
+            CVpredict=cross_val_predict(Gclf, features.X, features.y.values.ravel(), cv=CV_settings)  
+            
+            n,p=features.X.shape
+            UAR=recall_score(features.y, CVpredict, average='macro')
+            AUC=roc_auc_score(features.y, CVpredict)
+            f1Score=f1_score(features.y, CVpredict, average='macro')
+            
+            # feature_keys='+'.join(feature_chooses)
+            feature_keys=key
+            print('Feature {0}, UAR {1}, AUC {2} ,f1Score {3}'.format(feature_keys, UAR, AUC,f1Score))
+            RESULT_dict[feature_keys]=[UAR,AUC,f1Score]
+    
+    
+    df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index')
+    df_RESULT_list.columns=['UAR','AUC','f1Score']
+    print(df_RESULT_list)
+    
+    Expiment_str=' vs '.join(Top_data_lst)
+    Top_RESULT_dict[Expiment_str]=df_RESULT_list
+
+Result_UAR_summary={}
+Inspect_metric='UAR'
+for Expiment_str, values in Top_RESULT_dict.items():
+    Result_UAR_summary[Expiment_str]=values[Inspect_metric]
+    
+
+
+df_Result_UAR_summary_list=pd.DataFrame.from_dict(Result_UAR_summary,orient='index')
+del Gclf
+
+
+
 
 # =============================================================================
 ''' 
@@ -482,7 +837,6 @@ def TBMEB1Preparation_LoadForFromOtherData(dfFormantStatisticpath):
         raise FileExistsError('Directory not exist')
     df_phonation_statistic_77=pickle.load(open(dfFormantStatisticFractionpath+'/df_phonation_statistic_77.pkl','rb'))
     return df_phonation_statistic_77
-
 df_phonation_statistic_77=TBMEB1Preparation_LoadForFromOtherData(pklpath)
 df_formant_statistic_added=pd.concat([df_phonation_statistic_77,df_formant_statistic],axis=1)
 df_formant_statistic_added=df_formant_statistic_added.loc[:,~df_formant_statistic_added.columns.duplicated()]
@@ -496,8 +850,6 @@ N=2
 df_formant_statistic_added=criterion_filter(df_formant_statistic_added,\
                                         constrain_sex=sex,constrain_module=module,N=N,constrain_agemax=agemax,constrain_agemin=agemin,constrain_ADOScate=ADOScate,\
                                         evictNamelst=[])
-
-
 ''' cross validation prediction '''
 # feature_chos_lst=['between_covariance_norm(A:,i:,u:)',
 # 'sam_wilks_lin_norm(A:,i:,u:)',
@@ -519,16 +871,17 @@ df_formant_statistic_added=criterion_filter(df_formant_statistic_added,\
 # feature_chos_lst=['FCR2','ang_ua']
 # feature_chos_lst=['FCR2','ang_ai','ang_ua']
 # feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)','dcorr_12']
-feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)']
-# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','dcorr_12']
+# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)']
+feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','dcorr_12']
 baseline_lst=['FCR2']
 
 
+# C_variable=np.array([0.001,0.01, 0.1,0.5,1.0,10.0,50,100])
 C_variable=np.array([0.001,0.01, 0.1,0.5,1.0,10.0,50,100])
 Classifier={}
 loo=LeaveOneOut()
-CV_settings=loo
-# CV_settings=10
+# CV_settings=loo
+CV_settings=10
 pca = PCA(n_components=1)
 
 # =============================================================================
@@ -557,13 +910,14 @@ clf=Classifier['SVR']
 # comb4 = combinations(feature_chos_lst_top, 4)
 # combinations_lsts=list(comb2) + list(comb3)+ list(comb4)
 combinations_lsts=[feature_chos_lst_top]
-
+lab_chos_lst=['ADOS_C']
 
 RESULT_dict=Dict()
 for feature_chos_tup in combinations_lsts:
     feature_chos_lst=list(feature_chos_tup)
     for feature_chooses in [feature_chos_lst,baseline_lst]:
-        pipe = Pipeline(steps=[("model", clf['model'])])
+        # pipe = Pipeline(steps=[("model", clf['model'])])
+        pipe = Pipeline(steps=[('scalar',StandardScaler()),("model", clf['model'])])
         # pipe = Pipeline(steps=[ ("pca", pca), ("model", clf['model'])])
         param_grid = {
         # "pca__n_components": [3],
@@ -578,8 +932,11 @@ for feature_chos_tup in combinations_lsts:
         # features.X=df_formant_statistic[feature_chooses]
         # features.y=df_formant_statistic[lab_chos_lst]
         
-        features.X=df_formant_statistic_added[feature_chooses]
-        features.y=df_formant_statistic_added[lab_chos_lst]
+        # features.X=df_formant_statistic_added[feature_chooses]
+        # features.y=df_formant_statistic_added[lab_chos_lst]
+        
+        features.X=df_feature_ASD[feature_chooses]
+        features.y=df_feature_ASD[lab_chos_lst]
         
         
         
@@ -598,6 +955,7 @@ for feature_chos_tup in combinations_lsts:
 
 
 df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index')
+del Gclf
 ''' multiple regression model '''
 # =============================================================================
 # 
@@ -941,67 +1299,67 @@ Survey_nice_variable(Aaad_Correlation_toy)
 
 
 # Play code for distance covariance
-import dcor
-import math
-from scipy.stats import spearmanr,pearsonr 
-import seaborn as sns
-from matplotlib.offsetbox import AnchoredText
-count=0
-for people in list(Vowels_AUI.keys())[:]:
-    plt.figure(count)
-    F12_raw_dict=Vowels_AUI[people]
-    df_vowel = pd.DataFrame()
-    for keys in F12_raw_dict.keys():
-        if len(df_vowel) == 0:
-            df_vowel=F12_raw_dict[keys]
-            df_vowel['vowel']=keys
-        else:
-            df_=F12_raw_dict[keys]
-            df_['vowel']=keys
-            df_vowel=df_vowel.append(df_)
+# import dcor
+# import math
+# from scipy.stats import spearmanr,pearsonr 
+# import seaborn as sns
+# from matplotlib.offsetbox import AnchoredText
+# count=0
+# for people in list(Vowels_AUI.keys())[:]:
+#     plt.figure(count)
+#     F12_raw_dict=Vowels_AUI[people]
+#     df_vowel = pd.DataFrame()
+#     for keys in F12_raw_dict.keys():
+#         if len(df_vowel) == 0:
+#             df_vowel=F12_raw_dict[keys]
+#             df_vowel['vowel']=keys
+#         else:
+#             df_=F12_raw_dict[keys]
+#             df_['vowel']=keys
+#             df_vowel=df_vowel.append(df_)
     
-    def Calculate_distanceCorr(df_vowel):
-        a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
-        u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
-        i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
+#     def Calculate_distanceCorr(df_vowel):
+#         a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
+#         u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
+#         i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
         
         
-        a_1, a_2=a['F1'], a['F2']
-        u_1, u_2=u['F1'], u['F2']
-        i_1, i_2=i['F1'], i['F2']
+#         a_1, a_2=a['F1'], a['F2']
+#         u_1, u_2=u['F1'], u['F2']
+#         i_1, i_2=i['F1'], i['F2']
         
-        d_stats_a=dcor.distance_stats(a_1, a_2)
-        d_stats_u=dcor.distance_stats(u_1, u_2)
-        d_stats_i=dcor.distance_stats(i_1, i_2)
+#         d_stats_a=dcor.distance_stats(a_1, a_2)
+#         d_stats_u=dcor.distance_stats(u_1, u_2)
+#         d_stats_i=dcor.distance_stats(i_1, i_2)
         
-        pear_a=pearsonr(a_1, a_2)[0]
-        pear_u=pearsonr(u_1, u_2)[0]
-        pear_i=pearsonr(i_1, i_2)[0]
+#         pear_a=pearsonr(a_1, a_2)[0]
+#         pear_u=pearsonr(u_1, u_2)[0]
+#         pear_i=pearsonr(i_1, i_2)[0]
         
-        def get_values(X_stats):
-            cov_xy, corr_xy, var_x, var_y=X_stats
-            return cov_xy, corr_xy, var_x, var_y
+#         def get_values(X_stats):
+#             cov_xy, corr_xy, var_x, var_y=X_stats
+#             return cov_xy, corr_xy, var_x, var_y
         
         
-        data_a = get_values(d_stats_a)
-        data_u = get_values(d_stats_u)
-        data_i = get_values(d_stats_i)
+#         data_a = get_values(d_stats_a)
+#         data_u = get_values(d_stats_u)
+#         data_i = get_values(d_stats_i)
         
-        Cov_sum=[sum(x) for x in zip(data_a,data_u,data_i)]
-        Corr_aui=[data_a[1],data_u[1],data_i[1]]
+#         Cov_sum=[sum(x) for x in zip(data_a,data_u,data_i)]
+#         Corr_aui=[data_a[1],data_u[1],data_i[1]]
 
-        pear_sum=sum([pear_a,pear_u,pear_i])
-        return Cov_sum, Corr_aui, pear_sum
-    ADOS_lab=df_formant_statistic[df_formant_statistic.index==people]['ADOS_C'].values[0]
-    [a,b,c,d], [dcor_a,dcor_u,dcor_i] ,pearsum=Calculate_distanceCorr(df_vowel)
-    sns.scatterplot(data=df_vowel, x="F1", y="F2", hue="vowel")
-    at = AnchoredText(
-    "dcorr:{0}\nADOS:{1}".format(np.round(b,2),np.round(ADOS_lab,2)), prop=dict(size=15), frameon=True, loc='lower right')
-    plt.setp(at.patch, facecolor='white', alpha=0.5)
-    plt.gca().add_artist(at)
+#         pear_sum=sum([pear_a,pear_u,pear_i])
+#         return Cov_sum, Corr_aui, pear_sum
+#     ADOS_lab=df_formant_statistic[df_formant_statistic.index==people]['ADOS_C'].values[0]
+#     [a,b,c,d], [dcor_a,dcor_u,dcor_i] ,pearsum=Calculate_distanceCorr(df_vowel)
+#     sns.scatterplot(data=df_vowel, x="F1", y="F2", hue="vowel")
+#     at = AnchoredText(
+#     "dcorr:{0}\nADOS:{1}".format(np.round(b,2),np.round(ADOS_lab,2)), prop=dict(size=15), frameon=True, loc='lower right')
+#     plt.setp(at.patch, facecolor='white', alpha=0.5)
+#     plt.gca().add_artist(at)
     
-    plt.show()
-    count+=1
+#     plt.show()
+#     count+=1
 
 
 # Play code for scipy c distance
@@ -1268,370 +1626,370 @@ for people in list(Vowels_AUI.keys())[:]:
 # Aaadf_spearmanr_table_outer=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_formant_statistic_outer,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
 # Aaadf_spearmanr_table_inner=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_formant_statistic_inner,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
 
-def LDA_LevelOfClustering_feats(df_vowel):
-    '''    Calculate class variance by LDA. Vowel space features are in this function 
+# def LDA_LevelOfClustering_feats(df_vowel):
+#     '''    Calculate class variance by LDA. Vowel space features are in this function 
     
-            Suffix "_norm"" represents normalized matrix or scalar
-    '''  
-    within_class_scatter_matrix, between_class_scatter_matrix,\
-            within_class_scatter_matrix_norm, between_class_scatter_matrix_norm, linear_discriminant_norm, Total_scatter_matrix_norm = LDA_scatter_matrices(df_vowel)
+#             Suffix "_norm"" represents normalized matrix or scalar
+#     '''  
+#     within_class_scatter_matrix, between_class_scatter_matrix,\
+#             within_class_scatter_matrix_norm, between_class_scatter_matrix_norm, linear_discriminant_norm, Total_scatter_matrix_norm = LDA_scatter_matrices(df_vowel)
     
-    # eigen_values_lin, eigen_vectors_lin = np.linalg.eig(linear_discriminant)
-    eigen_values_lin_norm, eigen_vectors_lin_norm = np.linalg.eig(linear_discriminant_norm)
-    eigen_values_B, eigen_vectors_B = np.linalg.eig(between_class_scatter_matrix)
-    eigen_values_B_norm, eigen_vectors_B_norm = np.linalg.eig(between_class_scatter_matrix_norm)
-    eigen_values_W, eigen_vectors_W = np.linalg.eig(within_class_scatter_matrix)
-    eigen_values_W_norm, eigen_vectors_W_norm = np.linalg.eig(within_class_scatter_matrix_norm)
-    # eigen_values_T, eigen_vectors_T = np.linalg.eig(Total_scatter_matrix)
-    eigen_values_T_norm, eigen_vectors_T_norm = np.linalg.eig(Total_scatter_matrix_norm)
+#     # eigen_values_lin, eigen_vectors_lin = np.linalg.eig(linear_discriminant)
+#     eigen_values_lin_norm, eigen_vectors_lin_norm = np.linalg.eig(linear_discriminant_norm)
+#     eigen_values_B, eigen_vectors_B = np.linalg.eig(between_class_scatter_matrix)
+#     eigen_values_B_norm, eigen_vectors_B_norm = np.linalg.eig(between_class_scatter_matrix_norm)
+#     eigen_values_W, eigen_vectors_W = np.linalg.eig(within_class_scatter_matrix)
+#     eigen_values_W_norm, eigen_vectors_W_norm = np.linalg.eig(within_class_scatter_matrix_norm)
+#     # eigen_values_T, eigen_vectors_T = np.linalg.eig(Total_scatter_matrix)
+#     eigen_values_T_norm, eigen_vectors_T_norm = np.linalg.eig(Total_scatter_matrix_norm)
 
     
-    def Covariance_representations(eigen_values):
-        sam_wilks=1
-        pillai=0
-        hotelling=0
-        for eigen_v in eigen_values:
-            wild_element=1.0/np.float(1+eigen_v)
-            sam_wilks*=wild_element
-            pillai+=wild_element * eigen_v
-            hotelling+=eigen_v
-        roys_root=np.max(eigen_values)
-        return sam_wilks, pillai, hotelling, roys_root
-    Covariances={}
-    # Covariances['sam_wilks_lin'], Covariances['pillai_lin'], Covariances['hotelling_lin'], Covariances['roys_root_lin'] = Covariance_representations(eigen_values_lin)
-    Covariances['sam_wilks_lin_norm'], Covariances['pillai_lin_norm'], Covariances['hotelling_lin_norm'], Covariances['roys_root_lin_norm'] = Covariance_representations(eigen_values_lin_norm)
-    # Covariances['sam_wilks_B'], Covariances['pillai_B'], Covariances['hotelling_B'], Covariances['roys_root_B'] = Covariance_representations(eigen_values_B)
-    # Covariances['sam_wilks_Bnorm'], Covariances['pillai_Bnorm'], Covariances['hotelling_Bnorm'], Covariances['roys_root_Bnorm'] = Covariance_representations(eigen_values_B_norm)
-    # Covariances['sam_wilks_W'], Covariances['pillai_W'], Covariances['hotelling_W'], Covariances['roys_root_W'] = Covariance_representations(eigen_values_W)
+#     def Covariance_representations(eigen_values):
+#         sam_wilks=1
+#         pillai=0
+#         hotelling=0
+#         for eigen_v in eigen_values:
+#             wild_element=1.0/np.float(1+eigen_v)
+#             sam_wilks*=wild_element
+#             pillai+=wild_element * eigen_v
+#             hotelling+=eigen_v
+#         roys_root=np.max(eigen_values)
+#         return sam_wilks, pillai, hotelling, roys_root
+#     Covariances={}
+#     # Covariances['sam_wilks_lin'], Covariances['pillai_lin'], Covariances['hotelling_lin'], Covariances['roys_root_lin'] = Covariance_representations(eigen_values_lin)
+#     Covariances['sam_wilks_lin_norm'], Covariances['pillai_lin_norm'], Covariances['hotelling_lin_norm'], Covariances['roys_root_lin_norm'] = Covariance_representations(eigen_values_lin_norm)
+#     # Covariances['sam_wilks_B'], Covariances['pillai_B'], Covariances['hotelling_B'], Covariances['roys_root_B'] = Covariance_representations(eigen_values_B)
+#     # Covariances['sam_wilks_Bnorm'], Covariances['pillai_Bnorm'], Covariances['hotelling_Bnorm'], Covariances['roys_root_Bnorm'] = Covariance_representations(eigen_values_B_norm)
+#     # Covariances['sam_wilks_W'], Covariances['pillai_W'], Covariances['hotelling_W'], Covariances['roys_root_W'] = Covariance_representations(eigen_values_W)
 
     
-    Multi_Variances={}
-    Multi_Variances['between_covariance_norm'] = np.prod(eigen_values_B_norm)# product of every element
-    Multi_Variances['between_variance_norm'] = np.sum(eigen_values_B_norm)
-    # Multi_Variances['between_covariance'] = np.prod(eigen_values_B)# product of every element
-    # Multi_Variances['between_variance'] = np.sum(eigen_values_B)
-    Multi_Variances['within_covariance_norm'] = np.prod(eigen_values_W_norm)
-    Multi_Variances['within_variance_norm'] = np.sum(eigen_values_W_norm)
-    # Multi_Variances['within_covariance'] = np.prod(eigen_values_W)
-    # Multi_Variances['within_variance'] = np.sum(eigen_values_W)
-    Multi_Variances['total_covariance_norm'] = np.prod(eigen_values_T_norm)
-    Multi_Variances['total_variance_norm'] = np.sum(eigen_values_T_norm)
-    # Multi_Variances['total_covariance'] = np.prod(eigen_values_T)
-    # Multi_Variances['total_variance'] = np.sum(eigen_values_T)
-    Covariances['Between_Within_Det_ratio_norm'] = Multi_Variances['between_covariance_norm'] / Multi_Variances['within_covariance_norm']
-    Covariances['Between_Within_Tr_ratio_norm'] = Multi_Variances['between_variance_norm'] / Multi_Variances['within_variance_norm']
-    return Covariances, Multi_Variances
+#     Multi_Variances={}
+#     Multi_Variances['between_covariance_norm'] = np.prod(eigen_values_B_norm)# product of every element
+#     Multi_Variances['between_variance_norm'] = np.sum(eigen_values_B_norm)
+#     # Multi_Variances['between_covariance'] = np.prod(eigen_values_B)# product of every element
+#     # Multi_Variances['between_variance'] = np.sum(eigen_values_B)
+#     Multi_Variances['within_covariance_norm'] = np.prod(eigen_values_W_norm)
+#     Multi_Variances['within_variance_norm'] = np.sum(eigen_values_W_norm)
+#     # Multi_Variances['within_covariance'] = np.prod(eigen_values_W)
+#     # Multi_Variances['within_variance'] = np.sum(eigen_values_W)
+#     Multi_Variances['total_covariance_norm'] = np.prod(eigen_values_T_norm)
+#     Multi_Variances['total_variance_norm'] = np.sum(eigen_values_T_norm)
+#     # Multi_Variances['total_covariance'] = np.prod(eigen_values_T)
+#     # Multi_Variances['total_variance'] = np.sum(eigen_values_T)
+#     Covariances['Between_Within_Det_ratio_norm'] = Multi_Variances['between_covariance_norm'] / Multi_Variances['within_covariance_norm']
+#     Covariances['Between_Within_Tr_ratio_norm'] = Multi_Variances['between_variance_norm'] / Multi_Variances['within_variance_norm']
+#     return Covariances, Multi_Variances
 
-def Store_FeatVals(RESULT_dict,df_vowel,Inspect_features=['F1','F2'], cluster_str='u:,i:,A:'):
-    Covariances, Multi_Variances\
-        =LDA_LevelOfClustering_feats(df_vowel[Inspect_features+['vowel']])
+# def Store_FeatVals(RESULT_dict,df_vowel,Inspect_features=['F1','F2'], cluster_str='u:,i:,A:'):
+#     Covariances, Multi_Variances\
+#         =LDA_LevelOfClustering_feats(df_vowel[Inspect_features+['vowel']])
 
-    # RESULT_dict['between_covariance({0})'.format(cluster_str)]=between_covariance
-    # RESULT_dict['between_variance({0})'.format(cluster_str)]=between_variance
-    # RESULT_dict['between_covariance_norm({0})'.format(cluster_str)]=between_covariance_norm
-    # RESULT_dict['between_variance_norm({0})'.format(cluster_str)]=between_variance_norm
-    # RESULT_dict['within_covariance({0})'.format(cluster_str)]=within_covariance
-    # RESULT_dict['within_variance({0})'.format(cluster_str)]=within_variance
-    # RESULT_dict['linear_discriminant_covariance({0})'.format(cluster_str)]=linear_discriminant_covariance
+#     # RESULT_dict['between_covariance({0})'.format(cluster_str)]=between_covariance
+#     # RESULT_dict['between_variance({0})'.format(cluster_str)]=between_variance
+#     # RESULT_dict['between_covariance_norm({0})'.format(cluster_str)]=between_covariance_norm
+#     # RESULT_dict['between_variance_norm({0})'.format(cluster_str)]=between_variance_norm
+#     # RESULT_dict['within_covariance({0})'.format(cluster_str)]=within_covariance
+#     # RESULT_dict['within_variance({0})'.format(cluster_str)]=within_variance
+#     # RESULT_dict['linear_discriminant_covariance({0})'.format(cluster_str)]=linear_discriminant_covariance
     
-    # for keys, values in Single_Variances.items():
-    #     RESULT_dict[keys+'({0})'.format(cluster_str)]=values
-    for keys, values in Multi_Variances.items():
-        RESULT_dict[keys+'({0})'.format(cluster_str)]=values
-    for keys, values in Covariances.items():
-        RESULT_dict[keys+'({0})'.format(cluster_str)]=values
-    return RESULT_dict
+#     # for keys, values in Single_Variances.items():
+#     #     RESULT_dict[keys+'({0})'.format(cluster_str)]=values
+#     for keys, values in Multi_Variances.items():
+#         RESULT_dict[keys+'({0})'.format(cluster_str)]=values
+#     for keys, values in Covariances.items():
+#         RESULT_dict[keys+'({0})'.format(cluster_str)]=values
+#     return RESULT_dict
 
 
 # Play code for KDE filtering
-count=0
-from sklearn.neighbors import KernelDensity
-from sklearn import preprocessing
-from matplotlib.offsetbox import AnchoredText
-THRESHOLD=40
-for THRESHOLD in [40]:
-    scale_factor=100
-    N=2
-    RESULT_DICTIONARY=Dict()
-    df_simulate=pd.DataFrame()
-    # for people in list(Vowels_AUI.keys())[:3]:
-    for people in Vowels_AUI.keys():
-        # plt.figure(count)
-        F12_raw_dict=Vowels_AUI[people]
-        df_vowel = pd.DataFrame()
-        for keys in F12_raw_dict.keys():
-            if len(df_vowel) == 0:
-                df_vowel=F12_raw_dict[keys]
-                df_vowel['vowel']=keys
-            else:
-                df_=F12_raw_dict[keys]
-                df_['vowel']=keys
-                df_vowel=df_vowel.append(df_)
+# count=0
+# from sklearn.neighbors import KernelDensity
+# from sklearn import preprocessing
+# from matplotlib.offsetbox import AnchoredText
+# THRESHOLD=40
+# for THRESHOLD in [40]:
+#     scale_factor=100
+#     N=2
+#     RESULT_DICTIONARY=Dict()
+#     df_simulate=pd.DataFrame()
+#     # for people in list(Vowels_AUI.keys())[:3]:
+#     for people in Vowels_AUI.keys():
+#         # plt.figure(count)
+#         F12_raw_dict=Vowels_AUI[people]
+#         df_vowel = pd.DataFrame()
+#         for keys in F12_raw_dict.keys():
+#             if len(df_vowel) == 0:
+#                 df_vowel=F12_raw_dict[keys]
+#                 df_vowel['vowel']=keys
+#             else:
+#                 df_=F12_raw_dict[keys]
+#                 df_['vowel']=keys
+#                 df_vowel=df_vowel.append(df_)
         
-        len_a=len(np.where(df_vowel['vowel']=='A:')[0])
-        len_u=len(np.where(df_vowel['vowel']=='u:')[0])
-        len_i=len(np.where(df_vowel['vowel']=='i:')[0])
+#         len_a=len(np.where(df_vowel['vowel']=='A:')[0])
+#         len_u=len(np.where(df_vowel['vowel']=='u:')[0])
+#         len_i=len(np.where(df_vowel['vowel']=='i:')[0])
         
         
-        if len_a<=N or len_u<=N or len_i<=N:
-            continue
+#         if len_a<=N or len_u<=N or len_i<=N:
+#             continue
         
-        def KDE_Filtering(df_vowel,THRESHOLD=10,scale_factor=100):
-            X=df_vowel[args.Inspect_features].values
-            labels=df_vowel['vowel']
+#         def KDE_Filtering(df_vowel,THRESHOLD=10,scale_factor=100):
+#             X=df_vowel[args.Inspect_features].values
+#             labels=df_vowel['vowel']
             
-            df_vowel_calibrated=pd.DataFrame([])
-            for phone in set(labels):
+#             df_vowel_calibrated=pd.DataFrame([])
+#             for phone in set(labels):
                 
-                df=df_vowel[df_vowel['vowel']==phone][args.Inspect_features]
-                data_array=df_vowel[df_vowel['vowel']==phone][args.Inspect_features].values
+#                 df=df_vowel[df_vowel['vowel']==phone][args.Inspect_features]
+#                 data_array=df_vowel[df_vowel['vowel']==phone][args.Inspect_features].values
     
-                x=data_array[:,0]
-                y=data_array[:,1]
-                xmin = x.min()
-                xmax = x.max()        
-                ymin = y.min()
-                ymax = y.max()
+#                 x=data_array[:,0]
+#                 y=data_array[:,1]
+#                 xmin = x.min()
+#                 xmax = x.max()        
+#                 ymin = y.min()
+#                 ymax = y.max()
                 
-                image_num=1j
-                X, Y = np.mgrid[xmin:xmax:image_num*scale_factor, ymin:ymax:image_num*scale_factor]
+#                 image_num=1j
+#                 X, Y = np.mgrid[xmin:xmax:image_num*scale_factor, ymin:ymax:image_num*scale_factor]
                 
-                positions = np.vstack([X.ravel(), Y.ravel()])
+#                 positions = np.vstack([X.ravel(), Y.ravel()])
                 
-                values = np.vstack([x, y])
+#                 values = np.vstack([x, y])
                 
-                kernel = stats.gaussian_kde(values)
+#                 kernel = stats.gaussian_kde(values)
                         
-                Z = np.reshape(kernel(positions).T, X.shape)
-                normalized_z = preprocessing.normalize(Z)
+#                 Z = np.reshape(kernel(positions).T, X.shape)
+#                 normalized_z = preprocessing.normalize(Z)
                 
-                df['x_to_scale'] = (100*(x - np.min(x))/np.ptp(x)).astype(int) 
-                df['y_to_scale'] = (100*(y - np.min(y))/np.ptp(y)).astype(int) 
+#                 df['x_to_scale'] = (100*(x - np.min(x))/np.ptp(x)).astype(int) 
+#                 df['y_to_scale'] = (100*(y - np.min(y))/np.ptp(y)).astype(int) 
                 
-                normalized_z=(100*(Z - np.min(Z.ravel()))/np.ptp(Z.ravel())).astype(int)
-                to_delete = zip(*np.where((normalized_z<THRESHOLD) == True))
+#                 normalized_z=(100*(Z - np.min(Z.ravel()))/np.ptp(Z.ravel())).astype(int)
+#                 to_delete = zip(*np.where((normalized_z<THRESHOLD) == True))
                 
-                # The indexes that are smaller than threshold
-                deletepoints_bool=df.apply(lambda x: (x['x_to_scale'], x['y_to_scale']), axis=1).isin(to_delete)
-                df_calibrated=df.loc[(deletepoints_bool==False).values]
-                df_deleted_after_calibrated=df.loc[(deletepoints_bool==True).values]
+#                 # The indexes that are smaller than threshold
+#                 deletepoints_bool=df.apply(lambda x: (x['x_to_scale'], x['y_to_scale']), axis=1).isin(to_delete)
+#                 df_calibrated=df.loc[(deletepoints_bool==False).values]
+#                 df_deleted_after_calibrated=df.loc[(deletepoints_bool==True).values]
                 
-                df_vowel_calibrated_tmp=df_calibrated.drop(columns=['x_to_scale','y_to_scale'])
-                df_vowel_calibrated_tmp['vowel']=phone
-                df_vowel_output=df_vowel_calibrated_tmp.copy()
-                df_vowel_calibrated=df_vowel_calibrated.append(df_vowel_output)
+#                 df_vowel_calibrated_tmp=df_calibrated.drop(columns=['x_to_scale','y_to_scale'])
+#                 df_vowel_calibrated_tmp['vowel']=phone
+#                 df_vowel_output=df_vowel_calibrated_tmp.copy()
+#                 df_vowel_calibrated=df_vowel_calibrated.append(df_vowel_output)
                 
                 
-                # Data prepare for plotting 
-                # import seaborn as sns
-                # df_calibrated_tocombine=df_calibrated.copy()
-                # df_calibrated_tocombine['cal']='calibrated'
-                # df_deleted_after_calibrated['cal']='deleted'
-                # df_calibratedcombined=df_calibrated_tocombine.append(df_deleted_after_calibrated)
+#                 # Data prepare for plotting 
+#                 # import seaborn as sns
+#                 # df_calibrated_tocombine=df_calibrated.copy()
+#                 # df_calibrated_tocombine['cal']='calibrated'
+#                 # df_deleted_after_calibrated['cal']='deleted'
+#                 # df_calibratedcombined=df_calibrated_tocombine.append(df_deleted_after_calibrated)
                 
-                # #Plotting code
-                # fig = plt.figure(figsize=(8,8))
-                # ax = fig.gca()
-                # ax.set_xlim(xmin, xmax)
-                # ax.set_ylim(ymin, ymax)
-                # # cfset = ax.contourf(X, Y, Z, cmap='coolwarm')
-                # # ax.imshow(Z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
-                # # cset = ax.contour(X, Y, Z, colors='k')
-                # cfset = ax.contourf(X, Y, normalized_z, cmap='coolwarm')
-                # ax.imshow(normalized_z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
-                # cset = ax.contour(X, Y, normalized_z, colors='k')
-                # ax.clabel(cset, inline=1, fontsize=10)
-                # ax.set_xlabel('X')
-                # ax.set_ylabel('Y')
-                # plt.title('2D Gaussian Kernel density estimation')
+#                 # #Plotting code
+#                 # fig = plt.figure(figsize=(8,8))
+#                 # ax = fig.gca()
+#                 # ax.set_xlim(xmin, xmax)
+#                 # ax.set_ylim(ymin, ymax)
+#                 # # cfset = ax.contourf(X, Y, Z, cmap='coolwarm')
+#                 # # ax.imshow(Z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
+#                 # # cset = ax.contour(X, Y, Z, colors='k')
+#                 # cfset = ax.contourf(X, Y, normalized_z, cmap='coolwarm')
+#                 # ax.imshow(normalized_z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
+#                 # cset = ax.contour(X, Y, normalized_z, colors='k')
+#                 # ax.clabel(cset, inline=1, fontsize=10)
+#                 # ax.set_xlabel('X')
+#                 # ax.set_ylabel('Y')
+#                 # plt.title('2D Gaussian Kernel density estimation')
                 
-                # sns.scatterplot(data=df_vowel[df_vowel['vowel']==phone], x="F1", y="F2")
-                # sns.scatterplot(data=df_calibratedcombined, x="F1", y="F2",hue='cal')
-            return df_vowel_calibrated
+#                 # sns.scatterplot(data=df_vowel[df_vowel['vowel']==phone], x="F1", y="F2")
+#                 # sns.scatterplot(data=df_calibratedcombined, x="F1", y="F2",hue='cal')
+#             return df_vowel_calibrated
         
         
-        def Calculate_pointDistsTotal(df_vowel,dist_type='euclidean'):
-            import scipy
-            a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
-            u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
-            i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
+#         def Calculate_pointDistsTotal(df_vowel,dist_type='euclidean'):
+#             import scipy
+#             a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
+#             u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
+#             i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
             
             
             
-            dist_au=scipy.spatial.distance.cdist(a,u,dist_type)
-            dist_ai=scipy.spatial.distance.cdist(a,i,dist_type)
-            dist_iu=scipy.spatial.distance.cdist(i,u,dist_type)
-            mean_dist_au=np.mean(dist_au)
-            mean_dist_ai=np.mean(dist_ai)
-            mean_dist_iu=np.mean(dist_iu)
-            dist_total=mean_dist_au*mean_dist_ai*mean_dist_iu
-            # return dist_total, [mean_dist_au,mean_dist_ai,mean_dist_iu]
-            return dist_total
+#             dist_au=scipy.spatial.distance.cdist(a,u,dist_type)
+#             dist_ai=scipy.spatial.distance.cdist(a,i,dist_type)
+#             dist_iu=scipy.spatial.distance.cdist(i,u,dist_type)
+#             mean_dist_au=np.mean(dist_au)
+#             mean_dist_ai=np.mean(dist_ai)
+#             mean_dist_iu=np.mean(dist_iu)
+#             dist_total=mean_dist_au*mean_dist_ai*mean_dist_iu
+#             # return dist_total, [mean_dist_au,mean_dist_ai,mean_dist_iu]
+#             return dist_total
         
         
-        df_vowel_calibrated=KDE_Filtering(df_vowel,THRESHOLD=THRESHOLD,scale_factor=100)
+#         df_vowel_calibrated=KDE_Filtering(df_vowel,THRESHOLD=THRESHOLD,scale_factor=100)
     
-        a=df_vowel_calibrated[df_vowel_calibrated['vowel']=='A:'][args.Inspect_features].mean()
-        u=df_vowel_calibrated[df_vowel_calibrated['vowel']=='u:'][args.Inspect_features].mean()
-        i=df_vowel_calibrated[df_vowel_calibrated['vowel']=='i:'][args.Inspect_features].mean()
+#         a=df_vowel_calibrated[df_vowel_calibrated['vowel']=='A:'][args.Inspect_features].mean()
+#         u=df_vowel_calibrated[df_vowel_calibrated['vowel']=='u:'][args.Inspect_features].mean()
+#         i=df_vowel_calibrated[df_vowel_calibrated['vowel']=='i:'][args.Inspect_features].mean()
     
-        numerator=u[1] + a[1] + i[0] + u[0]
-        demominator=i[1] + a[0]
-        RESULT_dict={}
-        RESULT_dict['FCR2']=np.float(numerator/demominator)
-        # RESULT_dict['FCR2_uF2']=np.float(u[1]/demominator)
-        # RESULT_dict['FCR2_aF2']=np.float(a[1]/demominator)
-        # RESULT_dict['FCR2_iF1']=np.float(i[0]/demominator)
-        # RESULT_dict['FCR2_uF1']=np.float(u[0]/demominator)
+#         numerator=u[1] + a[1] + i[0] + u[0]
+#         demominator=i[1] + a[0]
+#         RESULT_dict={}
+#         RESULT_dict['FCR2']=np.float(numerator/demominator)
+#         # RESULT_dict['FCR2_uF2']=np.float(u[1]/demominator)
+#         # RESULT_dict['FCR2_aF2']=np.float(a[1]/demominator)
+#         # RESULT_dict['FCR2_iF1']=np.float(i[0]/demominator)
+#         # RESULT_dict['FCR2_uF1']=np.float(u[0]/demominator)
         
-        #Get total between cluster distances
-        # distance_types=['euclidean','minkowski','cityblock','seuclidean','sqeuclidean','cosine',\
-        #      'correlation','jaccard','jensenshannon','chebyshev','canberra','braycurtis',\
-        #      'mahalanobis','sokalsneath']
+#         #Get total between cluster distances
+#         # distance_types=['euclidean','minkowski','cityblock','seuclidean','sqeuclidean','cosine',\
+#         #      'correlation','jaccard','jensenshannon','chebyshev','canberra','braycurtis',\
+#         #      'mahalanobis','sokalsneath']
             
-        # for dst_tpe in distance_types:
-        #     # RESULT_dict[dst_tpe+" "+'pointDistsTotal'],\
-        #     #     [RESULT_dict[dst_tpe+" "+'dist_au'],RESULT_dict[dst_tpe+" "+'dist_ai'],RESULT_dict[dst_tpe+" "+'dist_iu']]\
-        #     #         =Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe)
-        #     RESULT_dict[dst_tpe+" "+'pointDistsTotal']=Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe)
-        #     RESULT_dict[dst_tpe+" "+'pointDistsTotal_norm']=Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe) / numerator
+#         # for dst_tpe in distance_types:
+#         #     # RESULT_dict[dst_tpe+" "+'pointDistsTotal'],\
+#         #     #     [RESULT_dict[dst_tpe+" "+'dist_au'],RESULT_dict[dst_tpe+" "+'dist_ai'],RESULT_dict[dst_tpe+" "+'dist_iu']]\
+#         #     #         =Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe)
+#         #     RESULT_dict[dst_tpe+" "+'pointDistsTotal']=Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe)
+#         #     RESULT_dict[dst_tpe+" "+'pointDistsTotal_norm']=Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe) / numerator
         
         
-        for label_choose in label_choose_lst:
-            RESULT_dict[label_choose]=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
-        RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=len_u,len_a,len_i
+#         for label_choose in label_choose_lst:
+#             RESULT_dict[label_choose]=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
+#         RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=len_u,len_a,len_i
         
-        cluster_str=','.join(sorted(F12_raw_dict.keys()))
-        RESULT_dict=Store_FeatVals(RESULT_dict,df_vowel_calibrated,args.Inspect_features, cluster_str=cluster_str)    
+#         cluster_str=','.join(sorted(F12_raw_dict.keys()))
+#         RESULT_dict=Store_FeatVals(RESULT_dict,df_vowel_calibrated,args.Inspect_features, cluster_str=cluster_str)    
         
-        ''' End of feature calculation '''
-        # =============================================================================
-        df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
-        df_RESULT_list.index=[people]
-        df_simulate=df_simulate.append(df_RESULT_list)
-        # sns.scatterplot(data=df_vowel_calibrated, x="F1", y="F2", hue="vowel")
+#         ''' End of feature calculation '''
+#         # =============================================================================
+#         df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
+#         df_RESULT_list.index=[people]
+#         df_simulate=df_simulate.append(df_RESULT_list)
+#         # sns.scatterplot(data=df_vowel_calibrated, x="F1", y="F2", hue="vowel")
         
-        # at = AnchoredText(
-        # "FCR2:{0}\nuF2{1}\naF2{2}\niF1{3}\nuF1{4}".format(\
-        #     np.round(RESULT_dict['FCR2'],2),np.round(RESULT_dict['FCR2_uF2'],2),np.round(RESULT_dict['FCR2_aF2'],2),\
-        #     np.round(RESULT_dict['FCR2_iF1'],2),np.round(RESULT_dict['FCR2_uF1'],2)),prop=dict(size=15), frameon=True, loc='lower right')
-        # # at = AnchoredText(
-        # # "angles\nai{0}\niu{1}\nua{2}".format(np.round(ang_ai,2),np.round(ang_iu,2),np.round(ang_ua,2)), prop=dict(size=15), frameon=True, loc='lower right')
-        # plt.setp(at.patch, facecolor='white', alpha=0.5)
-        # plt.gca().add_artist(at)
-        # plt.show()
-        count+=1
+#         # at = AnchoredText(
+#         # "FCR2:{0}\nuF2{1}\naF2{2}\niF1{3}\nuF1{4}".format(\
+#         #     np.round(RESULT_dict['FCR2'],2),np.round(RESULT_dict['FCR2_uF2'],2),np.round(RESULT_dict['FCR2_aF2'],2),\
+#         #     np.round(RESULT_dict['FCR2_iF1'],2),np.round(RESULT_dict['FCR2_uF1'],2)),prop=dict(size=15), frameon=True, loc='lower right')
+#         # # at = AnchoredText(
+#         # # "angles\nai{0}\niu{1}\nua{2}".format(np.round(ang_ai,2),np.round(ang_iu,2),np.round(ang_ua,2)), prop=dict(size=15), frameon=True, loc='lower right')
+#         # plt.setp(at.patch, facecolor='white', alpha=0.5)
+#         # plt.gca().add_artist(at)
+#         # plt.show()
+#         count+=1
         
-    Eval_med=Evaluation_method()
+#     Eval_med=Evaluation_method()
     
-    columns_sel=df_simulate.columns
-    # columns_sel=list(set(columns_sel) - set([co for co in columns_sel if " pointDistsTotal" not in co]))
-    columns_sel=list(set(columns_sel) - set(['u_num','a_num','i_num','ADOS_C']))
-    # columns_sel= columns_sel + ['FCR2']
+#     columns_sel=df_simulate.columns
+#     # columns_sel=list(set(columns_sel) - set([co for co in columns_sel if " pointDistsTotal" not in co]))
+#     columns_sel=list(set(columns_sel) - set(['u_num','a_num','i_num','ADOS_C']))
+#     # columns_sel= columns_sel + ['FCR2']
     
     
-    for N in [2]:
-    # for N in [7,8,9,10]:
-        Aaadf_results=Eval_med.Calculate_correlation(['ADOS_C'],df_simulate,N,columns_sel,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
-        Survey_nice_variable(Aaadf_results)
+#     for N in [2]:
+#     # for N in [7,8,9,10]:
+#         Aaadf_results=Eval_med.Calculate_correlation(['ADOS_C'],df_simulate,N,columns_sel,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
+#         Survey_nice_variable(Aaadf_results)
 
     
 
 
-def LDA_scatter_matrices(df_vowel):
-    a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features].mean()
-    u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features].mean()
-    i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features].mean()
+# def LDA_scatter_matrices(df_vowel):
+#     a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features].mean()
+#     u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features].mean()
+#     i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features].mean()
     
-    def Normalize_operation(df_vowel, normalized_method='TotalMin'):
-        a_raw=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
-        u_raw=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
-        i_raw=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
+#     def Normalize_operation(df_vowel, normalized_method='TotalMin'):
+#         a_raw=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
+#         u_raw=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
+#         i_raw=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
     
-        a_min=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features].min()
-        u_min=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features].min()
-        i_min=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features].min()
+#         a_min=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features].min()
+#         u_min=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features].min()
+#         i_min=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features].min()
     
-        a_norm=a_raw/a_min
-        u_norm=u_raw/u_min
-        i_norm=i_raw/i_min
-        a_norm['vowel']='A:'
-        u_norm['vowel']='u:'
-        i_norm['vowel']='i:'
+#         a_norm=a_raw/a_min
+#         u_norm=u_raw/u_min
+#         i_norm=i_raw/i_min
+#         a_norm['vowel']='A:'
+#         u_norm['vowel']='u:'
+#         i_norm['vowel']='i:'
         
-        # df_vowel_min=pd.DataFrame([],columns=args.Inspect_features)
-        df_vowel_min=df_vowel[args.Inspect_features].min()
+#         # df_vowel_min=pd.DataFrame([],columns=args.Inspect_features)
+#         df_vowel_min=df_vowel[args.Inspect_features].min()
     
         
-        # normalize data before Sb Sw calculation
-        if normalized_method == 'TotalMin':
-            df_vowel_normalized=df_vowel.copy()[args.Inspect_features]/df_vowel_min
-            df_vowel_normalized['vowel']=df_vowel['vowel']
-        elif normalized_method == 'WithinVowelMin':
-            df_vowel_normalized=pd.concat([u_norm,i_norm,a_norm],axis=0)
-        else:
-            raise KeyError()
-        return df_vowel_normalized
-    # df_vowel=Normalize_operation(df_vowel, normalized_method='TotalMin') 
+#         # normalize data before Sb Sw calculation
+#         if normalized_method == 'TotalMin':
+#             df_vowel_normalized=df_vowel.copy()[args.Inspect_features]/df_vowel_min
+#             df_vowel_normalized['vowel']=df_vowel['vowel']
+#         elif normalized_method == 'WithinVowelMin':
+#             df_vowel_normalized=pd.concat([u_norm,i_norm,a_norm],axis=0)
+#         else:
+#             raise KeyError()
+#         return df_vowel_normalized
+#     # df_vowel=Normalize_operation(df_vowel, normalized_method='TotalMin') 
     
     
     
     
-    numerator=u[1] + a[1] + i[0] + u[0]
-    demominator=i[1] + a[0]
+#     numerator=u[1] + a[1] + i[0] + u[0]
+#     demominator=i[1] + a[0]
 
     
-    class_feature_means = pd.DataFrame(columns=list(set(df_vowel['vowel'])))
-    n_samples = len(df_vowel)
-    for c, rows in df_vowel.groupby('vowel'):
-        class_feature_means[c] = rows[args.Inspect_features].mean()
+#     class_feature_means = pd.DataFrame(columns=list(set(df_vowel['vowel'])))
+#     n_samples = len(df_vowel)
+#     for c, rows in df_vowel.groupby('vowel'):
+#         class_feature_means[c] = rows[args.Inspect_features].mean()
     
-    groups_num=len(class_feature_means.index)
-    # Within class scatter matrix 
-    within_class_scatter_matrix = np.zeros((groups_num,groups_num))
-    for c, rows in df_vowel.groupby('vowel'):
-        rows = rows[args.Inspect_features]
-        s = np.zeros((groups_num,groups_num))
+#     groups_num=len(class_feature_means.index)
+#     # Within class scatter matrix 
+#     within_class_scatter_matrix = np.zeros((groups_num,groups_num))
+#     for c, rows in df_vowel.groupby('vowel'):
+#         rows = rows[args.Inspect_features]
+#         s = np.zeros((groups_num,groups_num))
         
-        for index, row in rows.iterrows():
-            x, mc = row.values.reshape(groups_num,1), class_feature_means[c].values.reshape(groups_num,1)
-            # class_variance=((x - mc) / mc).dot(((x - mc) / mc).T).astype(float)
-            # class_variance=((x - mc) / numerator).dot(((x - mc) / numerator).T).astype(float) #BCC norm2 + WCC norm2
-            # class_variance=((x - mc) / numerator).dot(((x - mc) ).T).astype(float) #BCC norm2 + WCC norm1
-            class_variance=((x - mc) ).dot(((x - mc) ).T).astype(float) #BCC norm2
-            # class_variance=( x  / mc).dot(( x / mc).T).astype(float) 
-            s += class_variance
+#         for index, row in rows.iterrows():
+#             x, mc = row.values.reshape(groups_num,1), class_feature_means[c].values.reshape(groups_num,1)
+#             # class_variance=((x - mc) / mc).dot(((x - mc) / mc).T).astype(float)
+#             # class_variance=((x - mc) / numerator).dot(((x - mc) / numerator).T).astype(float) #BCC norm2 + WCC norm2
+#             # class_variance=((x - mc) / numerator).dot(((x - mc) ).T).astype(float) #BCC norm2 + WCC norm1
+#             class_variance=((x - mc) ).dot(((x - mc) ).T).astype(float) #BCC norm2
+#             # class_variance=( x  / mc).dot(( x / mc).T).astype(float) 
+#             s += class_variance
             
-        within_class_scatter_matrix += s
-    within_class_scatter_matrix_norm = within_class_scatter_matrix / n_samples
-    # within_class_scatter_matrix_norm = within_class_scatter_matrix / n_samples / numerator**2
-    within_class_scatter_matrix_norm = within_class_scatter_matrix / numerator**2
+#         within_class_scatter_matrix += s
+#     within_class_scatter_matrix_norm = within_class_scatter_matrix / n_samples
+#     # within_class_scatter_matrix_norm = within_class_scatter_matrix / n_samples / numerator**2
+#     within_class_scatter_matrix_norm = within_class_scatter_matrix / numerator**2
         
-    # Between class scatter matrix 
-    feature_means = df_vowel.mean()
-    between_class_scatter_matrix = np.zeros((groups_num,groups_num))
-    for c in class_feature_means:    
-        n = len(df_vowel.loc[df_vowel['vowel'] == c].index)
+#     # Between class scatter matrix 
+#     feature_means = df_vowel.mean()
+#     between_class_scatter_matrix = np.zeros((groups_num,groups_num))
+#     for c in class_feature_means:    
+#         n = len(df_vowel.loc[df_vowel['vowel'] == c].index)
         
-        mc, m = class_feature_means[c].values.reshape(groups_num,1), feature_means[args.Inspect_features].values.reshape(groups_num,1)
+#         mc, m = class_feature_means[c].values.reshape(groups_num,1), feature_means[args.Inspect_features].values.reshape(groups_num,1)
         
-        # between_class_variance = n * ( (mc - m) / m).dot(((mc - m) / m).T)
-        # between_class_variance = n * ( (mc - m) / numerator ).dot(((mc - m) / numerator ).T) #BCC norm2 + WCC norm2
-        # between_class_variance = n * ( (mc - m) / numerator ).dot(((mc - m)  ).T) #BCC norm1 + WCC norm2
-        between_class_variance = n * ( (mc - m)  ).dot(((mc - m)  ).T) #BCC norm1 + WCC norm2
-        # between_class_variance = n * ( mc/ m).dot((mc / m).T)
+#         # between_class_variance = n * ( (mc - m) / m).dot(((mc - m) / m).T)
+#         # between_class_variance = n * ( (mc - m) / numerator ).dot(((mc - m) / numerator ).T) #BCC norm2 + WCC norm2
+#         # between_class_variance = n * ( (mc - m) / numerator ).dot(((mc - m)  ).T) #BCC norm1 + WCC norm2
+#         between_class_variance = n * ( (mc - m)  ).dot(((mc - m)  ).T) #BCC norm1 + WCC norm2
+#         # between_class_variance = n * ( mc/ m).dot((mc / m).T)
         
-        between_class_scatter_matrix += between_class_variance
-    between_class_scatter_matrix_norm = between_class_scatter_matrix / n_samples
-    # between_class_scatter_matrix_norm = between_class_scatter_matrix / n_samples / numerator**2
-    between_class_scatter_matrix_norm = between_class_scatter_matrix / numerator**2
+#         between_class_scatter_matrix += between_class_variance
+#     between_class_scatter_matrix_norm = between_class_scatter_matrix / n_samples
+#     # between_class_scatter_matrix_norm = between_class_scatter_matrix / n_samples / numerator**2
+#     between_class_scatter_matrix_norm = between_class_scatter_matrix / numerator**2
     
-    Total_scatter_matrix_norm=within_class_scatter_matrix_norm + between_class_scatter_matrix_norm
+#     Total_scatter_matrix_norm=within_class_scatter_matrix_norm + between_class_scatter_matrix_norm
     
-    # Calculate eigen values
-    linear_discriminant_norm=np.linalg.inv(within_class_scatter_matrix_norm ).dot(between_class_scatter_matrix_norm )
-    # linear_discriminant=np.linalg.inv(within_class_scatter_matrix_norm ).dot(between_class_scatter_matrix )
+#     # Calculate eigen values
+#     linear_discriminant_norm=np.linalg.inv(within_class_scatter_matrix_norm ).dot(between_class_scatter_matrix_norm )
+#     # linear_discriminant=np.linalg.inv(within_class_scatter_matrix_norm ).dot(between_class_scatter_matrix )
     
-    return within_class_scatter_matrix, between_class_scatter_matrix,\
-            within_class_scatter_matrix_norm, between_class_scatter_matrix_norm, linear_discriminant_norm, Total_scatter_matrix_norm
+#     return within_class_scatter_matrix, between_class_scatter_matrix,\
+#             within_class_scatter_matrix_norm, between_class_scatter_matrix_norm, linear_discriminant_norm, Total_scatter_matrix_norm
 

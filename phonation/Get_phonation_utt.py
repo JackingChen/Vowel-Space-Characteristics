@@ -6,7 +6,7 @@ Created on Jul 21 2017
 @author: J. C. Vasquez-Correa
 modified by Jackchen 20210524
 
-This script is to extract word level phonation feature 
+This script is to extract utterance level phonation feature 
     input: filepath
     
     or user can use precomputed checkpoints
@@ -98,7 +98,7 @@ def get_args():
         )
     parser.add_argument('--base_path', default='/homes/ssd1/jackchen/DisVoice',
                         help='path of the base directory', dest='base_path')
-    parser.add_argument('--filepath', default='data/Segmented_ADOS_TD_normalized_untranscripted',
+    parser.add_argument('--filepath', default='data/Segmented_ADOS_normalized',
                         help='data/{Segmented_ADOS_TD_normalized_untranscripted|Segmented_ADOS_normalized}')
     parser.add_argument('--checkpointpath', default='/homes/ssd1/jackchen/DisVoice/phonation/features',
                         help='path of the base directory')
@@ -122,9 +122,7 @@ PhonationPath=base_path + "/phonation/features"
 
 
 import praat.praat_functions as praat_functions
-from script_mananger import script_manager
 from utils_jack import *
-from script_mananger import script_manager
 # =============================================================================
 '''
 
@@ -133,7 +131,7 @@ from script_mananger import script_manager
 '''
 F0_parameter_dict=Dict()
 F0_parameter_dict['male']={'f0_min':75,'f0_max':400}
-F0_parameter_dict['female']={'f0_min':75,'f0_max':800}
+F0_parameter_dict['female']={'f0_min':75,'f0_max':550}
 
 Formants_utt_symb=Dict()
 Formants_people_symb=Dict()
@@ -167,6 +165,9 @@ def Get_phonationdictbag_map(files,Info_name_sex):
         
         if method == "Disvoice":
             phonation_extractor=Phonation(maxf0=maxf0, minf0=minf0)
+            # toy_files=glob.glob("data/Segmented_ADOS_normalized/2015_12_06_01_097_K_*.wav")
+            # for f in toy_files:
+            #     print(phonation_extractor.extract_features_file(audiofile))
             df_feat_utt=phonation_extractor.extract_features_file(audiofile)
         elif method == "praat":
             df_feat_utt=measurePitch(audiofile, minf0, maxf0, "Hertz")
@@ -261,6 +262,9 @@ else:
 '''
     df_phonation_{role}[utt], role={doc|kid} 
     process: input: audio_files
+    
+    這邊只是把所有utterence level的feature做一個mean的動作
+    
 '''
 
 chkptpath_kid=PhonationPath+"/df_phonation_kid_{}.pkl".format(dataset_name)
@@ -305,13 +309,3 @@ df_ttest_result_d=TTest_Cmp_checkpoint(chkptpath_doc_TD,chkptpath_kid_TD)
 
 
 aaa=ccc
-# dataset_str='{ds}_DvsK'.format(ds=dataset_name)
-# df_ttest_result=pd.DataFrame()
-# for col in df_phonation_kid.columns:
-#     df_ttest_result.loc[dataset_str+"-p-val",col]=stats.ttest_ind(df_phonation_kid[col].dropna(),df_phonation_doc[col].dropna())[1].astype(float)
-# df_ttest_result=df_ttest_result.T 
-
-# result_path="RESULTS/"
-# if not os.path.exists(result_path):
-#     os.makedirs(result_path)
-# df_ttest_result.to_excel(result_path+dataset_str+".xlsx")
