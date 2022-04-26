@@ -87,6 +87,14 @@ def get_args():
                         help='')
     parser.add_argument('--Mergefeatures', default=False,
                         help='')
+    parser.add_argument('--knn_weights', default='distance',
+                            help='path of the base directory')
+    parser.add_argument('--knn_neighbors', default=2,  type=int,
+                            help='path of the base directory')
+    parser.add_argument('--Reorder_type', default='DKIndividual',
+                            help='[DKIndividual, DKcriteria]')
+    parser.add_argument('--Add_UttLvl_feature', default=True,
+                            help='[DKIndividual, DKcriteria]')
     args = parser.parse_args()
     return args
 
@@ -94,7 +102,10 @@ def get_args():
 args = get_args()
 start_point=args.start_point
 experiment=args.experiment
-
+knn_weights=args.knn_weights
+knn_neighbors=args.knn_neighbors
+Reorder_type=args.Reorder_type
+Add_UttLvl_feature=args.Add_UttLvl_feature
 # =============================================================================
 # Feature
 # columns=[
@@ -156,20 +167,47 @@ columns=[
 #     'Norm(TotalVar)_Det_DKRaito', 'Norm(TotalVar)_Tr_DKRaito'
 # ]
 
+# Comb=Dict()
+# Comb['LOC_columns']=FeatSel.LOC_columns
+# Comb['DEP_columns']=FeatSel.DEP_columns
+# Comb['LOC_columns+DEP_columns']=FeatSel.LOC_columns+FeatSel.DEP_columns
 
-Comb=Dict()
-Comb[0]=FeatSel.Utt_prosodyF0
-Comb[1]=FeatSel.Utt_prosodyF0 + FeatSel.LOC_columns
-Comb[2]=FeatSel.Utt_VoiceQuality
-Comb[3]=FeatSel.Utt_VoiceQuality + FeatSel.LOC_columns
-Comb[4]=FeatSel.Utt_energy
-Comb[5]=FeatSel.Utt_energy + FeatSel.LOC_columns 
-Comb[6]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy 
-Comb[7]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy + FeatSel.LOC_columns
-Comb[8]=FeatSel.Utt_VoiceQuality + FeatSel.Utt_energy 
-Comb[9]=FeatSel.Utt_VoiceQuality + FeatSel.Utt_energy + FeatSel.LOC_columns
-Comb[10]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy + FeatSel.Utt_VoiceQuality
-Comb[11]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy + FeatSel.Utt_VoiceQuality+ FeatSel.LOC_columns
+# Comb['Utt_prosodyF0']=FeatSel.Utt_prosodyF0
+# Comb['Utt_prosodyF0+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.LOC_columns
+# Comb['Utt_prosodyF0+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.DEP_columns
+# Comb['Utt_prosodyF0+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.LOC_columns+FeatSel.DEP_columns
+
+# Comb['Utt_VoiceQuality']=FeatSel.Utt_VoiceQuality
+# Comb['Utt_VoiceQuality+LOC_columns']=FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns
+# Comb['Utt_VoiceQuality+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.DEP_columns
+# Comb['Utt_VoiceQuality+LOC_columns+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns+FeatSel.DEP_columns
+
+# Comb['Utt_energy']=FeatSel.Utt_energy
+# Comb['Utt_energy+LOC_columns']=FeatSel.Utt_energy+FeatSel.LOC_columns 
+# Comb['Utt_energy+DEP_columns']=FeatSel.Utt_energy+FeatSel.DEP_columns 
+# Comb['Utt_energy+LOC_columns+DEP_columns']=FeatSel.Utt_energy+FeatSel.LOC_columns+FeatSel.DEP_columns
+
+# Comb['Utt_prosodyF0+Utt_energy']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy 
+# Comb['Utt_prosodyF0+Utt_energy+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.LOC_columns
+# Comb['Utt_prosodyF0+Utt_energy+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.DEP_columns
+# Comb['Utt_prosodyF0+Utt_energy+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.LOC_columns+FeatSel.DEP_columns
+
+# Comb['Utt_VoiceQuality+Utt_energy']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy 
+# Comb['Utt_VoiceQuality+Utt_energy+LOC_columns']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy+FeatSel.LOC_columns
+# Comb['Utt_VoiceQuality+Utt_energy+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy+FeatSel.DEP_columns
+# Comb['Utt_VoiceQuality+Utt_energy+LOC_columns+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy+FeatSel.LOC_columns+FeatSel.DEP_columns
+
+# Comb['Utt_prosodyF0+Utt_VoiceQuality']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality 
+# Comb['Utt_prosodyF0+Utt_VoiceQuality+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns
+# Comb['Utt_prosodyF0+Utt_VoiceQuality+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality+FeatSel.DEP_columns
+# Comb['Utt_prosodyF0+Utt_VoiceQuality+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns+FeatSel.DEP_columns
+
+# Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality
+# Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns
+# Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality+FeatSel.DEP_columns
+# Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality+ FeatSel.LOC_columns+ FeatSel.DEP_columns
+
+
 
 # 用comb來組合multifeature fusion
 # 用[ [col] for col in columns]  來跑單feautre實驗
@@ -177,10 +215,14 @@ Comb[11]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy + FeatSel.Utt_VoiceQuality+ 
 # featuresOfInterest=[ [col] + ['u_num+i_num+a_num'] for col in columns]
 # featuresOfInterest=[ [col] for col in columns]
 # featuresOfInterest=[ Comb[k] for k in Comb.keys()]
-featuresOfInterest=FeatSel.Columns_comb
+if Add_UttLvl_feature==True:
+    featuresOfInterest=FeatSel.Columns_comb2
+else:
+    featuresOfInterest=FeatSel.Columns_comb
 
 # label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
-label_choose=['ADOS_S','ADOS_C']
+# label_choose=['ADOS_S','ADOS_C']
+label_choose=['ADOS_C']
 # label_choose=['ADOS_cate','ASDTD']
 
 pearson_scorer = make_scorer(pearsonr, greater_is_better=False)
@@ -250,30 +292,17 @@ ados_ds=ADOSdataset()
 ErrorFeat_bookeep=Dict()
 Session_level_all=Dict()
 
-Pseudo_CtxDepPhone_path='artuculation_AUI/Pseudo_CtxDepVowels'
-CtxDepPhone_path='artuculation_AUI/CtxDepVowels/bkup0729'
-Vowel_path='artuculation_AUI/Vowels'
-Vowel_Ratio_path='artuculation_AUI/Vowels/DKRatios'
-Interactionfeat_path='artuculation_AUI/Interaction'
-OtherFeat_path='Other/Static_BasicInfo'
-CombinedassistFeature_path='CombinedassistFeature'
-CheckFeat_path='checkFeatures'
-Phonation_static_path='artuculation_AUI/Vowels/Phonation'
-Merge_feature_path='RegressionMerged_dfs/'
-# for feature_paths in [Vowel_path, CtxDepPhone_path, Pseudo_CtxDepPhone_path]:
-# for feature_paths in [Vowel_path]:
-# for feature_paths in [Phonation_static_path]:
-# for feature_paths in [Interactionfeat_path]:
+if Add_UttLvl_feature==True:
+    Merge_feature_path='RegressionMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
+else:
+    Merge_feature_path='RegressionMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 for feature_paths in [Merge_feature_path]:
-# for feature_paths in [CombinedassistFeature_path]:
-# for feature_paths in [CheckFeat_path]:
-# for feature_paths in [Vowel_path, CtxDepPhone_path]:
     files = glob.glob(ados_ds.featurepath +'/'+ feature_paths+'/*.pkl')
     # load features from file
     for file in files: #iterate over features
         feat_=os.path.basename(file).split(".")[0]  
         
-        if type(featuresOfInterest)==dict:
+        if type(featuresOfInterest)==dict or type(featuresOfInterest)==Dict:
             column_dict=featuresOfInterest[feat_]
         elif type(featuresOfInterest)==list:
             column_dict=featuresOfInterest
@@ -494,7 +523,10 @@ df_best_result_AUC=pd.DataFrame([])
 df_best_result_f1=pd.DataFrame([])
 df_best_result_allThreeClassifiers=pd.DataFrame([])
 # =============================================================================
-Result_path="RESULTS/"
+if Add_UttLvl_feature==True:
+    Result_path="RESULTS/ADDed_UttFeat/"
+else:
+    Result_path="RESULTS/"
 if not os.path.exists(Result_path):
     os.makedirs(Result_path)
 final_result_file="_ADOS_{}.xlsx".format(args.suffix)
@@ -618,4 +650,5 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
 
 writer_clf.save()
 print(df_best_result_allThreeClassifiers)
-df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Regression_"+args.Feature_mode+"_3clsferRESULT.xlsx")
+df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Regression_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type))
+print()

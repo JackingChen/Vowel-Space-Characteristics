@@ -243,7 +243,7 @@ class Evaluation_method:
                 filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
                 filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
             elif feature_type == 'Syncrony_formant':
-                filter_bool=df_formant_statistic['timeSeries_len']>N
+                filter_bool=df_formant_statistic['timeSeries_len[]']>N
             else:
                 filter_bool=pd.Series([True]*len(df_formant_statistic),index=df_formant_statistic.index)
                 

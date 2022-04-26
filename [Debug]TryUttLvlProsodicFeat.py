@@ -50,6 +50,7 @@ import inspect
 from multiprocessing import Pool, current_process
 from metric import Evaluation_method 
 from articulation.HYPERPARAM import phonewoprosody, Label
+import articulation.HYPERPARAM.FeatureSelect as FeatSel
 import matplotlib.pyplot as plt
 
 
@@ -148,8 +149,8 @@ def get_args():
         )
     parser.add_argument('--base_path', default='/homes/ssd1/jackchen/DisVoice',
                         help='path of the base directory', dest='base_path')
-    parser.add_argument('--filepath', default='data/Segmented_ADOS_normalized',
-                        help='data/{Segmented_ADOS_TD_normalized_untranscripted|Segmented_ADOS_normalized}')
+    parser.add_argument('--filepath', default='data/Segmented_ADOS_TD_normalized',
+                        help='data/{Segmented_ADOS_TD_normalized|Segmented_ADOS_normalized}')
     parser.add_argument('--inpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--checkpointpath', default='/homes/ssd1/jackchen/DisVoice/phonation/features',
@@ -161,7 +162,7 @@ def get_args():
     parser.add_argument('--checkreliability', default=False,
                             help='path of the base directory')
     parser.add_argument('--method', default='Disvoice_prosody_energy',
-                            help='Disvoice_phonation|Disvoice_prosody_energy|praat')
+                            help='Disvoice_phonation|Disvoice_prosody_energy|Disvoice_prosodyF0|praat')
     args = parser.parse_args()
     return args
 
@@ -195,6 +196,13 @@ Formants_people_symb=Dict()
 audiopath = os.path.join(base_path,filepath)
 dataset_name=os.path.basename(audiopath)
 dataset_name=dataset_name[dataset_name.find('ADOS'):dataset_name.find('normalized')-1]
+
+if dataset_name == "ADOS":
+    dataset_role='ASD'
+elif dataset_name == "ADOS_TD":
+    dataset_role='TD'
+else:
+    raise KeyError()
 
 files=glob.glob(audiopath+"/*.wav")
 
@@ -232,11 +240,11 @@ def Get_phonationdictbag_map(files,Info_name_sex):
                 print("Skipped audio file: ", audiofile)
                 Skipped_audio_file.append(audiofile)
                 continue
-        elif method == "Disvoice_prosody_energy":
+        elif method == "Disvoice_prosody_energy" or method == 'Disvoice_prosodyF0':
             prosody_extractor=Prosody(maxf0=maxf0, minf0=minf0)
             # static = True : static feature, False = dynamic feature
             try:
-                df_feat_utt=prosody_extractor.extract_features_file(audiofile,fmt="dataframe" , static=True)
+                df_feat_utt=prosody_extractor.extract_features_file(audiofile,fmt="dataframe" , static=True, feature_method=method)
             except IndexError: 
                 print("Skipped audio file: ", audiofile)
                 Skipped_audio_file.append(audiofile)
@@ -362,8 +370,8 @@ else:
     
 '''
 
-chkptpath_kid=PhonationPath+"/df_phonation_kid_{}.pkl".format(dataset_name)
-chkptpath_doc=PhonationPath+"/df_phonation_doc_{}.pkl".format(dataset_name)
+chkptpath_kid=PhonationPath+"/df_phonation_{method}_kid_{dataset_role}.pkl".format(method=method,dataset_role=dataset_role)
+chkptpath_doc=PhonationPath+"/df_phonation_{method}_doc_{dataset_role}.pkl".format(method=method,dataset_role=dataset_role)
 
 Phonation_role_dict=Dict()
 for keys, values in Phonation_dict_bag.items():
@@ -384,6 +392,7 @@ def FilterNan_criteria(df_input):
 df_phonation_kid=FilterNan_criteria(df_phonation_kid)
 df_phonation_doc=FilterNan_criteria(df_phonation_doc)
 
+
 pickle.dump(df_phonation_kid,open(chkptpath_kid,"wb"))
 pickle.dump(df_phonation_doc,open(chkptpath_doc,"wb"))
 
@@ -392,6 +401,11 @@ chkptpath_kid_TD=args.checkpointpath + "/df_phonation_kid_ADOS_TD.pkl"
 chkptpath_kid_ASD=args.checkpointpath + "/df_phonation_kid_ADOS.pkl"
 chkptpath_doc_ASD=args.checkpointpath + "/df_phonation_doc_ADOS.pkl"
 chkptpath_doc_TD=args.checkpointpath + "/df_phonation_doc_ADOS_TD.pkl"
+
+
+
+
+
 
 
 # =============================================================================
@@ -450,8 +464,28 @@ def TBMEB1Preparation_SaveForClassifyData(dfpath,\
     if not os.path.exists(dfFormantStatisticFractionpath):
         os.makedirs(dfFormantStatisticFractionpath)
     pickle.dump(df_SegLvl_features,open(dfFormantStatisticFractionpath+'/df_SegLvl_features_{}.pkl'.format(suffix),'wb'))
+    print("File ", dfFormantStatisticFractionpath+ '/df_SegLvl_features_{}.pkl'.format(suffix), \
+      'Suscessfully output to: \n')
 
-# TBMEB1Preparation_SaveForClassifyData('Pickles/',df_phonation_kid,suffix=method)
+
+
+
+if method == "Disvoice_phonation":
+    column_sel=FeatSel.Utt_VoiceQuality
+elif method == "Disvoice_prosody_energy":
+    column_sel=FeatSel.Utt_energy
+elif method == 'Disvoice_prosodyF0':
+    column_sel=FeatSel.Utt_prosodyF0
+
+df_SegLvl_features=df_phonation_kid[column_sel].copy()
+dfpath='Pickles/'
+TBMEB1Preparation_SaveForClassifyData(dfpath,df_SegLvl_features,suffix="{method}_kid_{dataset_role}".format(method=method,dataset_role=dataset_role))
+
+
+
+aaa=ccc
+
+
 
 df_formant_statistic_77=TBMEB1Preparation_LoadForFromOtherData(pklpath,prefix='Formant_AUI_tVSAFCRFvals',\
                                            suffix='KID_FromASD_DOCKID')
@@ -528,134 +562,6 @@ from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-''' cross validation prediction '''
-# feature_chos_lst=['between_covariance_norm(A:,i:,u:)',
-# 'sam_wilks_lin_norm(A:,i:,u:)',
-# 'hotelling_lin_norm(A:,i:,u:)',
-# 'pillai_lin_norm(A:,i:,u:)']
-
-# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)']
-# feature_chos_lst_top=['between_variance_norm(A:,i:,u:)']
-
-# feature_chos_lst_top=['roys_root_lin_norm(A:,i:,u:)', 'Angles']
-# feature_chos_lst_top=['Between_Within_Det_ratio_norm(A:,i:,u:)']
-# feature_chos_lst=['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ai']
-# feature_chos_lst=['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ua']
-# feature_chos_lst=['pillai_lin_norm(A:,i:,u:)']
-# feature_chos_lst=['ang_ai']
-# feature_chos_lst=['ang_ua']
-# feature_chos_lst=['FCR2']
-# feature_chos_lst=['FCR2','ang_ai']
-# feature_chos_lst=['FCR2','ang_ua']
-# feature_chos_lst=['FCR2','ang_ai','ang_ua']
-# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)','dcorr_12']
-# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)']
-# feature_chos_lst_top=list(df_phonation_kid.columns) 
-# LOC_columns=[ 'between_covariance_norm(A:,i:,u:)',
-
-
-# feature_chos_lst_top=list(df_phonation_kid.columns)
-# feature_chos_lst_top=list(df_phonation_kid.columns) + LOC_columns
-# feature_chos_lst_top=LOC_columns
-# feature_chos_lst_top=list(df_disvoice_prosodyF0.columns)
-# feature_chos_lst_top=list(df_disvoice_prosodyF0.columns) + LOC_columns
-# feature_chos_lst_top=list(df_disvoice_phonation.columns)
-# feature_chos_lst_top=list(df_disvoice_phonation.columns) + LOC_columns
-# feature_chos_lst_top=list(df_disvoice_prosody_energy.columns) 
-# feature_chos_lst_top=[
-#     'avgEvoiced', 'stdEvoiced', 'skwEvoiced', 'kurtosisEvoiced',
-#         'avgtiltEvoiced', 'stdtiltEvoiced', 'skwtiltEvoiced',
-#         'kurtosistiltEvoiced', 'avgmseEvoiced', 'stdmseEvoiced',
-#         'skwmseEvoiced', 'kurtosismseEvoiced', 
-#         ]
-New_prosodyF0=[
-    'F0avg',
- 'F0std',
- 'F0max',
- 'F0min',
- 'F0skew',
- 'F0kurt',
- 'F0tiltavg',
- 'F0mseavg',
- 'F0tiltstd',
- 'F0msestd',
- 'F0tiltmax',
- 'F0msemax',
- 'F0tiltmin',
- 'F0msemin',
- 'F0tiltskw',
- 'F0mseskw',
- 'F0tiltku',
- 'F0mseku',
-    ]
-
-
-New_VoiceQuality = ['avg Jitter',
- 'avg Shimmer',
- # 'avg apq',
- # 'avg ppq',
- # 'avg logE',
- 'std Jitter',
- 'std Shimmer',
- # 'std apq',
- # 'std ppq',
- # 'std logE',
- 'skewness Jitter',
- 'skewness Shimmer',
- # 'skewness apq',
- # 'skewness ppq',
- # 'skewness logE',
- 'kurtosis Jitter',
- 'kurtosis Shimmer',
- # 'kurtosis apq',
- # 'kurtosis ppq',
- # 'kurtosis logE'
- ]
-
-New_energy = [
-    'avgEvoiced', 'stdEvoiced', 'skwEvoiced', 'kurtosisEvoiced',
-        'avgtiltEvoiced', 'stdtiltEvoiced', 'skwtiltEvoiced',
-        'kurtosistiltEvoiced', 'avgmseEvoiced', 'stdmseEvoiced',
-        'skwmseEvoiced', 'kurtosismseEvoiced', 
-        ]
-
-
-# =============================================================================
-# 
-# =============================================================================
-LOC_columns=[ 'between_covariance_norm(A:,i:,u:)',
-        'between_variance_norm(A:,i:,u:)',
-        'total_covariance_norm(A:,i:,u:)',
-        'total_variance_norm(A:,i:,u:)', 
-        'sam_wilks_lin_norm(A:,i:,u:)',
-        'pillai_lin_norm(A:,i:,u:)', 
-        'hotelling_lin_norm(A:,i:,u:)',
-        'roys_root_lin_norm(A:,i:,u:)',
-        'Between_Within_Det_ratio_norm(A:,i:,u:)',
-        'Between_Within_Tr_ratio_norm(A:,i:,u:)',
-       ]
-DEP_columns=[
-    'pear_12',
-    'spear_12',
-    'kendall_12',
-    'dcorr_12'
-    ]
-
-# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)','Between_Within_Det_ratio_norm(A:,i:,u:)']]
-# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','dcorr_12']]
-# X = df_formant_statistic[[ 'pillai_lin_norm(A:,i:,u:)','dcorr_12']]
-# X = df_formant_statistic[['dcorr_12','dcov_12']]
-# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ai']]
-# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ua']] 
-# X = df_formant_statistic[['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ai','ang_ua']] 
-# X = df_formant_statistic[['FCR2']] 
-# X = df_kid_ManualComb[feature_chos_lst_top]
-# y = df_kid_ManualComb[lab_chos_lst]
-# ## fit a OLS model with intercept on TV and Radio
-# X = sm.add_constant(X)
-# est = sm.OLS(y, X).fit()
-# est.summary()
-
 
 
 # feature_chos_lst_top=[
@@ -711,48 +617,63 @@ Classifier['EN']={'model':ElasticNet(random_state=0),\
                                 'model__l1_ratio': np.arange(0,1,0.25)}} #Just a initial value will be changed by parameter tuning
 
 
+    
+Comb=Dict()
+Comb[0]=FeatSel.Utt_prosodyF0
+Comb[1]=FeatSel.Utt_prosodyF0 + FeatSel.LOC_columns
+Comb[2]=FeatSel.Utt_VoiceQuality
+Comb[3]=FeatSel.Utt_VoiceQuality + FeatSel.LOC_columns
+Comb[4]=FeatSel.Utt_energy
+Comb[5]=FeatSel.Utt_energy + FeatSel.LOC_columns
+Comb[6]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy 
+Comb[7]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy + FeatSel.LOC_columns
+Comb[8]=FeatSel.Utt_VoiceQuality + FeatSel.Utt_energy 
+Comb[9]=FeatSel.Utt_VoiceQuality + FeatSel.Utt_energy + FeatSel.LOC_columns
+Comb[10]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy + FeatSel.Utt_VoiceQuality
+Comb[11]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy + FeatSel.Utt_VoiceQuality+ FeatSel.LOC_columns
+    
 
     
 clf=Classifier['SVR']
 Comb=Dict()
-Comb['LOC_columns']=LOC_columns
-Comb['DEP_columns']=DEP_columns
-Comb['LOC_columns+DEP_columns']=LOC_columns+DEP_columns
+Comb['LOC_columns']=FeatSel.LOC_columns
+Comb['DEP_columns']=FeatSel.DEP_columns
+Comb['LOC_columns+DEP_columns']=FeatSel.LOC_columns+FeatSel.DEP_columns
 
-Comb['New_prosodyF0']=New_prosodyF0
-Comb['New_prosodyF0+LOC_columns']=New_prosodyF0+LOC_columns
-Comb['New_prosodyF0+DEP_columns']=New_prosodyF0+DEP_columns
-Comb['New_prosodyF0+LOC_columns+DEP_columns']=New_prosodyF0+LOC_columns+DEP_columns
+Comb['Utt_prosodyF0']=FeatSel.Utt_prosodyF0
+Comb['Utt_prosodyF0+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.LOC_columns
+Comb['Utt_prosodyF0+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.DEP_columns
+Comb['Utt_prosodyF0+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.LOC_columns+FeatSel.DEP_columns
 
-Comb['New_VoiceQuality']=New_VoiceQuality
-Comb['New_VoiceQuality+LOC_columns']=New_VoiceQuality+LOC_columns
-Comb['New_VoiceQuality+DEP_columns']=New_VoiceQuality+DEP_columns
-Comb['New_VoiceQuality+LOC_columns+DEP_columns']=New_VoiceQuality+LOC_columns+DEP_columns
+Comb['Utt_VoiceQuality']=FeatSel.Utt_VoiceQuality
+Comb['Utt_VoiceQuality+LOC_columns']=FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns
+Comb['Utt_VoiceQuality+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.DEP_columns
+Comb['Utt_VoiceQuality+LOC_columns+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns+FeatSel.DEP_columns
 
-Comb['New_energy']=New_energy
-Comb['New_energy+LOC_columns']=New_energy+LOC_columns 
-Comb['New_energy+DEP_columns']=New_energy+DEP_columns 
-Comb['New_energy+LOC_columns+DEP_columns']=New_energy+LOC_columns+DEP_columns
+Comb['Utt_energy']=FeatSel.Utt_energy
+Comb['Utt_energy+LOC_columns']=FeatSel.Utt_energy+FeatSel.LOC_columns 
+Comb['Utt_energy+DEP_columns']=FeatSel.Utt_energy+FeatSel.DEP_columns 
+Comb['Utt_energy+LOC_columns+DEP_columns']=FeatSel.Utt_energy+FeatSel.LOC_columns+FeatSel.DEP_columns
 
-Comb['New_prosodyF0+New_energy']=New_prosodyF0+New_energy 
-Comb['New_prosodyF0+New_energy+LOC_columns']=New_prosodyF0+New_energy+LOC_columns
-Comb['New_prosodyF0+New_energy+DEP_columns']=New_prosodyF0+New_energy+DEP_columns
-Comb['New_prosodyF0+New_energy+LOC_columns+DEP_columns']=New_prosodyF0+New_energy+LOC_columns+DEP_columns
+Comb['Utt_prosodyF0+Utt_energy']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy 
+Comb['Utt_prosodyF0+Utt_energy+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.LOC_columns
+Comb['Utt_prosodyF0+Utt_energy+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.DEP_columns
+Comb['Utt_prosodyF0+Utt_energy+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.LOC_columns+FeatSel.DEP_columns
 
-Comb['New_VoiceQuality+New_energy']=New_VoiceQuality+New_energy 
-Comb['New_VoiceQuality+New_energy+LOC_columns']=New_VoiceQuality+New_energy+LOC_columns
-Comb['New_VoiceQuality+New_energy+DEP_columns']=New_VoiceQuality+New_energy+DEP_columns
-Comb['New_VoiceQuality+New_energy+LOC_columns+DEP_columns']=New_VoiceQuality+New_energy+LOC_columns+DEP_columns
+Comb['Utt_VoiceQuality+Utt_energy']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy 
+Comb['Utt_VoiceQuality+Utt_energy+LOC_columns']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy+FeatSel.LOC_columns
+Comb['Utt_VoiceQuality+Utt_energy+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy+FeatSel.DEP_columns
+Comb['Utt_VoiceQuality+Utt_energy+LOC_columns+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy+FeatSel.LOC_columns+FeatSel.DEP_columns
 
-Comb['New_prosodyF0+New_VoiceQuality']=New_prosodyF0+New_VoiceQuality 
-Comb['New_prosodyF0+New_VoiceQuality+LOC_columns']=New_prosodyF0+New_VoiceQuality+LOC_columns
-Comb['New_prosodyF0+New_VoiceQuality+DEP_columns']=New_prosodyF0+New_VoiceQuality+DEP_columns
-Comb['New_prosodyF0+New_VoiceQuality+LOC_columns+DEP_columns']=New_prosodyF0+New_VoiceQuality+LOC_columns+DEP_columns
+Comb['Utt_prosodyF0+Utt_VoiceQuality']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality 
+Comb['Utt_prosodyF0+Utt_VoiceQuality+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns
+Comb['Utt_prosodyF0+Utt_VoiceQuality+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality+FeatSel.DEP_columns
+Comb['Utt_prosodyF0+Utt_VoiceQuality+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns+FeatSel.DEP_columns
 
-Comb['New_prosodyF0+New_energy+New_VoiceQuality']=New_prosodyF0+New_energy+New_VoiceQuality
-Comb['New_prosodyF0+New_energy+New_VoiceQuality+LOC_columns']=New_prosodyF0+New_energy+New_VoiceQuality+LOC_columns
-Comb['New_prosodyF0+New_energy+New_VoiceQuality+DEP_columns']=New_prosodyF0+New_energy+New_VoiceQuality+DEP_columns
-Comb['New_prosodyF0+New_energy+New_VoiceQuality+LOC_columns+DEP_columns']=New_prosodyF0+New_energy+New_VoiceQuality+ LOC_columns+ DEP_columns
+Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality
+Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns
+Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality+FeatSel.DEP_columns
+Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality+ FeatSel.LOC_columns+ FeatSel.DEP_columns
 
 
 
@@ -832,8 +753,8 @@ print(df_RESULT_list)
 Result_nice=Dict()
 for measureOI in df_RESULT_list.columns:
     Result_nice[measureOI]=pd.DataFrame()
-    for prosody in ['','New_prosodyF0', 'New_energy', 'New_VoiceQuality','New_prosodyF0 New_energy',\
-                    'New_VoiceQuality New_energy','New_prosodyF0 New_VoiceQuality','New_prosodyF0 New_energy New_VoiceQuality']:
+    for prosody in ['','Utt_prosodyF0', 'Utt_energy', 'Utt_VoiceQuality','Utt_prosodyF0 Utt_energy',\
+                    'Utt_VoiceQuality Utt_energy','Utt_prosodyF0 Utt_VoiceQuality','Utt_prosodyF0 Utt_energy Utt_VoiceQuality']:
         for addition in ['','LOC_columns', 'DEP_columns','LOC_columns DEP_columns']:
             P=prosody.replace(" ","+")
             A=addition.replace(" ","+")

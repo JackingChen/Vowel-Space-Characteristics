@@ -22,27 +22,29 @@ def multi_find(s, r):
     return(_complete)
 
 def praat_vuv(audio_filaname, resultsp, resultst, time_stepF0=0, minf0=75, maxf0=600, maxVUVPeriod=0.02, averageVUVPeriod=0.01):
-	"""
-	runs vuv_praat script to obtain pitch and voicing decisions for a wav file.
-	It writes the results into two text files, one for the pitch and another
-	for the voicing decisions. These results can then be read using the function
-	read_textgrid_trans and decodeF0
-
-	:param audio_filaname: Full path to the wav file
-	:param resultsp: Full path to the resulting file with the pitch
-	:param resultst: Full path to the resulting file with the voiced/unvoiced decisions
-	:param time_stepF0: time step to compute the pitch, default value is 0 and Praat will use 0.75 / minf0
-	:param minf0: minimum frequency for the pitch in Hz, default is 75Hz
-	:param maxf0: maximum frequency for the pitch in Hz, default is 600
-	:param maxVUVPeriod: maximum interval that considered part of a larger voiced interval, default 0.02
-	:param averageVUVPeriod: half of this value will be taken to be the amount to which a voiced interval will extend 							beyond its initial and final points, default is 0.01
-	:returns: nothing
-	"""
-	command='praat --run '+path_praat_script+'/vuv_praat.praat '
-	command+=audio_filaname+' '+resultsp +' '+  resultst+' '
-	command+=str(minf0)+' '+str(maxf0)+' '
-	command+=str(time_stepF0)+' '+str(maxVUVPeriod)+' '+str(averageVUVPeriod)
-	os.system(command)
+    """
+    runs vuv_praat script to obtain pitch and voicing decisions for a wav file.
+    It writes the results into two text files, one for the pitch and another
+    for the voicing decisions. These results can then be read using the function
+    read_textgrid_trans and decodeF0
+    
+    :param audio_filaname: Full path to the wav file
+    :param resultsp: Full path to the resulting file with the pitch
+    :param resultst: Full path to the resulting file with the voiced/unvoiced decisions
+    :param time_stepF0: time step to compute the pitch, default value is 0 and Praat will use 0.75 / minf0
+    :param minf0: minimum frequency for the pitch in Hz, default is 75Hz
+    :param maxf0: maximum frequency for the pitch in Hz, default is 600
+    :param maxVUVPeriod: maximum interval that considered part of a larger voiced interval, default 0.02
+    :param averageVUVPeriod: half of this value will be taken to be the amount to which a voiced interval will extend 							beyond its initial and final points, default is 0.01
+    :returns: nothing
+    """
+    command='praat --run '+path_praat_script+'/vuv_praat.praat '
+    command+='"' + audio_filaname +'"'+' '+'"' +resultsp +'"' +' '+'"'+  resultst+'"'+' '
+    command+=str(minf0)+' '+str(maxf0)+' '
+    command+=str(time_stepF0)+' '+str(maxVUVPeriod)+' '+str(averageVUVPeriod)
+    #Debug 
+    # print(command)
+    os.system(command)
     
 
 def praat_formants(audio_filename, results_filename,sizeframe,step, n_formants=5, max_formant=5500):

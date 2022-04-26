@@ -177,7 +177,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--poolWindowSize', default=3,
                             help='path of the base directory')
-    parser.add_argument('--dataset_role', default='KID_FromASD_DOCKID',
+    parser.add_argument('--dataset_role', default='KID_FromTD_DOCKID',
                             help='kid_TD| kid88| DOC_FromASD_DOCKID | KID_FromASD_DOCKID')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
@@ -475,7 +475,7 @@ feat='Formant_AUI_tVSAFCRFvals'
 
 df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromASD_DOCKID')
 df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
-df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='kid_TD')
+df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromTD_DOCKID')
 if not os.path.exists(df_formant_statistic_ASDTD_path) or not os.path.exists(df_formant_statistic77_path):
     raise FileExistsError
 df_feature_TD=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))

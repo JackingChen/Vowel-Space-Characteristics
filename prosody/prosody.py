@@ -712,7 +712,7 @@ class Prosody_jack:
         plt.show()
 
 
-    def extract_features_file(self, audio, static=True, plots=False, fmt="npy", kaldi_file=""):
+    def extract_features_file(self, audio, static=True, plots=False, fmt="npy", kaldi_file="",feature_method='Disvoice_prosodyF0'):
         """Extract the prosody features from an audio file
 
         :param audio: .wav audio file.
@@ -730,7 +730,7 @@ class Prosody_jack:
         >>> prosody.extract_features_file(file_audio, static=False, plots=False, fmt="kaldi", kaldi_file="./test")
         """
         if static:
-            features=self.prosody_static(audio, plots)
+            features=self.prosody_static(audio, plots, feature_method=feature_method)
             if fmt=="npy" or fmt=="txt":
                 return features
             elif fmt=="dataframe" or fmt=="csv":
@@ -772,7 +772,7 @@ class Prosody_jack:
                 raise ValueError("format"+ fmt+" is not supported" )
 
 
-    def prosody_static(self, audio, plots):
+    def prosody_static(self, audio, plots, feature_method='Disvoice_prosodyF0'):
         """Extract the static prosody features from an audio file
 
         :param audio: .wav audio file.
@@ -832,11 +832,13 @@ class Prosody_jack:
         # features=np.hstack((F0_features, energy_featuresV, energy_featuresU, duration_features))
         # self.head_st=self.namefeatf0+self.namefeatEv+self.namefeatEu+self.namefeatdur
         
-        self.head_st=self.namefeatf0
-        features=np.hstack((F0_features))
+        if feature_method == 'Disvoice_prosodyF0':
+            self.head_st=self.namefeatf0
+            features=np.hstack((F0_features))
         
-        # self.head_st=self.namefeatEv
-        # features=np.hstack((energy_featuresV))
+        elif feature_method == 'Disvoice_prosody_energy':
+            self.head_st=self.namefeatEv
+            features=np.hstack((energy_featuresV))
         
         # self.head_st=self.namefeatEu
         # features=np.hstack((energy_featuresU))

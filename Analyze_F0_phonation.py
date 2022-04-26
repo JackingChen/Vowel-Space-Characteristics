@@ -150,7 +150,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Stat_med_str_VSA', default='mean',
                             help='path of the base directory')
-    parser.add_argument('--dataset_role', default='KID_FromASD_DOCKID',
+    parser.add_argument('--dataset_role', default='KID_FromTD_DOCKID',
                             help='kid_TD| kid88')
     # parser.add_argument('--Inspect_features', default=['F1','F2'],
     #                         help='')

@@ -90,12 +90,23 @@ def get_args():
                         help='[recall_macro,accuracy]')
     parser.add_argument('--Mergefeatures', default=False,
                         help='')
+    parser.add_argument('--knn_weights', default='distance',
+                            help='path of the base directory')
+    parser.add_argument('--knn_neighbors', default=2,  type=int,
+                            help='path of the base directory')
+    parser.add_argument('--Reorder_type', default='DKIndividual',
+                            help='[DKIndividual, DKcriteria]')
+    parser.add_argument('--Add_UttLvl_feature', default=True,
+                            help='[DKIndividual, DKcriteria]')
     args = parser.parse_args()
     return args
 args = get_args()
 start_point=args.start_point
 experiment=args.experiment
-
+knn_weights=args.knn_weights
+knn_neighbors=args.knn_neighbors
+Reorder_type=args.Reorder_type
+Add_UttLvl_feature=args.Add_UttLvl_feature
 # =============================================================================
 
 #[tmp] should remove soon
@@ -227,7 +238,7 @@ df_formant_statistics_CtxPhone_collect_dict=Dict()
 # =============================================================================
 
 class ADOSdataset():
-    def __init__(self,):
+    def __init__(self,knn_weights,knn_neighbors,Reorder_type,Add_UttLvl_feature=False):
         self.featurepath='Features'            
         self.N=2
         self.LabelType=Dict()
@@ -235,7 +246,17 @@ class ADOSdataset():
         self.LabelType['ADOS_cate_C']='classification'
         self.LabelType['ASDTD']='classification'
         self.Fractionfeatures_str='Features/artuculation_AUI/Vowels/Fraction/*.pkl'    
-        self.Merge_feature_path='Features/ClassificationMerged_dfs/{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
+        
+        
+        # self.Merge_feature_path='Features/ClassificationMerged_dfs/{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
+        
+        if Add_UttLvl_feature==True:
+            self.File_root_path='Features/ClassificationMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
+            self.Merge_feature_path=self.File_root_path+'{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
+        else:
+            self.File_root_path='Features/ClassificationMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
+            self.Merge_feature_path=self.File_root_path+'{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
+        
         self.FeatureCombs_manual=Dict()
         self.FeatureCombs_manual['TD_normal vs ASDSevere_agesexmatch >> FeatLOC_kid']=['df_formant_statistic_TD_normal_kid', 'df_formant_statistic_agesexmatch_ASDSevereGrp_kid']
         self.FeatureCombs_manual['TD_normal vs ASDMild_agesexmatch >> FeatLOC_kid']=['df_formant_statistic_TD_normal_kid', 'df_formant_statistic_agesexmatch_ASDMildGrp_kid']
@@ -296,17 +317,22 @@ class ADOSdataset():
         self.Features_comb_single=Features_comb
     def _FeatureBuild_Module(self):
         Labels_add=['ASDTD']
-        ModuledFeatureCombination=FeatSel.Columns_comb.copy()
+        if Add_UttLvl_feature==True:
+            ModuledFeatureCombination=FeatSel.Columns_comb2.copy()
+        else:
+            ModuledFeatureCombination=FeatSel.Columns_comb.copy()
+        
         sellect_people_define=SellectP_define()
         #Loading features from ASD        
         Features_comb=Dict()
         IterateFilesFullPaths = glob.glob(self.Merge_feature_path)
+        print("Search path from ", self.Merge_feature_path)
         
-        File_root_path='Features/ClassificationMerged_dfs/'
         DfCombFilenames=[os.path.basename(f) for f in IterateFilesFullPaths]
-        File_ASD_paths=[File_root_path+"ASD_DOCKID/"+f for f in DfCombFilenames]
-        File_TD_paths=[File_root_path+"TD_DOCKID/"+f for f in DfCombFilenames]
-        
+        File_ASD_paths=[self.File_root_path+"ASD_DOCKID/"+f for f in DfCombFilenames]
+        File_TD_paths=[self.File_root_path+"TD_DOCKID/"+f for f in DfCombFilenames]
+        print("Read path from ", File_ASD_paths)
+        print("Read path from ", File_TD_paths)
         
         df_Top_Check_length=pd.DataFrame()
         for file_ASD, file_TD in zip(File_ASD_paths,File_TD_paths):
@@ -451,7 +477,7 @@ if args.Mergefeatures:
 
 
 
-ados_ds=ADOSdataset()
+ados_ds=ADOSdataset(knn_weights,knn_neighbors,Reorder_type,Add_UttLvl_feature=Add_UttLvl_feature)
 ErrorFeat_bookeep=Dict()
 
 
@@ -467,7 +493,11 @@ for k in ados_ds.Features_comb_multi.keys():
         FeatureLabelMatch.append([k,'ASDTD'])
     else:
         FeatureLabelMatch.append([k,'ASDsevereMild'])
-ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb[e_str][e2_str] for e_str in FeatSel.Columns_comb.keys() for e2_str in FeatSel.Columns_comb[e_str].keys()}
+if Add_UttLvl_feature==True:
+    ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb2[e_str][e2_str] for e_str in FeatSel.Columns_comb2.keys() for e2_str in FeatSel.Columns_comb2[e_str].keys()}
+else:
+    ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb[e_str][e2_str] for e_str in FeatSel.Columns_comb.keys() for e2_str in FeatSel.Columns_comb[e_str].keys()}
+
     
 for exp_str,lab_ in FeatureLabelMatch:
     ModuleColumn_str=exp_str.split(" >> ")[-1]
@@ -642,7 +672,10 @@ df_best_result_AUC=pd.DataFrame([])
 df_best_result_f1=pd.DataFrame([])
 df_best_result_allThreeClassifiers=pd.DataFrame([])
 # =============================================================================
-Result_path="RESULTS/"
+if Add_UttLvl_feature==True:
+    Result_path="RESULTS/ADDed_UttFeat/"
+else:
+    Result_path="RESULTS/"
 if not os.path.exists(Result_path):
     os.makedirs(Result_path)
 final_result_file="_ADOS_{}.xlsx".format(args.suffix)
@@ -652,6 +685,9 @@ warnings.filterwarnings("ignore")
 count=0
 OutFeature_dict=Dict()
 Best_param_dict=Dict()
+
+print("Start classification")
+print("\n\n\n\n")
 
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
     writer_clf = pd.ExcelWriter(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_"+final_result_file, engine = 'xlsxwriter')
@@ -765,5 +801,11 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         df_best_result_f1.to_excel(writer_clf,sheet_name="f1")
 
 writer_clf.save()
-df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Classification_"+args.Feature_mode+"_3clsferRESULT.xlsx")
+df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Classification_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type))
+
+df_best_result_allThreeClassifiers[df_best_result_allThreeClassifiers['ASDTD/SVC'].astype(float)>0.8]
+
+print("df_best_result_allThreeClassifiers")
 print(df_best_result_allThreeClassifiers)
+print('generated at',Result_path+"/"+"Classification_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type) )
+print("\n\n\n\n")

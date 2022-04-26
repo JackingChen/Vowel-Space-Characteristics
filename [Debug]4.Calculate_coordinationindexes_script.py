@@ -89,7 +89,7 @@ def get_args():
                             help='')
     parser.add_argument('--basic_columns', default=['u_num', 'a_num', 'i_num', 'ADOS_C', 'dia_num', 'sex', 'age', 'Module','ADOS_cate_C', 'u_num+i_num+a_num'],
                             help='')
-    parser.add_argument('--knn_weights', default='uniform',
+    parser.add_argument('--knn_weights', default='distance',
                             help='path of the base directory')
     parser.add_argument('--knn_neighbors', default=2,  type=int,
                             help='path of the base directory')

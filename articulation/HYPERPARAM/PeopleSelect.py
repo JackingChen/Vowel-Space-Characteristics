@@ -85,3 +85,4 @@ class SellectP_define:
        ]
         
         self.ASDTD_label={'ASD':1,'TD':2}
+        self.ASDsevereMild_label={'ASDsevere':1,'ASDmild':2}
