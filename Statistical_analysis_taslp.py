@@ -130,9 +130,11 @@ TopTop_data_lst=[]
 # TopTop_data_lst.append(['df_feature_low_CSS','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderatehigh_CSS'])
+# TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderatehigh_CSS'])
+# TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderatehigh_CSS','df_feature_TD'])
+
 
 
 # TopTop_data_lst.append(['df_feature_low_CSS','df_feature_moderate_CSS'])
@@ -143,16 +145,16 @@ TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderatehigh_CSS
 
 # TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_Autism_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_Autism_TC'])
-
+# TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Autism_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_Autism_TC'])
+TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_Autism_TC','df_feature_TD'])
 
 # TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_Autism_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_Autism_TS'])
+# TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Autism_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_Autism_TS'])
 
 
 # TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS'])
@@ -161,23 +163,23 @@ TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_Autism_TS'])
 
 self_specify_cols=[
     'FCR2',
-    'VSA2',
-    'between_covariance_norm(A:,i:,u:)', 
-    'between_variance_norm(A:,i:,u:)',
-    'within_covariance_norm(A:,i:,u:)', 
-    'within_variance_norm(A:,i:,u:)',
-    'total_covariance_norm(A:,i:,u:)', 
-    'total_variance_norm(A:,i:,u:)',
-    'sam_wilks_lin_norm(A:,i:,u:)', 
-    'pillai_lin_norm(A:,i:,u:)',
-    'hotelling_lin_norm(A:,i:,u:)', 
-    'roys_root_lin_norm(A:,i:,u:)',
-    'Between_Within_Det_ratio_norm(A:,i:,u:)',
-    'Between_Within_Tr_ratio_norm(A:,i:,u:)',
-    'pear_12',
-    'spear_12',
-    'kendall_12',
-    'dcorr_12'
+    # 'VSA2',
+    # 'between_covariance_norm(A:,i:,u:)', 
+    # 'between_variance_norm(A:,i:,u:)',
+    # 'within_covariance_norm(A:,i:,u:)', 
+    # 'within_variance_norm(A:,i:,u:)',
+    # 'total_covariance_norm(A:,i:,u:)', 
+    # 'total_variance_norm(A:,i:,u:)',
+    # 'sam_wilks_lin_norm(A:,i:,u:)', 
+    # 'pillai_lin_norm(A:,i:,u:)',
+    # 'hotelling_lin_norm(A:,i:,u:)', 
+    # 'roys_root_lin_norm(A:,i:,u:)',
+    # 'Between_Within_Det_ratio_norm(A:,i:,u:)',
+    # 'Between_Within_Tr_ratio_norm(A:,i:,u:)',
+    # 'pear_12',
+    # 'spear_12',
+    # 'kendall_12',
+    # 'dcorr_12'
     ]
 
 # self_specify_cols=FeatSel.Phonation_Trend_D_cols + FeatSel.Phonation_Trend_K_cols + FeatSel.Phonation_Proximity_cols + FeatSel.Phonation_Convergence_cols + FeatSel.Phonation_Syncrony_cols
@@ -188,7 +190,7 @@ if len(self_specify_cols) > 0:
 # else:
 #     inspect_cols=Parameters
 
-plot=False
+plot=True
 Record_dict=Dict()
 All_cmp_dict=Dict()
 for Top_data_lst in TopTop_data_lst:
