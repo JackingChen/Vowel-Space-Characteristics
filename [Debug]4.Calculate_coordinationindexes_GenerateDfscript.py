@@ -418,12 +418,12 @@ for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
         df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
                                 args.Inspect_roles, Label,\
                                 knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                                MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
+                                MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,Knn_aggressive_mode=True)
     elif Reorder_type == 'DKcriteria':
         df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKcriteria_dict,features,PhoneOfInterest_str,\
                                 args.Inspect_roles, Label,\
                                 knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                                MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
+                                MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,Knn_aggressive_mode=True)
     
     
     # df_syncrony_measurement=syncrony.calculate_features_continuous(df_person_segment_feature_DKcriteria_dict,features,PhoneOfInterest_str,\

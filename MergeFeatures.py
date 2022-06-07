@@ -27,7 +27,8 @@ def get_args():
                         help='what kind of data you want to get')
     parser.add_argument('--ADDUtt_feature', default=True,
                         help='what kind of data you want to get')
-    
+    parser.add_argument('--exclude_people', default=['2015_12_07_02_003','2017_03_18_01_196_1'],
+                        help='what kind of data you want to get')
     args = parser.parse_args()
     return args
 args = get_args()
@@ -113,7 +114,12 @@ for knn_weights in ['uniform', 'distance']:
                     
                     df_infos_dict=Dict()
                     for keys, paths in Merg_filepath.items():
-                        df_infos_dict[keys]=pickle.load(open(paths,"rb")).sort_index()
+                        df_data=pickle.load(open(paths,"rb")).sort_index()
+                        #!!!!!!!!!!!!!!!!!  注意這邊我們人為移除一些資訊量太少的人
+                        for key_wrds in args.exclude_people:
+                            if df_data.index.str.contains(key_wrds).any():
+                                df_data=df_data.drop(index=key_wrds)
+                        df_infos_dict[keys]=df_data
                     
                     Merged_df_dict=Dict()
                     comb1 = list(combinations(list(Merg_filepath.keys()), 1))
@@ -145,15 +151,22 @@ for knn_weights in ['uniform', 'distance']:
                             Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
                             OutPklpath=merge_out_path+'+'.join(c)+".pkl"
                         pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
-                        
-                        
+                    
+                    # Condition for : Columns_comb3 = All possible LOC feature combination + phonation_proximity_col
+                    c = ('static_feautre_LOC', 'dynamic_feature_LOC', 'dynamic_feature_phonation')
+                    e1, e2, e3=c
+                    Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+                    Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],df_infos_dict[e3])
+                    OutPklpath=merge_out_path+'+'.join(c)+".pkl"
+                    pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+                    
             if args.MergeRegressionfeatures:
                 for dataset_role in ['ASD_DOCKID']:
                     if args.ADDUtt_feature==True:
                         role=dataset_role.split("_")[0] #ASD or TD
                     Merg_filepath={}
-                    Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl'
-                    Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_FromASD_DOCKID.pkl'
+                    Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/Formant_AUI_tVSAFCRFvals_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
+                    Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
                     Merg_filepath['dynamic_feature_LOC']='Features/artuculation_AUI/Interaction/Syncrony_Knnparameters/Syncrony_measure_of_variance_{knn_weights}_{knn_neighbors}_{Reorder_type}_{dataset_role}.pkl'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type)
                     Merg_filepath['dynamic_feature_phonation']='Features/artuculation_AUI/Interaction/Syncrony_Knnparameters/Syncrony_measure_of_variance_phonation_{knn_weights}_{knn_neighbors}_{Reorder_type}_{dataset_role}.pkl'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type)
                     
@@ -167,14 +180,25 @@ for knn_weights in ['uniform', 'distance']:
                     
                     df_infos_dict=Dict()
                     for keys, paths in Merg_filepath.items():
-                        df_infos_dict[keys]=pickle.load(open(paths,"rb")).sort_index()
+                        df_data=pickle.load(open(paths,"rb")).sort_index()
+                        #!!!!!!!!!!!!!!!!!  注意這邊我們人為移除一些資訊量太少的人
+                        for key_wrds in args.exclude_people:
+                            if df_data.index.str.contains(key_wrds).any():
+                                df_data=df_data.drop(index=key_wrds)
+                        df_infos_dict[keys]=df_data
                     
                     Merged_df_dict=Dict()
                     comb1 = list(combinations(list(Merg_filepath.keys()), 1))
                     comb2 = list(combinations(list(Merg_filepath.keys()), 2))
                     if args.ADDUtt_feature==True: # output only Utt features
                         OutPklpath=merge_out_path+ "Utt_feature.pkl"
-                        pickle.dump(Utt_featuresCombinded_dict[role],open(OutPklpath,"wb"))
+                        #!!!!!!!!!!!!!!!!!  注意這邊我們人為移除一些資訊量太少的人
+                        df_data=Utt_featuresCombinded_dict[role].copy()
+                        for key_wrds in args.exclude_people:
+                            if df_data.index.str.contains(key_wrds).any():
+                                df_data=df_data.drop(index=key_wrds)
+                        pickle.dump(df_data,open(OutPklpath,"wb"))    
+                        # pickle.dump(Utt_featuresCombinded_dict[role],open(OutPklpath,"wb"))
                     for c in comb1:
                         e1=c[0]
 
@@ -185,7 +209,8 @@ for knn_weights in ['uniform', 'distance']:
                             Merged_df_dict[e1]=df_infos_dict[e1]
                             OutPklpath=merge_out_path+ e1 + ".pkl"
                         pickle.dump(Merged_df_dict[e1],open(OutPklpath,"wb"))
-                        
+                        # print(len(Merged_df_dict[e1]))
+                        # assert Merged_df_dict[e1].isna().any().any() !=True
                     for c in comb2:
                         e1, e2=c
                         
@@ -197,4 +222,11 @@ for knn_weights in ['uniform', 'distance']:
                             Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
                             OutPklpath=merge_out_path+'+'.join(c)+".pkl"
                         pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
-                        
+                        # print(len(Merged_df_dict['+'.join(c)]))
+                    # Condition for : Columns_comb3 = All possible LOC feature combination + phonation_proximity_col
+                    c = ('static_feautre_LOC', 'dynamic_feature_LOC', 'dynamic_feature_phonation')
+                    e1, e2, e3=c
+                    Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+                    Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],df_infos_dict[e3])
+                    OutPklpath=merge_out_path+'+'.join(c)+".pkl"
+                    pickle.dump(Merged_df_dict['Utt_feature'+'+'+'+'.join(c)],open(OutPklpath,"wb"))

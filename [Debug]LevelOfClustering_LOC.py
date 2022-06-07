@@ -177,7 +177,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--poolWindowSize', default=3,
                             help='path of the base directory')
-    parser.add_argument('--dataset_role', default='KID_FromTD_DOCKID',
+    parser.add_argument('--dataset_role', default='KID_FromASD_DOCKID',
                             help='kid_TD| kid88| DOC_FromASD_DOCKID | KID_FromASD_DOCKID')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
@@ -320,7 +320,6 @@ articulation=Articulation(Stat_med_str_VSA='mean')
 df_formant_statistic, SCATTER_matrixBookeep_dict=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst, FILTERING_method='KDE', KDE_THRESHOLD=40,RETURN_scatter_matrix=True)
 
 
-
 # For pseudo acoustic features generation
 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
                                             df_formant_statistic['i_num'] +\
@@ -353,12 +352,19 @@ agemax=-1
 agemin=-1
 ADOScate=-1
 N=2
+
+'''
+###############  Some TD will be wiped out because they don't have ADOC score and ADOS Modules ############
+'''
+
 df_formant_statistic_77=criterion_filter(df_formant_statistic,\
                                         constrain_sex=sex,constrain_module=module,N=N,constrain_agemax=agemax,constrain_agemin=agemin,constrain_ADOScate=ADOScate,\
                                         evictNamelst=[])
 
-pickle.dump(df_formant_statistic_77,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
-# pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
+if role == 'KID_FromASD_DOCKID':
+    pickle.dump(df_formant_statistic_77,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
+elif role == 'KID_FromTD_DOCKID':
+    pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
 
 
 
@@ -451,7 +457,7 @@ def Survey_nice_variable(df_result_table):
 
 
 Survey_nice_variable(Aaadf_spearmanr_table_NoLimit)
-aaa=ccc
+#%%
 # =============================================================================
 '''
     feature Classification 
@@ -523,39 +529,41 @@ df_feature_NotautismandASD_TS=df_feature_ASD[filter_Notautism_TS | filter_ASD_TS
 df_feature_Autism_TS=df_feature_ASD[filter_Autism_TS]
 
 TopTop_data_lst=[]
-TopTop_data_lst.append(['df_feature_ASD','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_ASD','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_low_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
 TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
 
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_moderate_CSS'])
-TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_high_CSS'])
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_high_CSS'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderate_CSS'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_high_CSS'])
+# TopTop_data_lst.append(['df_feature_low_CSS','df_feature_moderate_CSS'])
+# TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_high_CSS'])
+# TopTop_data_lst.append(['df_feature_low_CSS','df_feature_high_CSS'])
+# TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderate_CSS'])
+# TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_high_CSS'])
 
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_Autism_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Autism_TC','df_feature_TD'])
 
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC'])
-TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_Autism_TC'])
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_Autism_TC'])
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC','df_feature_Autism_TC'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC'])
+# TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_Autism_TC'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_Autism_TC'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC','df_feature_Autism_TC'])
 
 
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_Autism_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Autism_TS','df_feature_TD'])
 
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS'])
-TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_Autism_TS'])
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_Autism_TS'])
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS','df_feature_Autism_TS'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS'])
+# TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_Autism_TS'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_Autism_TS'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS','df_feature_Autism_TS'])
 
 self_specify_cols=[
     'FCR2',
@@ -671,7 +679,7 @@ Record_cleaned_dict={}
 for keys, values in Record_dict.items():
     Record_cleaned_dict[keys]=values.dropna(thresh=2,axis=0)
 
-aaa=ccc
+
 # =============================================================================
 # 
 # =============================================================================
@@ -679,11 +687,12 @@ lab_chos_lst=['ASDclassify']
 # feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','dcorr_12']
 
 
-# C_variable=np.array(np.arange(0.1,1.1,0.2))
+# C_variable=np.array(np.arange(0.1,1.5,0.1))
 # epsilon=np.array(np.arange(0.1,1.5,0.1) )
 # epsilon=np.array(np.arange(0.01,0.15,0.02))
-# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.1)))
-C_variable=np.array([0.001,0.01,10.0,50,100])
+# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.2)))
+C_variable=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
+
 Classifier={}
 loo=LeaveOneOut()
 # CV_settings=loo
@@ -714,7 +723,7 @@ clf=Classifier['SVC']
 
 
 
-columns=[
+LOCcolumns=[
     'FCR2',
     'VSA2',
     'between_covariance_norm(A:,i:,u:)', 
@@ -729,19 +738,22 @@ columns=[
     'roys_root_lin_norm(A:,i:,u:)',
     'Between_Within_Det_ratio_norm(A:,i:,u:)',
     'Between_Within_Tr_ratio_norm(A:,i:,u:)',
+    ]
+
+DEPcolumnns=[
     'pear_12',
     'spear_12',
     'kendall_12',
     'dcorr_12'
     ]
+LOCDEPcolumns=LOCcolumns+DEPcolumnns
 
-featuresOfInterest=[ [col] for col in columns]
+# featuresOfInterest=[ [col] for col in LOCDEPcolumns]
+# combinations_lsts=[ k for k in featuresOfInterest]
+# combinations_keylsts=[ k[0] for k in featuresOfInterest]
 
-
-
-combinations_lsts=[ k for k in featuresOfInterest]
-combinations_keylsts=[ k[0] for k in featuresOfInterest]
-
+combinations_lsts=[LOCcolumns,DEPcolumnns,LOCDEPcolumns]
+combinations_keylsts=['LOCcolumns','DEPcolumnns','LOCDEPcolumns']
 
 Top_RESULT_dict=Dict()
 for Top_data_lst in TopTop_data_lst:
@@ -807,7 +819,7 @@ for Expiment_str, values in Top_RESULT_dict.items():
 df_Result_UAR_summary_list=pd.DataFrame.from_dict(Result_UAR_summary,orient='index')
 del Gclf
 
-
+aaa=ccc
 
 
 # =============================================================================

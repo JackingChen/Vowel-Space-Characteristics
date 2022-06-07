@@ -107,7 +107,7 @@ def get_args():
                             help='')
     parser.add_argument('--knn_weights', default='uniform',
                             help='path of the base directory')
-    parser.add_argument('--knn_neighbors', default=2,  type=int,
+    parser.add_argument('--knn_neighbors', default=3,  type=int,
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
@@ -383,12 +383,12 @@ for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
             df_syncrony_measurement_phonation=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
                                                                             args.Inspect_roles, Label,\
                                                                             knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                                                                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
+                                                                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,Knn_aggressive_mode=True)
         if Reorder_type == 'DKcriteria':
             df_syncrony_measurement_phonation=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKcriteria_dict,features,PhoneOfInterest_str,\
                                                                             args.Inspect_roles, Label,\
                                                                             knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                                                                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
+                                                                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,Knn_aggressive_mode=True)
                                                     
             
         df_syncrony_measurement_phonation_all=pd.concat([df_syncrony_measurement_phonation_all,df_syncrony_measurement_phonation], axis=1)    
@@ -418,7 +418,7 @@ for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
     
     
     df_syncrony_measurement_phonation_all=df_syncrony_measurement_phonation_all.loc[:,~df_syncrony_measurement_phonation_all.columns.duplicated()]
-    df_syncrony_measurement_phonation_all_denan=df_syncrony_measurement_phonation_all.dropna(subset=[c for c in df_syncrony_measurement_phonation_all.columns if c not in label_generate_choose_lst])
+    df_syncrony_measurement_phonation_all_denan=df_syncrony_measurement_phonation_all.dropna(subset=[c for c in df_syncrony_measurement_phonation_all.columns if c not in label_generate_choose_lst+['timeSeries_len[A:,i:,u:]', 'timeSeries_len']])
     
     outDfPath='Features/artuculation_AUI/Interaction/Syncrony_Knnparameters/'
     if not os.path.exists(outDfPath):

@@ -12,6 +12,29 @@ from scipy import special, stats
 from sklearn import neighbors
 from addict import Dict
 from scipy.stats import spearmanr,pearsonr 
+import warnings
+
+
+from numpy.testing import assert_equal, assert_allclose, assert_warns
+
+from scipy import special
+from scipy import linalg
+class ConstantInputWarning(RuntimeWarning):
+
+    def __init__(self, msg=None):
+        if msg is None:
+            msg = ("An input array is constant; the correlation coefficent "
+                   "is not defined.")
+        self.args = (msg,)
+
+
+class NearConstantInputWarning(RuntimeWarning):
+
+    def __init__(self, msg=None):
+        if msg is None:
+            msg = ("An input array is nearly constant; the computed "
+                   "correlation coefficent may be inaccurate.")
+        self.args = (msg,)
 class Syncrony:
     def __init__(self, ):
         self.label_choose_lst=['ADOS_C']
@@ -24,24 +47,34 @@ class Syncrony:
     def KNNFitting(self,df_person_segment_feature_DKIndividual_dict,\
                    col_choose,Inspect_roles,\
                    knn_weights='uniform',knn_neighbors=2,MinNumTimeSeries=3,\
-                   st_col_str='IPU_st', ed_col_str='IPU_ed'):
+                   st_col_str='IPU_st', ed_col_str='IPU_ed', aggressive_mode=False):
         p_1=Inspect_roles[0]
         p_2=Inspect_roles[1]
         
         functionDK_people=Dict()
         for people in df_person_segment_feature_DKIndividual_dict.keys():
-            if len(df_person_segment_feature_DKIndividual_dict[people][p_1])<MinNumTimeSeries or len(df_person_segment_feature_DKIndividual_dict[people][p_2])<MinNumTimeSeries:
-                continue
+            if not aggressive_mode:
+                #Aggressive mode means that we don't want to skip any participant, if there is a value error, then make sure previous procedure doesn't generate unavailable data
+                if len(df_person_segment_feature_DKIndividual_dict[people][p_1])<MinNumTimeSeries or len(df_person_segment_feature_DKIndividual_dict[people][p_2])<MinNumTimeSeries:
+                    continue
             df_person_segment_feature_role_dict=df_person_segment_feature_DKIndividual_dict[people]  
-            
-            Totalendtime=min([df_person_segment_feature_role_dict[role][ed_col_str].values[-1]  for role in Inspect_roles])
+            try:
+                Totalendtime=min([df_person_segment_feature_role_dict[role][ed_col_str].values[-1]  for role in Inspect_roles])
+            except:
+                print("The people causing error happens at people: ",people)
+                print("The problem file is ",df_person_segment_feature_role_dict)
+                raise KeyError
             T = np.linspace(0, Totalendtime, int(Totalendtime))[:, np.newaxis]
             
             functionDK={}
             for role_choose in Inspect_roles:
                 df_dynVals=df_person_segment_feature_role_dict[role_choose][col_choose]
-                # remove outlier that is falls over 3 times of the std
-                df_dynVals_deleteOutlier=df_dynVals[(np.abs(stats.zscore(df_dynVals)) < 3)]
+                if not np.isnan(np.abs(stats.zscore(df_dynVals))).all(): 
+                    # remove outlier that is falls over 3 times of the std
+                    df_dynVals_deleteOutlier=df_dynVals[(np.abs(stats.zscore(df_dynVals)) < 3)]
+                else:
+                    #Situation for padding when the time series is too short
+                    df_dynVals_deleteOutlier=df_dynVals
                 df_stidx=df_person_segment_feature_role_dict[role_choose][st_col_str]
                 df_edidx=df_person_segment_feature_role_dict[role_choose][ed_col_str]
                 
@@ -53,7 +86,9 @@ class Syncrony:
                     mid_time=(start_time+end_time)/2
                     Mid_positions.append(mid_time)    
                 
-                # add an totally overlapped rectangle but it will show the label
+                if aggressive_mode:
+                    #Aggressive mode means that we don't want to skip any participant
+                    knn_neighbors = min (knn_neighbors,len(df_dynVals_deleteOutlier))
                 knn = neighbors.KNeighborsRegressor(knn_neighbors, weights=knn_weights)
                 X, y=np.array(Mid_positions).reshape(-1,1), df_dynVals_deleteOutlier
                 try:
@@ -76,7 +111,8 @@ class Syncrony:
     def calculate_features_continuous_modulized(self,df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
                                Inspect_roles, Label,\
                                knn_weights="uniform",knn_neighbors=2,\
-                               MinNumTimeSeries=3, label_choose_lst=['ADOS_C']):
+                               MinNumTimeSeries=3, label_choose_lst=['ADOS_C'],\
+                               Knn_aggressive_mode=True):
         df_basic_additional_info=self._Add_additional_info(df_person_segment_feature_DKIndividual_dict,Label,label_choose_lst,\
                                                      Inspect_roles, MinNumTimeSeries=MinNumTimeSeries,PhoneOfInterest_str=PhoneOfInterest_str)
         df_syncrony_measurement_merge=pd.DataFrame()
@@ -84,7 +120,7 @@ class Syncrony:
             Col_continuous_function_DK=self.KNNFitting(df_person_segment_feature_DKIndividual_dict,\
                        col, Inspect_roles,\
                        knn_weights=knn_weights,knn_neighbors=knn_neighbors,MinNumTimeSeries=MinNumTimeSeries,\
-                       st_col_str='IPU_st', ed_col_str='IPU_ed')
+                       st_col_str='IPU_st', ed_col_str='IPU_ed', aggressive_mode=Knn_aggressive_mode)
                 
             df_syncrony_measurement_col=self._calculate_features_col(Col_continuous_function_DK,col)
             df_syncrony_measurement_merge=pd.concat([df_syncrony_measurement_merge,df_syncrony_measurement_col],axis=1)
@@ -359,9 +395,10 @@ class Syncrony:
             D_t=-np.abs(functionDK['D']-functionDK['K'])
         
             time=T.reshape(-1)
-            Convergence=pearsonr(D_t,time)[0]
-            Trend_D=pearsonr(functionDK['D'],time)[0]
-            Trend_K=pearsonr(functionDK['K'],time)[0]
+            Convergence= 0 if np.isnan(pearsonr(D_t,time)[0]) else pearsonr(D_t,time)[0]
+            Trend_D= 0 if np.isnan(pearsonr(functionDK['D'],time)[0]) else pearsonr(functionDK['D'],time)[0]
+            Trend_K= 0 if np.isnan(pearsonr(functionDK['K'],time)[0]) else pearsonr(functionDK['K'],time)[0]
+
             delta=[-15, -10, -5, 0, 5, 10, 15]        
             syncron_lst=[]
             for d in delta:
@@ -377,7 +414,8 @@ class Syncrony:
                 syncron_candidate=pearsonr(f_d_shifted,f_k_shifted)[0]
                 
                 syncron_lst.append(syncron_candidate)
-            syncrony=syncron_lst[np.argmax(np.abs(syncron_lst))]
+            syncrony= 0 if np.isnan(syncron_lst[np.argmax(np.abs(syncron_lst))]) else syncron_lst[np.argmax(np.abs(syncron_lst))] 
+
             
             RESULT_dict['Proximity[{}]'.format(col)]=proximity
             RESULT_dict['Trend[{}]_d'.format(col)]=Trend_D
@@ -385,7 +423,51 @@ class Syncrony:
             RESULT_dict['Convergence[{}]'.format(col)]=Convergence
             RESULT_dict['Syncrony[{}]'.format(col)]=syncrony
             
+            assert np.isnan(np.array([proximity,Trend_D,Trend_K,Convergence,syncrony])).any() != True
+            
             df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index').T
             df_RESULT_list.index=[people]
             df_syncrony_measurement=df_syncrony_measurement.append(df_RESULT_list)
         return df_syncrony_measurement
+    def xpearsonr(x, y):
+        # x and y should have same length.
+        x = np.asarray(x)
+        y = np.asarray(y)
+    
+        # If an input is constant, the correlation coefficient is not defined.
+        if x.ptp() == 0 or y.ptp() == 0:
+            warnings.warn(ConstantInputWarning())
+            return np.nan, np.nan
+    
+        if len(x) == len(y) == 2:
+            return np.float64(np.sign(x[1] - x[0])*np.sign(y[1] - y[0])), 1.0
+    
+        xmean = x.mean()
+        ymean = y.mean()
+    
+        xm = x - xmean
+        ym = y - ymean
+    
+        sigmax = linalg.norm(xm)
+        sigmay = linalg.norm(ym)
+    
+        # A warning is generated if the coefficient of variation of either
+        # x or y is less than constant_threshold.
+        constant_threshold = 1.0e-8
+        if sigmax < constant_threshold*xmean or sigmay < constant_threshold*ymean:
+            warnings.warn(NearConstantInputWarning())
+    
+        r = np.dot(xm/sigmax, ym/sigmay)
+    
+        # Presumably, if abs(r) > 1, then it is only some small artifact of
+        # floating point arithmetic.
+        r = max(min(r, 1.0), -1.0)
+    
+        df = len(x) - 2
+        if abs(r) == 1.0:
+            prob = 0.0
+        else:
+            t_squared = r**2 * (df / ((1.0 - r) * (1.0 + r)))
+            prob = special.betainc(0.5*df, 0.5, df / (df + t_squared))
+    
+        return r, prob

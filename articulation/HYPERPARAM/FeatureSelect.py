@@ -7,6 +7,8 @@ Created on Tue Apr 19 12:44:54 2022
 """
 from itertools import combinations
 from addict import Dict
+import copy
+from scipy.special import comb
 # =============================================================================
 '''
 
@@ -376,6 +378,115 @@ DEP_columns=[
     ]
 
 LOCDEP_columns=LOC_columns+DEP_columns
+
+
+# =============================================================================
+''' Here are categories where the definitions are in paper '''
+Vowel_dispersion_inter=[
+        'VSA2',
+        'FCR2',
+        'between_covariance_norm(A:,i:,u:)',
+        'between_variance_norm(A:,i:,u:)',
+        'total_covariance_norm(A:,i:,u:)',
+        'total_variance_norm(A:,i:,u:)',
+        'sam_wilks_lin_norm(A:,i:,u:)',
+        'pillai_lin_norm(A:,i:,u:)',
+        'hotelling_lin_norm(A:,i:,u:)',
+        'roys_root_lin_norm(A:,i:,u:)',
+        'Between_Within_Det_ratio_norm(A:,i:,u:)',
+        'Between_Within_Tr_ratio_norm(A:,i:,u:)',
+        ]
+Vowel_dispersion_inter__vowel_centralization=[
+        'FCR2',
+        'sam_wilks_lin_norm(A:,i:,u:)',
+        ]
+
+Vowel_dispersion_inter__vowel_dispersion=[
+        'VSA2',
+        'between_covariance_norm(A:,i:,u:)',
+        'between_variance_norm(A:,i:,u:)',
+        'total_covariance_norm(A:,i:,u:)',
+        'total_variance_norm(A:,i:,u:)',
+        'pillai_lin_norm(A:,i:,u:)',
+        'hotelling_lin_norm(A:,i:,u:)',
+        'roys_root_lin_norm(A:,i:,u:)',
+        'Between_Within_Det_ratio_norm(A:,i:,u:)',
+        'Between_Within_Tr_ratio_norm(A:,i:,u:)',
+        ]
+Vowel_dispersion_intra=[
+        'within_covariance_norm(A:,i:,u:)',
+        'within_variance_norm(A:,i:,u:)',
+                     ]
+Vowel_dispersion=Vowel_dispersion_inter+Vowel_dispersion_intra    
+formant_dependency=['pear_12',
+        'spear_12',
+        'kendall_12',
+        'dcorr_12'
+        ]
+Syncrony_functions=['Proximity[{}]','Trend[{}]_d','Trend[{}]_k','Convergence[{}]','Syncrony[{}]']
+LOCDEP=Vowel_dispersion+formant_dependency
+
+    
+
+# =============================================================================
+PaperVariables=['Vowel_dispersion','Vowel_dispersion_inter','Vowel_dispersion_inter__vowel_centralization','Vowel_dispersion_inter__vowel_dispersion',\
+ 'Vowel_dispersion_intra','formant_dependency','LOCDEP','LOC_columns','DEP_columns']
+
+CategoricalName2cols={}
+for variables in PaperVariables:
+    CategoricalName2cols[variables]=vars()[variables]
+
+for Syncwrapper in Syncrony_functions:
+    for variables in PaperVariables:
+        FeatSet_bag=[]
+        for singlefeatures in vars()[variables]:
+            FeatSet_bag.append(Syncwrapper.format(singlefeatures))
+        CategoricalName2cols[Syncwrapper.format(variables)]=FeatSet_bag
+    
+# CategoricalName2cols={
+#     'Inter-vowel-dispersion':[
+#         'Trend[VSA2]_d',
+#         'Trend[FCR2]_d',
+#         'Trend[between_covariance_norm(A:,i:,u:)]_d',
+#         'Trend[between_variance_norm(A:,i:,u:)]_d',
+#         'Trend[total_covariance_norm(A:,i:,u:)]_d',
+#         'Trend[total_variance_norm(A:,i:,u:)]_d',
+#         'Trend[sam_wilks_lin_norm(A:,i:,u:)]_d',
+#         'Trend[pillai_lin_norm(A:,i:,u:)]_d',
+#         'Trend[hotelling_lin_norm(A:,i:,u:)]_d',
+#         'Trend[roys_root_lin_norm(A:,i:,u:)]_d',
+#         'Trend[Between_Within_Det_ratio_norm(A:,i:,u:)]_d',
+#         'Trend[Between_Within_Tr_ratio_norm(A:,i:,u:)]_d',
+#         ],
+#     'Inter-vowel-dispersion_vowel-centralization':[
+#         'Trend[FCR2]_d',
+#         'Trend[sam_wilks_lin_norm(A:,i:,u:)]_d',
+#         ],
+#     'Inter-vowel-dispersion_vowel-dispersion':[
+#         'Trend[VSA2]_d',
+#         'Trend[between_covariance_norm(A:,i:,u:)]_d',
+#         'Trend[between_variance_norm(A:,i:,u:)]_d',
+#         'Trend[total_covariance_norm(A:,i:,u:)]_d',
+#         'Trend[total_variance_norm(A:,i:,u:)]_d',
+#         'Trend[pillai_lin_norm(A:,i:,u:)]_d',
+#         'Trend[hotelling_lin_norm(A:,i:,u:)]_d',
+#         'Trend[roys_root_lin_norm(A:,i:,u:)]_d',
+#         'Trend[Between_Within_Det_ratio_norm(A:,i:,u:)]_d',
+#         'Trend[Between_Within_Tr_ratio_norm(A:,i:,u:)]_d',
+#         ],
+    
+#     'Intra-vowel-dispersion': [
+                         
+#         'Trend[within_covariance_norm(A:,i:,u:)]_d',
+#         'Trend[within_variance_norm(A:,i:,u:)]_d',
+                         
+#                          ],
+#     'formant-dependency': ['Trend[pear_12]_d',
+#                          'Trend[spear_12]_d',
+#                          'Trend[kendall_12]_d',
+#                          'Trend[dcorr_12]_d'
+#                          ],
+#     }
 # =============================================================================
 '''
     static_feautre_phonation
@@ -410,6 +521,45 @@ def Get_columnproduct(Comb1,Block_columns_dict):
         comb1_dict['+'.join(c)]=Block_columns_dict[c[0]]+ Block_columns_dict[c[1]]
         # comb1_dict.append(Block_columns_dict[c[0]]+ Block_columns_dict[c[1]])
     return comb1_dict
+
+def Get_Combs_Feat(Comb1,Block_columns_dict):
+    Comb1_result=[]
+    Combcount=0
+    for n in range(1,len(Comb1)+1):
+        Comb1_result+=list(itertools.combinations(Comb1,n))
+        Combcount+=comb(len(Comb1),n)
+    assert Combcount == len(Comb1_result)
+    
+    comb1_dict={}
+    for c_layer1 in Comb1_result:
+        comb1_dict['+'.join(c_layer1)]=[]
+        for c_layer2 in c_layer1:
+            comb1_dict['+'.join(c_layer1)]+=Block_columns_dict[c_layer2] 
+    return comb1_dict
+
+
+
+def Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Phonation_Proximity_cols'):
+    Comb1_result=[]
+    for n in range(1,len(Comb1)+1):
+        Comb1_result+=list(itertools.combinations(Comb1,n))
+    
+    def Fuse_combinationFeatWtihSelected(Comb1_result,Block_columns_dict,SelectedFeat):
+        comb1_dict={}
+        comb1_dict[SelectedFeat]=Block_columns_dict[SelectedFeat]
+        for c_layer1 in Comb1_result:
+            comb1_dict['+'.join(c_layer1)+'+'+SelectedFeat]=[]
+            for c_layer2 in c_layer1:
+                comb1_dict['+'.join(c_layer1)+'+'+SelectedFeat]+=Block_columns_dict[c_layer2] 
+            comb1_dict['+'.join(c_layer1)+'+'+SelectedFeat]+=Block_columns_dict[SelectedFeat]
+        return comb1_dict
+        
+    Comb_dict=Fuse_combinationFeatWtihSelected(Comb1_result,Block_columns_dict,SelectedFeat)
+        
+    return Comb_dict
+
+
+
 # =============================================================================
 import itertools
 
@@ -424,6 +574,8 @@ Block_columns_dict={}
 for Lsts in [static_feautre_LOC,static_feautre_phonation,dynamic_feature_LOC,dynamic_feature_phonation,Utt_feature]:
     for L in Lsts:
         Block_columns_dict[L]=vars()[L]
+    ''' Manually extended combinations'''
+    Block_columns_dict['Phonation_Trend_D_cols+Phonation_Proximity_cols']=Phonation_Trend_D_cols+Phonation_Proximity_cols
 
 
 Columns_comb={}
@@ -450,8 +602,12 @@ for c in Top_category_lst_comb1: #e.g. static_feautre_LOC,
 
     Columns_comb[e1]= Small_category_dict
 
+''' Baseline_comb = Only  dynamic_feature_LOC dynamic_feature_phonation static_feautre_LOC'''
+Baseline_comb=Dict()
+for col in ['static_feautre_LOC','dynamic_feature_phonation','dynamic_feature_LOC']:
+    Baseline_comb[col]= copy.deepcopy(Columns_comb[col])
 
-''' Columns_comb all combine with Utt feature '''
+''' Columns_comb2 = Columns_comb all combine with Utt feature '''
 Columns_comb2=Dict()
 for key_utt in Utt_feature:
     for key_layer1 in Columns_comb.keys():
@@ -460,17 +616,46 @@ for key_utt in Utt_feature:
 
 for key_utt in Utt_feature:
     Columns_comb2['Utt_feature'][key_utt]=vars()[key_utt]
+
+
+''' Columns_comb3 = All possible feature combination + phonation_proximity_col'''
+Comb1=['LOC_columns','DEP_columns']+dynamic_feature_LOC
+Columns_comb3=Dict()
+Columns_comb3['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=\
+    Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Phonation_Proximity_cols')
+
+Columns_comb4=Dict()
+Columns_comb4['Utt_feature+static_feautre_LOC+dynamic_feature_LOC']=\
+    Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Utt_prosodyF0_VoiceQuality_energy')
 # Columns_comb['static_feautre_LOC+static_feautre_phonation']=Get_columnproduct(Comb1,Block_columns_dict)
 # Columns_comb['static_feautre_LOC+static_feautre_phonation']+=Get_columnproduct(Comb2,Block_columns_dict)
 
-# Comb1 = [
-#     static_feautre_LOC,
-#     dynamic_feature_LOC,
-# ]
-# Comb2 = [
-#     static_feautre_LOCDEP,
-#     dynamic_feature_LOC,
-# ]
+''' Columns_comb5 = All possible feature combination + Phonation_Syncrony_cols'''
+Comb1=['LOC_columns','DEP_columns']+dynamic_feature_LOC
+Columns_comb5=Dict()
+Columns_comb5['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=\
+    Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Phonation_Syncrony_cols')
+''' Columns_comb6 = All possible feature combination + Phonation_Trend_D_cols'''
+Comb1=['LOC_columns','DEP_columns']+dynamic_feature_LOC
+Columns_comb6=Dict()
+Columns_comb6['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=\
+    Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Phonation_Trend_D_cols')
+''' Columns_comb7 = All possible feature combination + (Phonation_Trend_D_cols+Phonation_Proximity_cols)'''
+Comb1=['LOC_columns','DEP_columns']+dynamic_feature_LOC
+Columns_comb7=Dict()
+Columns_comb7['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=\
+    Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Phonation_Trend_D_cols+Phonation_Proximity_cols')
+
+
+''' Columns_comb_dynPhonation = All possible feature combination within dynamic_feature_phonation'''
+Comb2=dynamic_feature_phonation
+Comb_dynPhonation=Dict()
+Comb_dynPhonation['dynamic_feature_phonation']=Get_Combs_Feat(Comb2,Block_columns_dict)
+    
+''' Columns_TotalComb = All possible feature combination of static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation'''
+Comb3=['LOC_columns','DEP_columns'] + dynamic_feature_LOC + dynamic_feature_phonation
+Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation=Dict()
+Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=Get_Combs_Feat(Comb3,Block_columns_dict)
 
 
 # Columns_comb['static_feautre_LOC+dynamic_feature_LOC']=Get_columnproduct(Comb1,Block_columns_dict)

@@ -39,14 +39,12 @@ from sklearn import preprocessing
 from articulation.HYPERPARAM import phonewoprosody, Label
 from articulation.HYPERPARAM.PeopleSelect import SellectP_define
 import articulation.HYPERPARAM.FeatureSelect as FeatSel
-import articulation.HYPERPARAM.PaperNameMapping as PprNmeMp
 
 import articulation.articulation
 from sklearn.metrics import f1_score,recall_score,roc_auc_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
-from itertools import combinations, dropwhile
-
+from itertools import combinations
 def Assert_labelfeature(feat_name,lab_name):
     # =============================================================================
     #     To check if the label match with feature
@@ -94,14 +92,12 @@ def get_args():
                         help='')
     parser.add_argument('--knn_weights', default='distance',
                             help='path of the base directory')
-    parser.add_argument('--knn_neighbors', default=3,  type=int,
+    parser.add_argument('--knn_neighbors', default=2,  type=int,
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--FeatureComb_mode', default='feat_comb7',
-                            help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
-    # parser.add_argument('--Add_UttLvl_feature', default=False,
-    #                         help='[DKIndividual, DKcriteria]')
+    parser.add_argument('--Add_UttLvl_feature', default=False,
+                            help='[DKIndividual, DKcriteria]')
     args = parser.parse_args()
     return args
 args = get_args()
@@ -110,7 +106,7 @@ experiment=args.experiment
 knn_weights=args.knn_weights
 knn_neighbors=args.knn_neighbors
 Reorder_type=args.Reorder_type
-
+Add_UttLvl_feature=args.Add_UttLvl_feature
 # =============================================================================
 
 #[tmp] should remove soon
@@ -242,9 +238,8 @@ df_formant_statistics_CtxPhone_collect_dict=Dict()
 # =============================================================================
 
 class ADOSdataset():
-    def __init__(self,knn_weights,knn_neighbors,Reorder_type,FeatureComb_mode):
-        self.featurepath='Features'           
-        self.FeatureComb_mode=FeatureComb_mode
+    def __init__(self,knn_weights,knn_neighbors,Reorder_type,Add_UttLvl_feature=False):
+        self.featurepath='Features'            
         self.N=2
         self.LabelType=Dict()
         self.LabelType['ADOS_C']='regression'
@@ -255,24 +250,12 @@ class ADOSdataset():
         
         # self.Merge_feature_path='Features/ClassificationMerged_dfs/{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
         
-        if self.FeatureComb_mode == 'Add_UttLvl_feature':
+        if Add_UttLvl_feature==True:
             self.File_root_path='Features/ClassificationMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
             self.Merge_feature_path=self.File_root_path+'{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
         else:
             self.File_root_path='Features/ClassificationMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
             self.Merge_feature_path=self.File_root_path+'{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
-        
-        self.Top_ModuleColumn_mapping_dict={}
-        self.Top_ModuleColumn_mapping_dict['Add_UttLvl_feature']=FeatSel.Columns_comb2.copy()
-        self.Top_ModuleColumn_mapping_dict['feat_comb']=FeatSel.Columns_comb.copy()
-        self.Top_ModuleColumn_mapping_dict['feat_comb3']=FeatSel.Columns_comb3.copy()
-        self.Top_ModuleColumn_mapping_dict['feat_comb5']=FeatSel.Columns_comb6.copy()
-        self.Top_ModuleColumn_mapping_dict['feat_comb6']=FeatSel.Columns_comb6.copy()
-        self.Top_ModuleColumn_mapping_dict['feat_comb7']=FeatSel.Columns_comb7.copy()
-        self.Top_ModuleColumn_mapping_dict['Comb_dynPhonation']=FeatSel.Comb_dynPhonation.copy()
-        self.Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']=FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation.copy()
-        
-        self.Top_ModuleColumn_mapping_dict['baselineFeats']=FeatSel.Baseline_comb.copy()
         
         self.FeatureCombs_manual=Dict()
         self.FeatureCombs_manual['TD_normal vs ASDSevere_agesexmatch >> FeatLOC_kid']=['df_formant_statistic_TD_normal_kid', 'df_formant_statistic_agesexmatch_ASDSevereGrp_kid']
@@ -334,8 +317,10 @@ class ADOSdataset():
         self.Features_comb_single=Features_comb
     def _FeatureBuild_Module(self):
         Labels_add=['ASDTD']
-        ModuledFeatureCombination=self.Top_ModuleColumn_mapping_dict[self.FeatureComb_mode]
-
+        if Add_UttLvl_feature==True:
+            ModuledFeatureCombination=FeatSel.Columns_comb2.copy()
+        else:
+            ModuledFeatureCombination=FeatSel.Columns_comb.copy()
         
         sellect_people_define=SellectP_define()
         #Loading features from ASD        
@@ -343,14 +328,7 @@ class ADOSdataset():
         IterateFilesFullPaths = glob.glob(self.Merge_feature_path)
         print("Search path from ", self.Merge_feature_path)
         
-        if self.FeatureComb_mode in ['feat_comb3','feat_comb5','feat_comb6','feat_comb7','Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']:
-            DfCombFilenames=['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl']
-        if self.FeatureComb_mode == 'Comb_dynPhonation':
-            DfCombFilenames=['dynamic_feature_phonation.pkl']
-        elif self.FeatureComb_mode == 'baselineFeats':
-             DfCombFilenames=['{}.pkl'.format(Dataname) for Dataname in ModuledFeatureCombination.keys()]
-        else:
-            DfCombFilenames=[os.path.basename(f) for f in IterateFilesFullPaths]
+        DfCombFilenames=[os.path.basename(f) for f in IterateFilesFullPaths]
         File_ASD_paths=[self.File_root_path+"ASD_DOCKID/"+f for f in DfCombFilenames]
         File_TD_paths=[self.File_root_path+"TD_DOCKID/"+f for f in DfCombFilenames]
         print("Read path from ", File_ASD_paths)
@@ -397,28 +375,25 @@ class ADOSdataset():
             df_feauture_ASDgrp_dict={}
             # df_feauture_ASDgrp_dict['df_feature_Minimal_CSS']=df_feature_ASD[filter_Minimal_TCSS]
             # df_feauture_ASDgrp_dict['df_feature_low_CSS']=df_feature_ASD[filter_low_TCSS]
+            # df_feauture_ASDgrp_dict['df_feature_moderate_CSS']=df_feature_ASD[filter_moderate_TCSS]
+            # df_feauture_ASDgrp_dict['df_feature_high_CSS']=df_feature_ASD[filter_high_TCSS]
             df_feauture_ASDgrp_dict['df_feature_lowMinimal_CSS']=df_feature_ASD[filter_low_TCSS | filter_Minimal_TCSS]
-            df_feauture_ASDgrp_dict['df_feature_moderate_CSS']=df_feature_ASD[filter_moderate_TCSS]
-            df_feauture_ASDgrp_dict['df_feature_high_CSS']=df_feature_ASD[filter_high_TCSS]
-            # df_feauture_ASDgrp_dict['df_feature_moderatehigh_CSS']=df_feature_ASD[filter_moderate_TCSS | filter_high_TCSS]
+            df_feauture_ASDgrp_dict['df_feature_moderatehigh_CSS']=df_feature_ASD[filter_moderate_TCSS | filter_high_TCSS]
             
             # df_feauture_ASDgrp_dict['df_feature_Notautism_TC']=df_feature_ASD[filter_Notautism_TC]
             # df_feauture_ASDgrp_dict['df_feature_ASD_TC']=df_feature_ASD[filter_ASD_TC]
-            
-            # df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TC']=df_feature_ASD[filter_Notautism_TC | filter_ASD_TC]
-            # df_feauture_ASDgrp_dict['df_feature_Autism_TC']=df_feature_ASD[filter_Autism_TC]
+            df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TC']=df_feature_ASD[filter_Notautism_TC | filter_ASD_TC]
+            df_feauture_ASDgrp_dict['df_feature_Autism_TC']=df_feature_ASD[filter_Autism_TC]
             
             # df_feauture_ASDgrp_dict['df_feature_Notautism_TS']=df_feature_ASD[filter_Notautism_TS]
             # df_feauture_ASDgrp_dict['df_feature_ASD_TS']=df_feature_ASD[filter_ASD_TS]
-            
-            # df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TS']=df_feature_ASD[filter_Notautism_TS | filter_ASD_TS]
-            # df_feauture_ASDgrp_dict['df_feature_Autism_TS']=df_feature_ASD[filter_Autism_TS]
+            df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TS']=df_feature_ASD[filter_Notautism_TS | filter_ASD_TS]
+            df_feauture_ASDgrp_dict['df_feature_Autism_TS']=df_feature_ASD[filter_Autism_TS]
             
             # df_feauture_ASDgrp_dict['df_feature_Notautism_TSC']=df_feature_ASD[filter_Notautism_TSC]
             # df_feauture_ASDgrp_dict['df_feature_ASD_TSC']=df_feature_ASD[filter_ASD_TSC]
-            
-            # df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TSC']=df_feature_ASD[filter_Notautism_TSC | filter_ASD_TSC]
-            # df_feauture_ASDgrp_dict['df_feature_Autism_TSC']=df_feature_ASD[filter_Autism_TSC]
+            df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TSC']=df_feature_ASD[filter_Notautism_TSC | filter_ASD_TSC]
+            df_feauture_ASDgrp_dict['df_feature_Autism_TSC']=df_feature_ASD[filter_Autism_TSC]
             
             #Check the length of each paired comparison, should be stored on the top of for loop
             
@@ -432,11 +407,12 @@ class ADOSdataset():
             
             df_Tmp_Numcmp_list=pd.DataFrame.from_dict(Tmp_Numcmp_dict,orient='index')
             df_Tmp_Numcmp_list.columns=[k_FeatTypeLayer1]
-
+            
             if len(df_Top_Check_length)==0:
                 df_Top_Check_length=df_Tmp_Numcmp_list
             else:
                 df_Top_Check_length=Merge_dfs(df_Top_Check_length,df_Tmp_Numcmp_list)
+            
             # 手動執行到這邊，從for 上面
             
             
@@ -451,13 +427,14 @@ class ADOSdataset():
                     experiment_str="{TD_name} vs {ASD_name} >> {feature_type}".format(TD_name='TD',ASD_name=k_ASDgrp,feature_type=k_FeatTypeLayer2)
                     Features_comb[experiment_str]=pd.concat([df_ASD_subgrp,df_TD_subgrp],axis=0)
                 # 2. Set ASDsevere vs ASDmild experiment
-                    
-                # experiment_str="{ASDsevere_name} vs {ASDmild_name} >> {feature_type}".format(ASDsevere_name='df_feature_moderatehigh_CSS',ASDmild_name='df_feature_lowMinimal_CSS',feature_type=k_FeatTypeLayer2)
-                # df_ASDsevere_subgrp=df_feauture_ASDgrp_dict['df_feature_moderatehigh_CSS'].copy()
-                # df_ASDmild_subgrp=df_feauture_ASDgrp_dict['df_feature_lowMinimal_CSS'].copy()
-                # df_ASDsevere_subgrp['ASDsevereMild']=sellect_people_define.ASDsevereMild_label['ASDsevere']
-                # df_ASDmild_subgrp['ASDsevereMild']=sellect_people_define.ASDsevereMild_label['ASDmild']
-                # Features_comb[experiment_str]=pd.concat([df_ASDsevere_subgrp,df_ASDmild_subgrp],axis=0)
+                experiment_str="{ASDsevere_name} vs {ASDmild_name} >> {feature_type}".format(ASDsevere_name='df_feature_moderatehigh_CSS',ASDmild_name='df_feature_lowMinimal_CSS',feature_type=k_FeatTypeLayer2)
+                df_ASDsevere_subgrp=df_feauture_ASDgrp_dict['df_feature_moderatehigh_CSS'].copy()
+                df_ASDmild_subgrp=df_feauture_ASDgrp_dict['df_feature_lowMinimal_CSS'].copy()
+                df_ASDsevere_subgrp['ASDsevereMild']=sellect_people_define.ASDsevereMild_label['ASDsevere']
+                df_ASDmild_subgrp['ASDsevereMild']=sellect_people_define.ASDsevereMild_label['ASDmild']
+                Features_comb[experiment_str]=pd.concat([df_ASDsevere_subgrp,df_ASDmild_subgrp],axis=0)
+        
+        df_Check_pure_length=df_Top_Check_length[[col for col in df_Top_Check_length.columns if '+' not in col]]
         self.Features_comb_multi=Features_comb
 
 # =============================================================================
@@ -505,62 +482,46 @@ if args.Mergefeatures:
 
 
 
-ados_ds=ADOSdataset(knn_weights,knn_neighbors,Reorder_type,FeatureComb_mode=args.FeatureComb_mode)
+ados_ds=ADOSdataset(knn_weights,knn_neighbors,Reorder_type,Add_UttLvl_feature=Add_UttLvl_feature)
 ErrorFeat_bookeep=Dict()
 
 
 # FeatureLabelMatch=FeatureLabelMatch_manual
 
+
+
 # 在這邊生出要執行的feature實驗
-
-# FeatureLabelMatch=[ [k,'ASDTD'] for k in ados_ds.Features_comb_multi.keys()] ## Only ASD vs TD setting
-
-## ASD 之間互比的setting
 FeatureLabelMatch=[]
 for k in ados_ds.Features_comb_multi.keys():
     Compare_pair_str=k.split(" >> ")[0]
+    ModuleColumn_str=k.split(" >> ")[-1]
+    single_module_lst=ModuleColumn_str.split('+')
     if 'TD' in Compare_pair_str:
-        FeatureLabelMatch.append([k,'ASDTD'])
+        FeatureLabelMatch.append([k,ModuleColumn_str,'ASDTD']) #first field represents data, second field represents columns
+        for s in single_module_lst:
+            FeatureLabelMatch.append([k,s,'ASDTD'])
     else:
-        FeatureLabelMatch.append([k,'ASDsevereMild'])
+        FeatureLabelMatch.append([k,ModuleColumn_str,'ASDsevereMild']) #first field represents data, second field represents columns
+        for s in single_module_lst:
+            FeatureLabelMatch.append([k,s,'ASDsevereMild'])
+if Add_UttLvl_feature==True:
+    ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb2[e_str][e2_str] for e_str in FeatSel.Columns_comb2.keys() for e2_str in FeatSel.Columns_comb2[e_str].keys()}
+else:
+    ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb[e_str][e2_str] for e_str in FeatSel.Columns_comb.keys() for e2_str in FeatSel.Columns_comb[e_str].keys()}
 
-## Feature 組合為comb3 的 ASD vs TD setting
-# FeatureLabelMatch=[]
-# for k in ados_ds.Features_comb_multi.keys():
-#     Compare_pair_str=k.split(" >> ")[0]
-#     Feat_comb_str=k.split(" >> ")[1]
-#     if Feat_comb_str in FeatSel.Columns_comb3['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation'].keys():
-#         FeatureLabelMatch.append([k,'ASDTD'])
-
-Top_ModuleColumn_mapping_dict={}
-Top_ModuleColumn_mapping_dict['Add_UttLvl_feature']={ e2_str:FeatSel.Columns_comb2[e_str][e2_str] for e_str in FeatSel.Columns_comb2.keys() for e2_str in FeatSel.Columns_comb2[e_str].keys()}
-Top_ModuleColumn_mapping_dict['feat_comb3']=ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb3[e_str][e2_str] for e_str in FeatSel.Columns_comb3.keys() for e2_str in FeatSel.Columns_comb3[e_str].keys()}
-Top_ModuleColumn_mapping_dict['feat_comb5']=ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb5[e_str][e2_str] for e_str in FeatSel.Columns_comb5.keys() for e2_str in FeatSel.Columns_comb5[e_str].keys()}
-Top_ModuleColumn_mapping_dict['feat_comb6']=ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb6[e_str][e2_str] for e_str in FeatSel.Columns_comb6.keys() for e2_str in FeatSel.Columns_comb6[e_str].keys()}
-Top_ModuleColumn_mapping_dict['feat_comb7']=ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb7[e_str][e2_str] for e_str in FeatSel.Columns_comb7.keys() for e2_str in FeatSel.Columns_comb7[e_str].keys()}
-Top_ModuleColumn_mapping_dict['Comb_dynPhonation']=ModuleColumn_mapping={ e2_str:FeatSel.Comb_dynPhonation[e_str][e2_str] for e_str in FeatSel.Comb_dynPhonation.keys() for e2_str in FeatSel.Comb_dynPhonation[e_str].keys()}
-Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']=ModuleColumn_mapping={ e2_str:FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation[e_str][e2_str] for e_str in FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation.keys() for e2_str in FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation[e_str].keys()}
-Top_ModuleColumn_mapping_dict['feat_comb']=ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb[e_str][e2_str] for e_str in FeatSel.Columns_comb.keys() for e2_str in FeatSel.Columns_comb[e_str].keys()}
-
-
-ModuleColumn_mapping=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
-
+  
     
-for exp_str,lab_ in FeatureLabelMatch:
+for exp_str, feat_cols_,lab_ in FeatureLabelMatch:
+    comparison_pair=ModuleColumn_str=exp_str.split(" >> ")[0]
     ModuleColumn_str=exp_str.split(" >> ")[-1]
-    
-    if len(FeatureLabelMatch_manual)==0:
-        featuresOfInterest=[ModuleColumn_mapping[ModuleColumn_str]]
-    else:
-        featuresOfInterest=FeatureLabelMatch_manual
-    
+    featuresOfInterest=[ModuleColumn_mapping[feat_cols_]]
     # feat_=key
     for feat_col in featuresOfInterest:
         feat_col_ = list(feat_col) # ex: ['MSB_f1']
-        if len(feat_col) > 144:
+        if len(feat_col) > 144: # 144 is the limit of the filename
             key=feat_col_
         else:
-            key=[ModuleColumn_str]
+            key=[feat_cols_]
         
         
         
@@ -568,9 +529,9 @@ for exp_str,lab_ in FeatureLabelMatch:
         # X,y, featType=ados_ds.Get_FormantAUI_feat(\
         #     label_choose=lab_,pickle_path='',featuresOfInterest=feat_col_,filterbyNum=False,\
         #     feat_=ados_ds.Features_comb_single[feat_])
-            
+        
         X,y, featType=ados_ds.Get_FormantAUI_feat(\
-            label_choose=lab_,pickle_path='',featuresOfInterest=feat_col_,filterbyNum=False,\
+            label_choose=lab_,pickle_path='',featuresOfInterest=feat_col,filterbyNum=False,\
             feat_=ados_ds.Features_comb_multi[exp_str])
         
         if X.isnull().values.any() or y.isnull().values.any():
@@ -579,18 +540,53 @@ for exp_str,lab_ in FeatureLabelMatch:
             ErrorFeat_bookeep['{0} {1} {2}'.format(exp_str,lab_,key)].y=y
             continue
         
-        Item_name="{feat}::{lab}".format(feat='-'.join([exp_str]),lab=lab_)
+        Item_name="{feat}::{lab}".format(feat='-'.join([comparison_pair,ModuleColumn_str,feat_cols_]),lab=lab_)
         Session_level_all[Item_name].X, \
             Session_level_all[Item_name].y, \
                 Session_level_all[Item_name].feattype = X,y, featType
+
+
+
+
+paper_name_map={}    
+paper_name_map['Divergence[pillai_lin_(A:,i:,u:)]']='$Div(Pillai)$'
+paper_name_map['Divergence[pillai_lin_(A:,i:,u:)]_var_p1']='$Inc(Pillai)_{inv}$'
+paper_name_map['Divergence[pillai_lin_(A:,i:,u:)]_var_p2']='$Inc(Pillai)_{part}$'
+paper_name_map['Divergence[within_covariance_(A:,i:,u:)]']='$Div(WCC)$'
+paper_name_map['Divergence[within_covariance_(A:,i:,u:)]_var_p1']='$Inc(WCC)_{inv}$'
+paper_name_map['Divergence[within_covariance_(A:,i:,u:)]_var_p2']='$Inc(WCC)_{part}$'
+paper_name_map['Divergence[within_variance_(A:,i:,u:)]']='$Div(WCV)$'
+paper_name_map['Divergence[within_variance_(A:,i:,u:)]_var_p1']='$Inc(WCV)_{inv}$'
+paper_name_map['Divergence[within_variance_(A:,i:,u:)]_var_p2']='$Inc(WCV)_{part}$'
+paper_name_map['Divergence[sam_wilks_lin_(A:,i:,u:)]']='$Div(Wilks)$'
+paper_name_map['Divergence[sam_wilks_lin_(A:,i:,u:)]_var_p1']='$Inc(Wilks)_{inv}$'
+paper_name_map['Divergence[sam_wilks_lin_(A:,i:,u:)]_var_p2']='$Inc(Wilks)_{part}$'
+paper_name_map['Divergence[between_covariance_(A:,i:,u:)]']='$Div(BCC)$'
+paper_name_map['Divergence[between_covariance_(A:,i:,u:)]_var_p1']='$Inc(BCC)_{inv}$'
+paper_name_map['Divergence[between_covariance_(A:,i:,u:)]_var_p2']='$Inc(BCC)_{part}$'
+paper_name_map['Divergence[between_variance_(A:,i:,u:)]']='$Div(BCV)$'
+paper_name_map['Divergence[between_variance_(A:,i:,u:)]_var_p1']='$Inc(BCV)_{inv}$'
+paper_name_map['Divergence[between_variance_(A:,i:,u:)]_var_p2']='$Inc(BCV)_{part}$'
+paper_name_map['between_covariance_norm(A:,i:,u:)']='$BCC$'
+paper_name_map['between_variance_norm(A:,i:,u:)']='$BCV$'
+paper_name_map['within_covariance_norm(A:,i:,u:)']='$WCC$'
+paper_name_map['within_variance_norm(A:,i:,u:)']='$WCV$'
+paper_name_map['total_covariance_norm(A:,i:,u:)']='$TC$'
+paper_name_map['total_variance_norm(A:,i:,u:)']='$TV$'
+paper_name_map['sam_wilks_lin_norm(A:,i:,u:)']='$Wilks$'
+paper_name_map['pillai_lin_norm(A:,i:,u:)']='$Pillai$'
+paper_name_map['hotelling_lin_norm(A:,i:,u:)']='$Hotel$'
+paper_name_map['roys_root_lin_norm(A:,i:,u:)']='$Roys$'
+paper_name_map['Between_Within_Det_ratio_norm(A:,i:,u:)']='$Det(W^{-1}B)$'
+paper_name_map['Between_Within_Tr_ratio_norm(A:,i:,u:)']='$Tr(W^{-1}B)$'
+
 
 # =============================================================================
 # Model parameters
 # =============================================================================
 # C_variable=np.array([0.0001, 0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
 # C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0])
-# C_variable=np.array(np.arange(0.1,1.5,0.1))
-C_variable=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
+C_variable=np.array(np.arange(0.1,1.5,0.1))
 # C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.2))  )
 # C_variable=np.array([0.01, 0.1,0.5,1.0, 5.0])
 n_estimator=[ 32, 50, 64, 100 ,128, 256]
@@ -685,9 +681,10 @@ df_best_result_AUC=pd.DataFrame([])
 df_best_result_f1=pd.DataFrame([])
 df_best_result_allThreeClassifiers=pd.DataFrame([])
 # =============================================================================
-
-Result_path="RESULTS/Fusion_result/{}/".format(args.FeatureComb_mode)
-
+if Add_UttLvl_feature==True:
+    Result_path="RESULTS/Fusion_test_ADDed_UttFeat/"
+else:
+    Result_path="RESULTS/Fusion_test/"
 if not os.path.exists(Result_path):
     os.makedirs(Result_path)
 final_result_file="_ADOS_{}.xlsx".format(args.suffix)
@@ -703,13 +700,11 @@ print("\n\n\n\n")
 
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
     writer_clf = pd.ExcelWriter(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_"+final_result_file, engine = 'xlsxwriter')
-    # for feature_lab_str in dropwhile(lambda k: k != 'TD vs df_feature_lowMinimal_CSS >> LOC_columns+DEP_columns+LOCDEP_Proximity_cols+LOCDEP_Convergence_cols+LOCDEP_Syncrony_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols+Phonation_Convergence_cols+Phonation_Syncrony_cols::ASDTD', Session_level_all):
-    #     features=Session_level_all[feature_lab_str]
     for feature_lab_str, features in Session_level_all.items():
         feature_keys, label_keys= feature_lab_str.split("::")
-        feature_rawname=feature_keys[re.search(' >> ',feature_keys).end():]
-        if feature_rawname in PprNmeMp.Paper_name_map.keys():
-            featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
+        feature_rawname=feature_keys[feature_keys.find('-')+1:]
+        if feature_rawname in paper_name_map.keys():
+            featurename_paper=paper_name_map[feature_rawname]
             feature_keys=feature_keys.replace(feature_rawname,featurename_paper)
         
         
@@ -775,15 +770,15 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             Inspect the best result
         '''
         # =============================================================================
-        # Best_predict_optimize[label_keys]=pd.DataFrame(np.vstack((CVpredict,features.y)).T,columns=['y_pred','y'])
-        # excel_path='./Statistics/prediction_result'
-        # if not os.path.exists(excel_path):
-        #     os.makedirs(excel_path)
-        # excel_file=excel_path+"/{0}_{1}.xlsx"
-        # writer = pd.ExcelWriter(excel_file.format(clf_keys,feature_keys.replace(":","")), engine = 'xlsxwriter')
-        # for label_name in  Best_predict_optimize.keys():
-        #     Best_predict_optimize[label_name].to_excel(writer,sheet_name=label_name.replace("/","_"))
-        # writer.save()
+        Best_predict_optimize[label_keys]=pd.DataFrame(np.vstack((CVpredict,features.y)).T,columns=['y_pred','y'])
+        excel_path='./Statistics/prediction_result'
+        if not os.path.exists(excel_path):
+            os.makedirs(excel_path)
+        excel_file=excel_path+"/{0}_{1}.xlsx"
+        writer = pd.ExcelWriter(excel_file.format(clf_keys,feature_keys.replace(":","")), engine = 'xlsxwriter')
+        for label_name in  Best_predict_optimize.keys():
+            Best_predict_optimize[label_name].to_excel(writer,sheet_name=label_name.replace("/","_"))
+        writer.save()
                                 
         # ================================================      =============================
         if features.feattype == 'regression':

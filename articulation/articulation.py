@@ -121,6 +121,8 @@ class Articulation:
         self.Stat_med_str_VSA=Stat_med_str_VSA
         self.Inspect_features=Inspect_features
         self.N=3
+    def _updateN(self,N):
+        self.N=N
     def calculate_features(self,Vowels_AUI,Label,PhoneOfInterest,label_choose_lst=['ADOS_C'],\
                            RETURN_scatter_matrix=False, FILTER_overlap_thrld=None,KDE_THRESHOLD=None,\
                            FILTERING_method=None):
@@ -234,18 +236,24 @@ class Articulation:
                 d_stats_a=dcor.distance_stats(a_1, a_2)
                 d_stats_u=dcor.distance_stats(u_1, u_2)
                 d_stats_i=dcor.distance_stats(i_1, i_2)
+
+                # d_stats_a= 0 if np.isnan(dcor.distance_stats(a_1, a_2)) else dcor.distance_stats(a_1, a_2)
+                # d_stats_u= 0 if np.isnan(dcor.distance_stats(u_1, u_2)) else dcor.distance_stats(u_1, u_2)
+                # d_stats_i= 0 if np.isnan(dcor.distance_stats(i_1, i_2)) else dcor.distance_stats(i_1, i_2)
+
+                pear_a= 0 if np.isnan(np.abs(pearsonr(a_1, a_2)[0])) else np.abs(pearsonr(a_1, a_2)[0])
+                pear_u= 0 if np.isnan(np.abs(pearsonr(u_1, u_2)[0])) else np.abs(pearsonr(u_1, u_2)[0])
+                pear_i= 0 if np.isnan(np.abs(pearsonr(i_1, i_2)[0])) else np.abs(pearsonr(i_1, i_2)[0])
                 
-                pear_a=np.abs(pearsonr(a_1, a_2)[0])
-                pear_u=np.abs(pearsonr(u_1, u_2)[0])
-                pear_i=np.abs(pearsonr(i_1, i_2)[0])
+
+                spear_a= 0 if np.isnan(np.abs(spearmanr(a_1, a_2)[0])) else np.abs(spearmanr(a_1, a_2)[0])
+                spear_u= 0 if np.isnan(np.abs(spearmanr(u_1, u_2)[0])) else np.abs(spearmanr(u_1, u_2)[0])
+                spear_i= 0 if np.isnan(np.abs(spearmanr(i_1, i_2)[0])) else np.abs(spearmanr(i_1, i_2)[0])
                 
-                spear_a=np.abs(spearmanr(a_1, a_2)[0])
-                spear_u=np.abs(spearmanr(u_1, u_2)[0])
-                spear_i=np.abs(spearmanr(i_1, i_2)[0])
-                
-                kendall_a=np.abs(kendalltau(a_1, a_2)[0])
-                kendall_u=np.abs(kendalltau(u_1, u_2)[0])
-                kendall_i=np.abs(kendalltau(i_1, i_2)[0])
+
+                kendall_a= 0 if np.isnan(np.abs(kendalltau(a_1, a_2)[0])) else np.abs(kendalltau(a_1, a_2)[0])
+                kendall_u= 0 if np.isnan(np.abs(kendalltau(u_1, u_2)[0])) else np.abs(kendalltau(u_1, u_2)[0])
+                kendall_i= 0 if np.isnan(np.abs(kendalltau(i_1, i_2)[0])) else np.abs(kendalltau(i_1, i_2)[0])
                 
                 
                 

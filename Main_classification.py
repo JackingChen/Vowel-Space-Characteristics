@@ -90,12 +90,14 @@ def get_args():
                         help='[recall_macro,accuracy]')
     parser.add_argument('--Mergefeatures', default=False,
                         help='')
+    parser.add_argument('--Add_UttLvl_feature', default=False,
+                            help='[DKIndividual, DKcriteria]')
     args = parser.parse_args()
     return args
 args = get_args()
 start_point=args.start_point
 experiment=args.experiment
-
+Add_UttLvl_feature=args.Add_UttLvl_feature
 # =============================================================================
 
 #[tmp] should remove soon
@@ -221,7 +223,44 @@ label_choose=['ADOS_C']
                     # ['TD_normal vs ASDSevere_agesexmatch >> FeatCoor','ASDTD'],#注意DKRatio的columns跟別人不一樣，不過是可以統一的
                     # ['TD_normal vs ASDMild_agesexmatch >> FeatCoor','ASDTD'],
                     # ]
-FeatureLabelMatch_manual=[]
+FeatureLabelMatch_manual=[
+    # ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_columns+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_Convergence_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_moderatehigh_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
+    
+    # ['TD vs df_feature_NotautismandASD_TC >> DEP_columns+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_Autism_TC >> DEP_columns+Phonation_Proximity_cols','ASDTD'],
+    # ['TD vs df_feature_NotautismandASD_TSC >> DEP_columns+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_Autism_TSC >> DEP_columns+Phonation_Proximity_cols','ASDTD'],
+    
+    # ['TD vs df_feature_NotautismandASD_TC >> LOC_columns+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_Autism_TC >> LOC_columns+Phonation_Proximity_cols','ASDTD'],
+    # ['TD vs df_feature_NotautismandASD_TS >> LOC_columns+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_Autism_TS >> LOC_columns+Phonation_Proximity_cols','ASDTD'],
+    # ['TD vs df_feature_NotautismandASD_TSC >> LOC_columns+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_Autism_TSC >> LOC_columns+Phonation_Proximity_cols','ASDTD'],
+    
+    # ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_columns+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_NotautismandASD_TC >> LOCDEP_columns+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_Autism_TSC >> LOCDEP_columns+Phonation_Proximity_cols','ASDTD'],
+    
+    # ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_Convergence_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_NotautismandASD_TC >> LOCDEP_Convergence_cols+Phonation_Proximity_cols', 'ASDTD'],
+
+    # ['TD vs df_feature_moderatehigh_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols','ASDTD'],
+    # ['TD vs df_feature_NotautismandASD_TC >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
+    
+    # ['TD vs df_feature_Autism_TSC >> LOCDEP_Proximity_cols+Phonation_Proximity_cols','ASDTD'],
+    
+    # ['TD vs df_feature_lowMinimal_CSS >> Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_moderatehigh_CSS >> Phonation_Proximity_cols','ASDTD'],
+    # ['TD vs df_feature_NotautismandASD_TC >> Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_Autism_TC >> Phonation_Proximity_cols','ASDTD'],
+    # ['TD vs df_feature_NotautismandASD_TS >> Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_Autism_TS >> Phonation_Proximity_cols','ASDTD'],
+    # ['TD vs df_feature_NotautismandASD_TSC >> Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_Autism_TSC >> Phonation_Proximity_cols','ASDTD'],
+ ]
 df_formant_statistics_CtxPhone_collect_dict=Dict()
 
 # =============================================================================
@@ -235,7 +274,14 @@ class ADOSdataset():
         self.LabelType['ADOS_cate_C']='classification'
         self.LabelType['ASDTD']='classification'
         self.Fractionfeatures_str='Features/artuculation_AUI/Vowels/Fraction/*.pkl'    
-        self.Merge_feature_path='Features/ClassificationMerged_dfs/{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
+        
+        if Add_UttLvl_feature==True:
+            self.File_root_path='Features/ClassificationMerged_dfs/ADDed_UttFeat/distance_2_DKIndividual/'
+            self.Merge_feature_path=self.File_root_path+'{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
+        else:
+            self.File_root_path='Features/ClassificationMerged_dfs/distance_2_DKIndividual/'
+            self.Merge_feature_path=self.File_root_path+'{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
+        self.Merge_feature_path='Features/ClassificationMerged_dfs/distance_2_DKIndividual/{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
         self.FeatureCombs_manual=Dict()
         self.FeatureCombs_manual['TD_normal vs ASDSevere_agesexmatch >> FeatLOC_kid']=['df_formant_statistic_TD_normal_kid', 'df_formant_statistic_agesexmatch_ASDSevereGrp_kid']
         self.FeatureCombs_manual['TD_normal vs ASDMild_agesexmatch >> FeatLOC_kid']=['df_formant_statistic_TD_normal_kid', 'df_formant_statistic_agesexmatch_ASDMildGrp_kid']
@@ -250,8 +296,8 @@ class ADOSdataset():
         # self.FeatureCombs_manual['ASD vs Autism']=['df_formant_statistic_77_ASD', 'df_formant_statistic_77_Autism']
         # self.FeatureCombs_manual['Notautism vs Autism']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_Autism']
     
-        # self._FeatureBuild_single()
-        self._FeatureBuild_Module()
+        self._FeatureBuild_single()
+        # self._FeatureBuild_Module()
     def Get_FormantAUI_feat(self,label_choose,pickle_path,featuresOfInterest=['MSB_f1','MSB_f2','MSB_mix'],filterbyNum=True,**kwargs):
         arti=articulation.articulation.Articulation()
         
@@ -302,10 +348,10 @@ class ADOSdataset():
         Features_comb=Dict()
         IterateFilesFullPaths = glob.glob(self.Merge_feature_path)
         
-        File_root_path='Features/ClassificationMerged_dfs/'
+
         DfCombFilenames=[os.path.basename(f) for f in IterateFilesFullPaths]
-        File_ASD_paths=[File_root_path+"ASD_DOCKID/"+f for f in DfCombFilenames]
-        File_TD_paths=[File_root_path+"TD_DOCKID/"+f for f in DfCombFilenames]
+        File_ASD_paths=[self.File_root_path+"ASD_DOCKID/"+f for f in DfCombFilenames]
+        File_TD_paths=[self.File_root_path+"TD_DOCKID/"+f for f in DfCombFilenames]
         
         
         df_Top_Check_length=pd.DataFrame()
@@ -455,32 +501,41 @@ ados_ds=ADOSdataset()
 ErrorFeat_bookeep=Dict()
 
 
-# FeatureLabelMatch=FeatureLabelMatch_manual
 
 
+if len(FeatureLabelMatch_manual)==0:
+    # FeatureLabelMatch=[ [k,'ASDTD'] for k in ados_ds.Features_comb_multi.keys()]
+    FeatureLabelMatch=[]
+    for k in ados_ds.Features_comb_multi.keys():
+        Compare_pair_str=k.split(" >> ")[0]
+        if 'TD' in Compare_pair_str:
+            FeatureLabelMatch.append([k,'ASDTD'])
+        else:
+            FeatureLabelMatch.append([k,'ASDsevereMild'])
+else:
+    FeatureLabelMatch=FeatureLabelMatch_manual
 
-FeatureLabelMatch=[ [k,'ASDTD'] for k in ados_ds.Features_comb_multi.keys()]
-FeatureLabelMatch=[]
-for k in ados_ds.Features_comb_multi.keys():
-    Compare_pair_str=k.split(" >> ")[0]
-    if 'TD' in Compare_pair_str:
-        FeatureLabelMatch.append([k,'ASDTD'])
-    else:
-        FeatureLabelMatch.append([k,'ASDsevereMild'])
+# FeatSel 掌管該出現的columns
+# ados_ds.Features_comb_multi 掌管load進來的data
+
+
 ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb[e_str][e2_str] for e_str in FeatSel.Columns_comb.keys() for e2_str in FeatSel.Columns_comb[e_str].keys()}
-    
+# =============================================================================
+'''
+
+    Here starts to load features to Session_level_all dict
+
+'''
+# =============================================================================
 for exp_str,lab_ in FeatureLabelMatch:
     ModuleColumn_str=exp_str.split(" >> ")[-1]
+    featuresOfInterest=[ModuleColumn_mapping[ModuleColumn_str]]
     
-    if len(FeatureLabelMatch_manual)==0:
-        featuresOfInterest=[ModuleColumn_mapping[ModuleColumn_str]]
-    else:
-        featuresOfInterest=FeatureLabelMatch_manual
-    
+
     # feat_=key
     for feat_col in featuresOfInterest:
         feat_col_ = list(feat_col) # ex: ['MSB_f1']
-        if len(feat_col) > 144:
+        if len(feat_col) > 144: # 144 is the limit of the filename
             key=feat_col_
         else:
             key=[ModuleColumn_str]
@@ -491,7 +546,7 @@ for exp_str,lab_ in FeatureLabelMatch:
         # X,y, featType=ados_ds.Get_FormantAUI_feat(\
         #     label_choose=lab_,pickle_path='',featuresOfInterest=feat_col_,filterbyNum=False,\
         #     feat_=ados_ds.Features_comb_single[feat_])
-            
+        
         X,y, featType=ados_ds.Get_FormantAUI_feat(\
             label_choose=lab_,pickle_path='',featuresOfInterest=feat_col_,filterbyNum=False,\
             feat_=ados_ds.Features_comb_multi[exp_str])
@@ -506,7 +561,6 @@ for exp_str,lab_ in FeatureLabelMatch:
         Session_level_all[Item_name].X, \
             Session_level_all[Item_name].y, \
                 Session_level_all[Item_name].feattype = X,y, featType
-
 
 
 paper_name_map={}    

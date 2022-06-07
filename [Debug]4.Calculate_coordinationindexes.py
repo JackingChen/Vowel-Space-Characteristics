@@ -81,8 +81,8 @@ def get_args():
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='ASD_DOCKID',
-                            help='[TD_DOCKID_emotion | ASD_DOCKID_emotion | kid_TD | kid88]')
+    parser.add_argument('--dataset_role', default='TD_DOCKID',
+                            help='[TD_DOCKID | ASD_DOCKID_emotion | kid_TD | kid88]')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
     parser.add_argument('--Inspect_roles', default=['D','K'],
@@ -99,7 +99,7 @@ from utils_jack  import  Formant_utt2people_reshape, Gather_info_certainphones, 
                          Get_aligned_sequences, WER, Get_Vowels_AUI
 from metric import Evaluation_method     
 import random
-
+import copy
 def criterion_filter(df_formant_statistic,N=10,\
                      constrain_sex=-1, constrain_module=-1,constrain_agemax=-1,constrain_ADOScate=-1,constrain_agemin=-1,\
                      evictNamelst=[],feature_type='Session_formant'):
@@ -207,7 +207,21 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
                 
                 # Calculate articulation related features
                 # Will contain only one person
-                df_formant_statistic=Feature_calculator.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_choose_lst)
+                try:
+                    df_formant_statistic=Feature_calculator.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_choose_lst)
+                except:
+                    print("Error people: ",people," Role = ",role)
+                    raise ValueError()
+                    
+                if len(df_formant_statistic.columns) < 10:
+                    print("error people= ",people)
+                    print("Tryping to set N =2 for calculate_features",)
+                    Feature_calculator._updateN(2)
+                    df_formant_statistic=Feature_calculator.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_choose_lst)
+                    if len(df_formant_statistic.columns) < 10:
+                        print("people: ",people,"Not successfully generated")
+                        
+                        
                 # Add informations to columns that are needed to df_formant_statistic
                 for i in range(len(df_formant_statistic)):
                     name=df_formant_statistic.iloc[i].name
@@ -217,27 +231,62 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
                                                 df_formant_statistic['a_num']
                 query_lst=list(Formants_utt_symb_SegmentRole.keys())
                 df_general_info_query=df_general_info.query("utt == @query_lst")
-                IPU_start_time=df_general_info_query['st'].min()
-                IPU_end_time=df_general_info_query['ed'].max()
+                
+                # Padd a default IPU value for AUI_info_filled data
+                if len(df_general_info_query['st'])==0:
+                    IPU_start_time=0
+                else:
+                    IPU_start_time=df_general_info_query['st'].min()
+                if len(df_general_info_query['ed'])==0:
+                    IPU_end_time=25
+                else:
+                    IPU_end_time=df_general_info_query['ed'].max()
                 df_formant_statistic['IPU_st']=IPU_start_time
                 df_formant_statistic['IPU_ed']=IPU_end_time
+                # if len(PhoneOfInterest) >= 3:
+                #     df_formant_statistic=Eval_med._Postprocess_dfformantstatistic(df_formant_statistic)
                 
-                
-                if len(PhoneOfInterest) >= 3:
-                    df_formant_statistic=Eval_med._Postprocess_dfformantstatistic(df_formant_statistic)
-                assert len(df_formant_statistic.columns) > 10 #check if df_formant_statistic is empty DF
                 if len(df_person_segment_feature) == 0:
                     df_person_segment_feature=pd.DataFrame([],columns=df_formant_statistic.columns)
                 df_person_segment_feature.loc[segment]=df_formant_statistic.loc[people]
+                # try:
+                #     df_person_segment_feature.loc[segment]=df_formant_statistic.loc[people]
+                # except KeyError: 
+                #     print(df_formant_statistic)
+                #     raise KeyError
             df_person_segment_feature_dict[people][role]=df_person_segment_feature
-
     return df_person_segment_feature_dict, Vowels_AUI_info_dict, MissingSegment_bag
 
 
+# def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule,\
+#                                 outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+#                                 prefix='Formants_utt_symb',\
+#                                 suffix='KID_FromASD_DOCKID'):
+#     pool = Pool(int(os.cpu_count()))
+#     keys=[]
+#     interval=20
+#     for i in range(0,len(Formants_utt_symb.keys()),interval):
+#         # print(list(combs_tup.keys())[i:i+interval])
+#         keys.append(list(Formants_utt_symb.keys())[i:i+interval])
+#     flat_keys=[item for sublist in keys for item in sublist]
+#     assert len(flat_keys) == len(Formants_utt_symb.keys())
+#     muti=Multiprocess.Multi()
+#     final_results=pool.starmap(muti.FilterUttDictsByCriterion_map, [([Formants_utt_symb,Formants_utt_symb,file_block,limit_people_rule]) for file_block in tqdm(keys)])
+    
+#     Formants_utt_symb_limited=Dict()
+#     for load_file_tmp,_ in final_results:        
+#         for utt, df_utt in load_file_tmp.items():
+#             Formants_utt_symb_limited[utt]=df_utt
+    
+#     pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix),"wb"))
+#     print('Formants_utt_symb saved to ',outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix))
+    
+
+# This is from other script
 def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule,\
-                               outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
-                               prefix='Formants_utt_symb',\
-                               suffix='KID_FromASD_DOCKID'):
+                                outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+                                prefix='Formants_utt_symb',\
+                                suffix='KID_FromASD_DOCKID'):
     pool = Pool(int(os.cpu_count()))
     keys=[]
     interval=20
@@ -256,8 +305,8 @@ def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule,\
     
     pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix),"wb"))
     print('Formants_utt_symb saved to ',outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix))
-    
-    
+
+
 def GetValuemeanstd(AUI_info_total,PhoneMapp_dict,Inspect_features):
     People_data_distrib=Dict()
     for people in AUI_info_total.keys():
@@ -265,13 +314,27 @@ def GetValuemeanstd(AUI_info_total,PhoneMapp_dict,Inspect_features):
             df_values = AUI_info_total[people][phoneRepresent][AUI_info_total[people][phoneRepresent]['cmps'] == 'ori']
             df_values_K=df_values[df_values['utt'].str.contains("_K_")]
             df_values_D=df_values[df_values['utt'].str.contains("_D_")]
-            People_data_distrib['D'][people][phoneRepresent].means=df_values_D[Inspect_features].mean()
-            People_data_distrib['D'][people][phoneRepresent].stds=df_values_D[Inspect_features].std()
+            if len(df_values_D) == 0:
+                People_data_distrib['D'][people][phoneRepresent].means=pd.Series([0]*len(Inspect_features),index=Inspect_features)
+                People_data_distrib['D'][people][phoneRepresent].stds=pd.Series([0]*len(Inspect_features),index=Inspect_features)
+            else:
+                People_data_distrib['D'][people][phoneRepresent].means=df_values_D[Inspect_features].mean()
+                if len(df_values_D) == 1:
+                    People_data_distrib['D'][people][phoneRepresent].stds=pd.Series([0]*len(Inspect_features),index=Inspect_features)
+                else:
+                    People_data_distrib['D'][people][phoneRepresent].stds=df_values_D[Inspect_features].std()
             
-            People_data_distrib['K'][people][phoneRepresent].means=df_values_K[Inspect_features].mean()
-            People_data_distrib['K'][people][phoneRepresent].stds=df_values_K[Inspect_features].std()
+            if len(df_values_K) == 0:
+                People_data_distrib['K'][people][phoneRepresent].means=pd.Series([0]*len(Inspect_features),index=Inspect_features)
+                People_data_distrib['K'][people][phoneRepresent].stds=pd.Series([0]*len(Inspect_features),index=Inspect_features)
+            else:
+                People_data_distrib['K'][people][phoneRepresent].means=df_values_K[Inspect_features].mean()
+                if len(df_values_K) == 1:
+                    People_data_distrib['K'][people][phoneRepresent].stds=pd.Series([0]*len(Inspect_features),index=Inspect_features)
+                else:
+                    People_data_distrib['K'][people][phoneRepresent].stds=df_values_K[Inspect_features].std()
+            
     return People_data_distrib
-
 def FillData_NormDistrib(AUI_info,People_data_distrib,Inspect_features,PhoneOfInterest, vowel_min_num=3,\
                          verbose=True):
     # Fill data with random samples sampled from normal distribution with ones mean and std
@@ -304,6 +367,8 @@ def FillData_NormDistrib(AUI_info,People_data_distrib,Inspect_features,PhoneOfIn
     return AUI_info_filled
 
 def Fill_n_Create_AUIInfo(Formants_utt_symb_SegmentRole, People_data_distrib, Inspect_features ,PhoneMapp_dict, PhoneOfInterest ,people, vowel_min_num=3):
+    
+
     Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb_SegmentRole,Formants_utt_symb_SegmentRole,Align_OrinCmp=False)
     AUI_info=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
     
@@ -342,11 +407,18 @@ if not os.path.exists(outpklpath):
 
 
 Formants_utt_symb=pickle.load(open(pklpath+"/Formants_utt_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,windowsize,dataset_role),'rb'))
+Formants_utt_symb_onlyKid=pickle.load(open(pklpath+"/Formants_utt_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,windowsize,'KID_FromASD_DOCKID'),'rb'))
+
 
 
 ''' Get general timestamps '''
 ASD_info_path='/mnt/nas/jackchen/Segments_info_ADOS_ASD.txt'
 TD_info_path='/mnt/nas/jackchen/Segments_info_ADOS_TD.txt'
+# Backup segments info path = /homes/ssd1/jackchen/gop_prediction
+# ASD_info_path='/homes/ssd1/jackchen/gop_prediction/Segments_info_ADOS_ASD.txt'
+# TD_info_path='/homes/ssd1/jackchen/gop_prediction/Segments_info_ADOS_TD.txt'
+
+
 General_info_col=['utt','st','ed','txt','spk']
 if dataset_role == 'TD_DOCKID':
     df_general_info=pd.read_csv(TD_info_path, sep='\t',header=None)
@@ -363,52 +435,115 @@ else:
 PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
 PhoneOfInterest=sorted(list(PhoneMapp_dict.keys()))
 
-''' Vowel AUI rule is using phonewoprosody '''
-Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
-AUI_info_total=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
-limit_people_rule=GetValuelimit_IQR(AUI_info_total,PhoneMapp_dict,args.Inspect_features)
+Formants_utt_symb_Top=Dict()
+Formants_utt_symb_Top['K']={k:v for k,v in Formants_utt_symb.items() if "_K_" in k}
+Formants_utt_symb_Top['D']={k:v for k,v in Formants_utt_symb.items() if "_D_" in k}
 
 
-''' multi processing start '''
-prefix,suffix = 'Formants_utt_symb', dataset_role
-# date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
-date_now='{0}-{1}-{2}'.format(dt.now().year,dt.now().month,dt.now().day)
-outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
-filepath=outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix)
-if os.path.exists(filepath) and args.reFilter==False:
-    fname = pathlib.Path(filepath)
-    mtime = dt.fromtimestamp(fname.stat().st_mtime)
-    # filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
-    filemtime='{0}-{1}-{2}'.format(mtime.year,mtime.month,mtime.day)
+def Check_IfKID_FromASD_DOCKID_eq_ASD_DOCKID_K():    
+    Formants_people_information=Formant_utt2people_reshape(Formants_utt_symb_Top['K'],Formants_utt_symb_Top['K'],Align_OrinCmp=False)
+    AUI_info_total_fromDK=Gather_info_certainphones(Formants_people_information,PhoneMapp_dict,PhoneOfInterest)
     
-    # If file last modify time is not now (precisions to the hours) than we create new one
-    if filemtime != date_now:
-        Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,\
-                               outpath=outpath,\
-                               prefix=prefix,\
-                               suffix=suffix) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_limited.pkl"
-else:
-    Process_IQRFiltering_Multi(Formants_utt_symb,limit_people_rule,\
-                               outpath=outpath,\
-                               prefix=prefix,\
-                               suffix=suffix)
-Formants_utt_symb_limited=pickle.load(open(filepath,"rb"))
-''' multi processing end '''
-if len(limit_people_rule) >0:
-    Formants_utt_symb=Formants_utt_symb_limited
+    Formants_people_information=Formant_utt2people_reshape(Formants_utt_symb_onlyKid,Formants_utt_symb_onlyKid,Align_OrinCmp=False)
+    AUI_info_total=Gather_info_certainphones(Formants_people_information,PhoneMapp_dict,PhoneOfInterest)
+    
+    
+    #Compare AUI_info_total_fromDK & AUI_info_total
+    for people in AUI_info_total.keys():
+        for POI in PhoneOfInterest:
+            assert (AUI_info_total[people][POI] == AUI_info_total_fromDK[people][POI] ).all().all()
+    # The result is comfirmed
+
+def Check_Iflimit_people_rule_fromDK_eq_limit_people_rule():
+    Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb_Top['K'],Formants_utt_symb_Top['K'],Align_OrinCmp=False)
+    AUI_info_total_fromDK=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
+    limit_people_rule_fromDK=GetValuelimit_IQR(AUI_info_total_fromDK,PhoneMapp_dict,args.Inspect_features)
+    
+    Formants_people_information=Formant_utt2people_reshape(Formants_utt_symb_onlyKid,Formants_utt_symb_onlyKid,Align_OrinCmp=False)
+    AUI_info_total=Gather_info_certainphones(Formants_people_information,PhoneMapp_dict,PhoneOfInterest)
+    limit_people_rule=GetValuelimit_IQR(AUI_info_total,PhoneMapp_dict,args.Inspect_features)
+    
+    for people in limit_people_rule.keys():
+        for Phone in limit_people_rule[people]:
+            for feat in limit_people_rule[people][Phone]:
+                for max_min in limit_people_rule[people][Phone][feat]:
+                    assert (limit_people_rule[people][Phone][feat][max_min] == limit_people_rule_fromDK[people][Phone][feat][max_min] )
+    # The result is comfirmed
+def Check_IflenFormants_utt_symb_Top_eq_Formants_utt_symb_onlyKid():
+    for people in Formants_utt_symb_onlyKid.keys():
+        Aac=Formants_utt_symb_Top[role][people]
+        Aad=Formants_utt_symb_onlyKid[people]
+    
+        assert len(Aac) == len(Aad)
+
+for role in Formants_utt_symb_Top.keys():
+# for role in ['K']:
+    ''' Vowel AUI rule is using phonewoprosody '''
+    Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb_Top[role],Formants_utt_symb_Top[role],Align_OrinCmp=False)
+    AUI_info_total=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
+    limit_people_rule=GetValuelimit_IQR(AUI_info_total,PhoneMapp_dict,args.Inspect_features)
+    
+    # Check_Iflimit_people_rule_fromDK_eq_limit_people_rule()
+    # print("Check_Iflimit_people_rule_fromDK_eq_limit_people_rule passed")
+    # Check_IfKID_FromASD_DOCKID_eq_ASD_DOCKID_K()
+    # print("Check_IfKID_FromASD_DOCKID_eq_ASD_DOCKID_K passed")
+    # Check_IflenFormants_utt_symb_Top_eq_Formants_utt_symb_onlyKid()
+    # print("Check_IflenFormants_utt_symb_Top_eq_Formants_utt_symb_onlyKid passed")
+    
+    
+    ''' multi processing start '''
+    prefix,suffix = 'Formants_utt_symb_Top', '{dataset}_{role}'.format(dataset=dataset_role,role=role)
+    # date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
+    date_now='{0}-{1}-{2}'.format(dt.now().year,dt.now().month,dt.now().day)
+    outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
+    filepath=outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix)
+    if os.path.exists(filepath) and args.reFilter==False:
+        fname = pathlib.Path(filepath)
+        mtime = dt.fromtimestamp(fname.stat().st_mtime)
+        # filemtime='{0}-{1}-{2} {3}'.format(mtime.year,mtime.month,mtime.day,mtime.hour)
+        filemtime='{0}-{1}-{2}'.format(mtime.year,mtime.month,mtime.day)
+        
+        # If file last modify time is not now (precisions to the hours) than we create new one
+        if filemtime != date_now:
+            Process_IQRFiltering_Multi(Formants_utt_symb_Top[role],limit_people_rule,\
+                                   outpath=outpath,\
+                                   prefix=prefix,\
+                                   suffix=suffix) # the results will be output as pkl file at outpath+"/[Analyzing]Formants_utt_symb_Top[role]_limited.pkl"
+    else:
+        Process_IQRFiltering_Multi(Formants_utt_symb_Top[role],limit_people_rule,\
+                                   outpath=outpath,\
+                                   prefix=prefix,\
+                                   suffix=suffix)    
+    Formants_utt_symb_Top_limited=pickle.load(open(filepath,"rb"))
+    ''' multi processing end '''
+    if len(limit_people_rule) >0:
+        Formants_utt_symb_Top[role]=Formants_utt_symb_Top_limited
+
+def Check_IfFormants_utt_symb_Top_limited_onlyKid_eq_Formants_utt_symb_Top_limited():
+    Formants_utt_symb_Top_limited_onlyKid=pickle.load(open('articulation/Pickles/[Analyzing]Formants_utt_symb_limited_KID_FromASD_DOCKID.pkl',"rb"))
+    length_bag=[]
+    for people in Formants_utt_symb_Top_limited.keys():
+        length_bag.append(len(Formants_utt_symb_Top_limited_onlyKid[people]) - len(Formants_utt_symb_Top_limited[people] ))
+        if len(Formants_utt_symb_Top_limited_onlyKid[people]) != len(Formants_utt_symb_Top_limited[people]):
+            Aaa=Formants_utt_symb_Top_limited_onlyKid[people]
+            Aab=Formants_utt_symb_Top_limited[people]
+            Aac=Formants_utt_symb_Top[role][people]
+            Aad=Formants_utt_symb_onlyKid[people]
+            assert  len(Aaa) == len(Aab)
+            assert len(Aac) == len(Aad)
+        
 
 
 
-
-
-Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
-AUI_info=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
-
-
+Formants_utt_symb={**Formants_utt_symb_Top['D'], **Formants_utt_symb_Top['K']}
 
 Formants_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
 AUI_info_total=Gather_info_certainphones(Formants_people_information,PhoneMapp_dict,PhoneOfInterest)
 
+
+
+
+#%%
 # =============================================================================
 '''
 
@@ -485,31 +620,232 @@ else:
                                                             PhoneOfInterest,['D'],\
                                                             MinNum=args.MinPhoneNum)
     
+    
     Formants_people_segment_DKIndividual_utt_dict['K']=sliding_window.Reorder2_PER_utt_formants(Formants_utt_symb_Individual['K'],PhoneMapp_dict,\
                                                             PhoneOfInterest,['K'],\
                                                             MinNum=args.MinPhoneNum)
     
-
-    Formants_people_segment_DKcriterial_utt_dict=sliding_window.Reorder2_PER_utt_formants(Formants_utt_symb,PhoneMapp_dict,\
+    
+    
+    # Formants_people_segmentutt_dict,Formants_utt_symb=copy.deepcopy(Formants_people_segment_DKIndividual_utt_dict),copy.deepcopy(Formants_utt_symb_Individual)
+    # minNum=3                                                                               
+    # role='K'
+    # backoff_minNum_lst=[ 1 ] 
+    # length_thrld=4
+    # # This function will repair the segments with short timeseries with at least more timeseries
+    # # by setting smaller MinNum (loosen the restriction of phone numbers )
+    # # 這個補償函數需要確保不會有人被捨棄掉，採以下兩步驟
+    # # 1. 如果小於length_thrld就放寬phone定義條件
+    # # 2. 如果time series長度為1那就補長到跟MinPhoneNum一樣
+    # def Check_short_TS(Formants_people_segmentutt_dict,role='K',length_thrld=length_thrld):
+    #     empty_lst_pp=[]
+    #     # for role in Formants_people_segmentutt_dict.keys():
+    #     for people,IPU_collection in Formants_people_segmentutt_dict[role].items():
+    #         TS_len=len(Formants_people_segmentutt_dict[role][people])
+    #         if TS_len < length_thrld: #For some people who talks less, the maximum timeseries they can get is 1, so set this as default value
+    #             empty_lst_pp.append(people)
+    #     return empty_lst_pp
+    
+    
+    # # for backoff_minNum in [args.MinPhoneNum - i  for i in range(1,10) if args.MinPhoneNum - i >0]:
+    # for backoff_minNum in backoff_minNum_lst:
+    #     empty_lst_pp=Check_short_TS(Formants_people_segmentutt_dict,role)
+    #     if len(empty_lst_pp) > 0: # there's people got empty timeseries list
+    #         # print(empty_lst_pp)
+            
+    #         ''' Change to Reorder2_PER_utt_phonation in phonation script'''
+    #         tmp_sldWind=sliding_window.Reorder2_PER_utt_formants(Formants_utt_symb[role],PhoneMapp_dict,\
+    #                                                         PhoneOfInterest,[role],\
+    #                                                         MinNum=backoff_minNum)
+    #         for people,segment_lst in Formants_people_segmentutt_dict[role].items():
+    #             # 1. 如果小於length_thrld就放寬phone定義條件
+    #             if len(segment_lst) < length_thrld:
+                    
+    #                 Formants_people_segmentutt_dict[role][people]=tmp_sldWind[people]
+    #                 print("TS of people ", people, " swapped with smaller MinNum: ",backoff_minNum)
+    #             # 2. 如果time series長度為1那就補長到跟MinPhoneNum一樣
+    #             if len(Formants_people_segmentutt_dict[role][people]) < minNum:
+    #                 padd_num=minNum-len(Formants_people_segmentutt_dict[role][people])
+    #                 st_idx=len(Formants_people_segmentutt_dict[role][people])
+    #                 for n in range(st_idx,st_idx+padd_num,1):
+    #                     Formants_people_segmentutt_dict[role][people][n]=Formants_people_segmentutt_dict[role][people][n-1]
+    # aaa=ccc
+        
+    
+    
+    def Compensate_EmptySegments_DKIndividual(Formants_people_segmentutt_dict,Formants_utt_symb,role,\
+                                     backoff_minNum_lst=[ 2 ], length_thrld=1, minNum=3):
+        # This function will repair the segments with short timeseries with at least more timeseries
+        # by setting smaller MinNum (loosen the restriction of phone numbers )
+        # 這個補償函數需要確保不會有人被捨棄掉，採以下兩步驟
+        # 1. 如果小於length_thrld就放寬phone定義條件
+        # 2. 如果time series長度為1那就補長到跟MinPhoneNum一樣
+        # backoff_minNum_lst 裡面至少要是2 不然算DEP features的spear時候會至少需要2個phone
+        def Check_short_TS(Formants_people_segmentutt_dict,role='K',length_thrld=length_thrld):
+            empty_lst_pp=[]
+            # for role in Formants_people_segmentutt_dict.keys():
+            for people,IPU_collection in Formants_people_segmentutt_dict[role].items():
+                TS_len=len(Formants_people_segmentutt_dict[role][people])
+                if TS_len < length_thrld: #For some people who talks less, the maximum timeseries they can get is 1, so set this as default value
+                    empty_lst_pp.append(people)
+            return empty_lst_pp
+        
+        
+        # for backoff_minNum in [args.MinPhoneNum - i  for i in range(1,10) if args.MinPhoneNum - i >0]:
+        for backoff_minNum in backoff_minNum_lst:
+            empty_lst_pp=Check_short_TS(Formants_people_segmentutt_dict,role)
+            if len(empty_lst_pp) > 0: # there's people got empty timeseries list
+                # print(empty_lst_pp)
+                
+                ''' Change to Reorder2_PER_utt_phonation in phonation script'''
+                tmp_sldWind=sliding_window.Reorder2_PER_utt_formants(Formants_utt_symb[role],PhoneMapp_dict,\
+                                                                PhoneOfInterest,[role],\
+                                                                MinNum=backoff_minNum)
+                for people,segment_lst in Formants_people_segmentutt_dict[role].items():
+                    # 1. 如果小於length_thrld就放寬phone定義條件
+                    if len(segment_lst) < length_thrld:
+                        Formants_people_segmentutt_dict[role][people]=tmp_sldWind[people]
+                        print("TS of people ", people, " swapped with smaller MinNum: ",backoff_minNum)
+                    # 2. 如果time series長度為1那就補長到跟MinPhoneNum一樣
+                    # 2-1. 如果是空的就不補
+                    if len(Formants_people_segmentutt_dict[role][people]) < minNum:
+                        padd_num=minNum-len(Formants_people_segmentutt_dict[role][people])
+                        st_idx=len(Formants_people_segmentutt_dict[role][people])
+                        for n in range(st_idx,st_idx+padd_num,1):
+                            if len(Formants_people_segmentutt_dict[role][people][n-1])!=0:
+                                Formants_people_segmentutt_dict[role][people][n]=Formants_people_segmentutt_dict[role][people][n-1]
+                    if len(Formants_people_segmentutt_dict[role][people]) == 0:
+                            Formants_people_segmentutt_dict[role][people][0]=Dict()
+                            Formants_people_segmentutt_dict[role][people][0][role]=pd.DataFrame([]) # If the segment is empty, add something so that the latter functions will fill some values for this
+        return Formants_people_segmentutt_dict
+    
+    
+    
+    
+    
+    
+    for role in Formants_people_segment_DKIndividual_utt_dict.keys():
+        Formants_people_segment_DKIndividual_utt_dict_new=Compensate_EmptySegments_DKIndividual(copy.deepcopy(Formants_people_segment_DKIndividual_utt_dict),\
+                                                                                   copy.deepcopy(Formants_utt_symb_Individual),role,\
+                                                                                   backoff_minNum_lst=[ 2 ], length_thrld=1, minNum=args.MinPhoneNum)
+    Formants_people_segment_DKIndividual_utt_dict = Formants_people_segment_DKIndividual_utt_dict_new 
+    
+    
+    def Compensate_EmptySegments_unity_check(Formants_people_segment_DKIndividual_utt_dict,Formants_people_segment_DKIndividual_utt_dict_new):
+        # Verification code
+        diff_dict=Dict()
+        for role in Formants_people_segment_DKIndividual_utt_dict.keys():
+            for people in Formants_people_segment_DKIndividual_utt_dict[role].keys():
+                for d_key in Formants_people_segment_DKIndividual_utt_dict[role][people].keys():
+                    
+                    # cond=[]
+                    # for k in Formants_people_segment_DKIndividual_utt_dict_new[role][people][d_key][role].keys():
+                    #     cond.append((Formants_people_segment_DKIndividual_utt_dict[role][people][d_key][role][k] == Formants_people_segment_DKIndividual_utt_dict_new[role][people][d_key][role][k]).all().all())
+                            
+                    cond= len(Formants_people_segment_DKIndividual_utt_dict[role][people][d_key][role]) == len(Formants_people_segment_DKIndividual_utt_dict_new[role][people][d_key][role])
+                    if not cond:
+                        diff_dict['{0}-{1}-{2}'.format(role,people,d_key)]['before']=Formants_people_segment_DKIndividual_utt_dict[role][people][d_key][role]
+                        diff_dict['{0}-{1}-{2}'.format(role,people,d_key)]['after']=Formants_people_segment_DKIndividual_utt_dict_new[role][people][d_key][role]
+    
+    
+    
+    def Compensate_EmptySegments_DKCriteria(Formants_utt_people_segmentutt_dict,Formants_utt_utt_symb,\
+                                     backoff_minNum_lst=[ 1 ], length_thrld=1, minNum=3):
+            # This function will repair the segments with short timeseries with at least more timeseries
+            # by setting smaller MinNum (loosen the restriction of phone numbers )
+            # 這個補償函數需要確保不會有人被捨棄掉，採以下兩步驟
+            # 1. 如果小於length_thrld就放寬phone定義條件
+            # 2. 如果time series長度為1那就補長到跟MinPhoneNum一樣
+            # backoff_minNum_lst 裡面至少要是2 不然算DEP features的spear時候會至少需要2個phone
+            def Check_short_TS(Formants_utt_people_segmentutt_dict,length_thrld=length_thrld):
+                empty_lst_pp=[]
+                # for role in Formants_utt_people_segmentutt_dict.keys():
+                for people,IPU_collection in Formants_utt_people_segmentutt_dict.items():
+                    TS_len=len(Formants_utt_people_segmentutt_dict[people])
+                    if TS_len < length_thrld: #For some people who talks less, the maximum timeseries they can get is 1, so set this as default value
+                        empty_lst_pp.append(people)
+                return empty_lst_pp
+            
+            
+            # for backoff_minNum in [args.MinPhoneNum - i  for i in range(1,10) if args.MinPhoneNum - i >0]:
+            for backoff_minNum in backoff_minNum_lst:
+                empty_lst_pp=Check_short_TS(Formants_utt_people_segmentutt_dict)
+                if len(empty_lst_pp) > 0: # there's people got empty timeseries list
+                    # print(empty_lst_pp)
+                    
+                    ''' Change to Reorder2_PER_utt_phonation in phonation script'''
+                    tmp_sldWind=sliding_window.Reorder2_PER_utt_formants(Formants_utt_utt_symb,PhoneMapp_dict,\
+                                                                    PhoneOfInterest,args.Inspect_roles,\
+                                                                    MinNum=backoff_minNum)
+                    for people,segment_lst in Formants_utt_people_segmentutt_dict.items():
+                        # 1. 如果小於length_thrld就放寬phone定義條件
+                        if len(segment_lst) < length_thrld:
+                            Formants_utt_people_segmentutt_dict[people]=tmp_sldWind[people]
+                            print("TS of people ", people, " swapped with smaller MinNum: ",backoff_minNum)
+                        # 2. 如果time series長度為1那就補長到跟MinPhoneNum一樣
+                        # 2-1. 如果是空的就不補
+                        # 2-2. 如果完全沒有segment就放一個空df讓後面算feature的function補值
+                        if len(Formants_utt_people_segmentutt_dict[people]) < minNum:
+                            padd_num=minNum-len(Formants_utt_people_segmentutt_dict[people])
+                            st_idx=len(Formants_utt_people_segmentutt_dict[people])
+                            for n in range(st_idx,st_idx+padd_num,1):
+                                if len(Formants_utt_people_segmentutt_dict[people][n-1])!=0:
+                                    Formants_utt_people_segmentutt_dict[people][n]=Formants_utt_people_segmentutt_dict[people][n-1]
+                        if len(Formants_utt_people_segmentutt_dict[people]) == 0:
+                            Formants_utt_people_segmentutt_dict[people][0]=Dict()
+                            for role in args.Inspect_roles:
+                                Formants_utt_people_segmentutt_dict[people][0][role]=pd.DataFrame([]) # If the segment is empty, add something so that the latter functions will fill some values for this
+            return Formants_utt_people_segmentutt_dict
+    
+    
+    Formants_people_segment_DKcriteria_utt_dict=sliding_window.Reorder2_PER_utt_formants(Formants_utt_symb,PhoneMapp_dict,\
                                                             PhoneOfInterest,args.Inspect_roles,\
                                                             MinNum=args.MinPhoneNum)            
-    Formants_people_half_role_utt_dict=Dict()
-    Formants_people_whole_role_utt_dict=Dict()
-    for people in Formants_people_segment_DKcriterial_utt_dict.keys():
-        split_num=len(Formants_people_segment_DKcriterial_utt_dict[people])//2
-        for segment in Formants_people_segment_DKcriterial_utt_dict[people].keys():
-            for role in Formants_people_segment_DKcriterial_utt_dict[people][segment].keys():
-                if segment <= split_num:
-                    Formants_people_half_role_utt_dict[people]['first_half'][role].update(Formants_people_segment_DKcriterial_utt_dict[people][segment][role])
-                else:
-                    Formants_people_half_role_utt_dict[people]['last_half'][role].update(Formants_people_segment_DKcriterial_utt_dict[people][segment][role])
-                Formants_people_whole_role_utt_dict[people]['whole'][role].update(Formants_people_segment_DKcriterial_utt_dict[people][segment][role])
+    Formants_people_segment_DKcriteria_utt_dict_new=Compensate_EmptySegments_DKCriteria(copy.deepcopy(Formants_people_segment_DKcriteria_utt_dict),\
+                                                                                   copy.deepcopy(Formants_utt_symb),\
+                                                                                   backoff_minNum_lst=[ 1 ], length_thrld=1)
+    Formants_people_segment_DKcriteria_utt_dict = Formants_people_segment_DKcriteria_utt_dict_new 
+    # Formants_people_half_role_utt_dict=Dict()
+    # Formants_people_whole_role_utt_dict=Dict()
+    # for people in Formants_people_segment_DKcriterial_utt_dict.keys():
+    #     split_num=len(Formants_people_segment_DKcriterial_utt_dict[people])//2
+    #     for segment in Formants_people_segment_DKcriterial_utt_dict[people].keys():
+    #         for role in Formants_people_segment_DKcriterial_utt_dict[people][segment].keys():
+    #             if segment <= split_num:
+    #                 Formants_people_half_role_utt_dict[people]['first_half'][role].update(Formants_people_segment_DKcriterial_utt_dict[people][segment][role])
+    #             else:
+    #                 Formants_people_half_role_utt_dict[people]['last_half'][role].update(Formants_people_segment_DKcriterial_utt_dict[people][segment][role])
+    #             Formants_people_whole_role_utt_dict[people]['whole'][role].update(Formants_people_segment_DKcriterial_utt_dict[people][segment][role])
+
+    
+    
+    
+
+pickle.dump(Formants_people_segment_DKIndividual_utt_dict,open(outpklpath+"Formants_people_segment_DKIndividual_utt_dict_{0}.pkl".format(dataset_role),"wb"))
+pickle.dump(Formants_people_segment_DKcriteria_utt_dict,open(outpklpath+"Formants_people_segment_DKcriterial_utt_dict{0}.pkl".format(dataset_role),"wb"))
+def Check_AUI_info_from_people_segment_dict(role='D'):
+        AUI_info_total_check=Dict()
+        # for role in Formants_people_segment_DKIndividual_utt_dict.keys():
+        for people in Formants_people_segment_DKIndividual_utt_dict[role].keys():
+            for i,n in enumerate(Formants_people_segment_DKIndividual_utt_dict[role][people]):
+                Formants_utt_symb_fake=Formants_people_segment_DKIndividual_utt_dict[role][people][n][role]
+                
+                
+                Formants_people_information=Formant_utt2people_reshape(Formants_utt_symb_fake,Formants_utt_symb_fake,Align_OrinCmp=False)
+                AUI_info=Gather_info_certainphones(Formants_people_information,PhoneMapp_dict,PhoneOfInterest)
+                if people not in AUI_info_total_check.keys():
+                    AUI_info_total_check[people]=AUI_info[people]
+                for P in PhoneOfInterest:
+                    AUI_info_total_check[people][P] = AUI_info_total_check[people][P].append(AUI_info[people][P])
+
+#%%
+Formants_people_segment_DKIndividual_utt_dict=pickle.load(open(outpklpath+"Formants_people_segment_DKIndividual_utt_dict_{0}.pkl".format(dataset_role),"rb"))
+Formants_people_segment_DKcriterial_utt_dict=pickle.load(open(outpklpath+"Formants_people_segment_DKcriterial_utt_dict{0}.pkl".format(dataset_role),"rb"))
 
 # Data Statistics for the use of filling empty segments
 People_data_distrib=GetValuemeanstd(AUI_info_total,PhoneMapp_dict,args.Inspect_features)
 
-pickle.dump(Formants_people_segment_DKIndividual_utt_dict,open(outpklpath+"Formants_people_segment_DKIndividual_utt_dict_{0}.pkl".format(dataset_role),"wb"))
-pickle.dump(Formants_people_segment_DKcriterial_utt_dict,open(outpklpath+"Formants_people_segment_DKcriterial_utt_dict{0}.pkl".format(dataset_role),"wb"))
+
 # =============================================================================
 '''
     2-2. Calculate LOC timeseries features within each defined timesteps (Details in TBME2021)
@@ -551,7 +887,10 @@ if 'emotion' in  dataset_role:
 else:
     Segment_lst=[]
 
-
+# def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_dict, People_data_distrib,\
+#                               PhoneMapp_dict, PhoneOfInterest ,df_general_info,\
+#                               Inspect_roles ,Inspect_features, In_Segments_order,\
+#                               Feature_calculator, vowel_min_num):
 
 
 # If IPU format = DKcriterial
@@ -570,21 +909,21 @@ for d, vowelinfoseg, missSeg in tqdm(final_result):
         Vowels_AUI_info_segments_dict[spk]=d[spk]
 
 # If IPU format = DKIndividual
-# df_person_segment_feature_DKIndividual_dict=Dict()
-# Vowels_AUI_info_segments_DKIndividual_dict=Dict()
-# for role in Formants_people_segment_DKIndividual_utt_dict.keys():
-#     final_result = pool.starmap(GetPersonalSegmentFeature_map, [(key,Formants_people_segment_DKIndividual_utt_dict[role],People_data_distrib, \
-#                                       PhoneMapp_dict, PhoneOfInterest ,df_general_info,\
-#                                       [role], args.Inspect_features,\
-#                                       Segment_lst, articulation,args.MinPhoneNum) for key in tqdm(keys)])
-#     print('GetPersonalSegmentFeature_map segment done !!!')
+df_person_segment_feature_DKIndividual_dict=Dict()
+Vowels_AUI_info_segments_DKIndividual_dict=Dict()
+for role in Formants_people_segment_DKIndividual_utt_dict.keys():
+    final_result = pool.starmap(GetPersonalSegmentFeature_map, [(key,Formants_people_segment_DKIndividual_utt_dict[role],People_data_distrib, \
+                                      PhoneMapp_dict, PhoneOfInterest ,df_general_info,\
+                                      [role], args.Inspect_features,\
+                                      Segment_lst, articulation,args.MinPhoneNum) for key in tqdm(keys)])
+    print('GetPersonalSegmentFeature_map segment done !!!')
     
-#     MissSeg=[]
-#     for d, vowelinfoseg, missSeg in tqdm(final_result):
-#         MissSeg.extend(missSeg) #Bookeep the people that the timestamps are missing 
-#         for spk in d.keys():
-#             df_person_segment_feature_DKIndividual_dict[spk][role]=d[spk][role]
-#             Vowels_AUI_info_segments_DKIndividual_dict[spk][role]=d[spk][role]
+    MissSeg=[]
+    for d, vowelinfoseg, missSeg in tqdm(final_result):
+        MissSeg.extend(missSeg) #Bookeep the people that the timestamps are missing 
+        for spk in d.keys():
+            df_person_segment_feature_DKIndividual_dict[spk][role]=d[spk][role]
+            Vowels_AUI_info_segments_DKIndividual_dict[spk][role]=d[spk][role]
 
 
 
@@ -629,8 +968,8 @@ for d, vowelinfoseg, missSeg in tqdm(final_result):
 
 
 # This will be used in Statistical tests
-# pickle.dump(df_person_segment_feature_DKIndividual_dict,open(outpklpath+"df_person_segment_feature_DKIndividual_dict_{0}_{1}.pkl".format(dataset_role, 'formant'),"wb"))
-# pickle.dump(df_person_segment_feature_DKcriteria_dict,open(outpklpath+"df_person_segment_feature_DKcriteria_dict_{0}_{1}.pkl".format(dataset_role, 'formant'),"wb"))
+pickle.dump(df_person_segment_feature_DKIndividual_dict,open(outpklpath+"df_person_segment_feature_DKIndividual_dict_{0}_{1}.pkl".format(dataset_role, 'formant'),"wb"))
+pickle.dump(df_person_segment_feature_DKcriteria_dict,open(outpklpath+"df_person_segment_feature_DKcriteria_dict_{0}_{1}.pkl".format(dataset_role, 'formant'),"wb"))
 
 #%%
 # =============================================================================
@@ -643,8 +982,8 @@ for d, vowelinfoseg, missSeg in tqdm(final_result):
     Output: 
 
 '''
-dataset_role='ASD_DOCKID'
-Reorder_type='DKIndividual'   #[DKIndividual, DKcriteria]
+dataset_role=args.dataset_role
+Reorder_type='DKcriteria'   #[DKIndividual, DKcriteria]
 if Reorder_type == 'DKIndividual':
     df_person_segment_feature_DKIndividual_dict=pickle.load(open(outpklpath+"df_person_segment_feature_{Reorder_type}_dict_{0}_{1}.pkl".format(dataset_role, 'formant',Reorder_type=Reorder_type),"rb"))
 elif Reorder_type == 'DKcriteria':
@@ -684,25 +1023,104 @@ label_generate_choose_lst=['ADOS_C','ADOS_S']
 
 syncrony=Syncrony()
 PhoneOfInterest_str=''
-knn_neighbors=4
+knn_neighbors=2
 MinNumTimeSeries=knn_neighbors+1
 knn_weights="distance"
 
-# df_syncrony_measurement_cmp=syncrony.calculate_features_continuous(df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
-#                             args.Inspect_roles, Label,\
-#                             knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-#                             MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,plot=False)
 if Reorder_type == 'DKIndividual':
     df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
-                            args.Inspect_roles, Label,\
-                            knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
-elif Reorder_type == 'DKcriteria':
-    df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKcriteria_dict,features,PhoneOfInterest_str,\
-                            args.Inspect_roles, Label,\
-                            knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
+                                                                    args.Inspect_roles, Label,\
+                                                                    knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
+                                                                    MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,Knn_aggressive_mode=True)
 
+    # Knn_aggressive_mode=False
+    # Inspect_roles=args.Inspect_roles
+    # df_basic_additional_info=syncrony._Add_additional_info(df_person_segment_feature_DKIndividual_dict,Label,label_choose_lst,\
+    #                                               Inspect_roles, MinNumTimeSeries=MinNumTimeSeries,PhoneOfInterest_str=PhoneOfInterest_str)
+    # df_syncrony_measurement_merge=pd.DataFrame()
+    # def KNNFitting(self,df_person_segment_feature_DKIndividual_dict,\
+    #             col_choose,Inspect_roles,\
+    #             knn_weights='uniform',knn_neighbors=2,MinNumTimeSeries=3,\
+    #             st_col_str='IPU_st', ed_col_str='IPU_ed', aggressive_mode=False):
+    #     p_1=Inspect_roles[0]
+    #     p_2=Inspect_roles[1]
+        
+    #     functionDK_people=Dict()
+    #     for people in df_person_segment_feature_DKIndividual_dict.keys():
+    #         if not aggressive_mode:
+    #             #Aggressive mode means that we don't want to skip any participant, if there is a value error, then make sure previous procedure doesn't generate unavailable data
+    #             if len(df_person_segment_feature_DKIndividual_dict[people][p_1])<MinNumTimeSeries or len(df_person_segment_feature_DKIndividual_dict[people][p_2])<MinNumTimeSeries:
+    #                 continue
+    #         df_person_segment_feature_role_dict=df_person_segment_feature_DKIndividual_dict[people]  
+    #         try:
+    #             Totalendtime=min([df_person_segment_feature_role_dict[role][ed_col_str].values[-1]  for role in Inspect_roles])
+    #         except:
+    #             print("The people causing error happens at people: ",people)
+    #             print("The problem file is ",df_person_segment_feature_role_dict)
+    #             raise KeyError
+    #         T = np.linspace(0, Totalendtime, int(Totalendtime))[:, np.newaxis]
+            
+    #         functionDK={}
+    #         for role_choose in Inspect_roles:
+    #             df_dynVals=df_person_segment_feature_role_dict[role_choose][col_choose]
+    #             if not np.isnan(np.abs(stats.zscore(df_dynVals))).all(): 
+    #                 # remove outlier that is falls over 3 times of the std
+    #                 df_dynVals_deleteOutlier=df_dynVals[(np.abs(stats.zscore(df_dynVals)) < 3)]
+    #             else:
+    #                 #Situation for padding when the time series is too short
+    #                 df_dynVals_deleteOutlier=df_dynVals
+    #             df_stidx=df_person_segment_feature_role_dict[role_choose][st_col_str]
+    #             df_edidx=df_person_segment_feature_role_dict[role_choose][ed_col_str]
+                
+                
+    #             Mid_positions=[]
+    #             for x_1 , x_2, y in zip(df_stidx.values ,df_edidx.values,df_dynVals_deleteOutlier.values):            
+    #                 start_time=x_1
+    #                 end_time=x_2
+    #                 mid_time=(start_time+end_time)/2
+    #                 Mid_positions.append(mid_time)    
+                
+    #             if aggressive_mode:
+    #                 #Aggressive mode means that we don't want to skip any participant
+    #                 knn_neighbors = min (knn_neighbors,len(df_dynVals_deleteOutlier))
+    #             knn = neighbors.KNeighborsRegressor(knn_neighbors, weights=knn_weights)
+    #             X, y=np.array(Mid_positions).reshape(-1,1), df_dynVals_deleteOutlier
+    #             try:
+    #                 y_ = knn.fit(X, y.values).predict(T)
+    #             except ValueError:
+    #                 print("Problem people happen at ", people, role_choose)
+    #                 print("df_dynVals", df_dynVals)
+    #                 print("==================================================")
+    #                 print("df_dynVals_deleteOutlier", df_dynVals_deleteOutlier)
+    #                 raise ValueError
+    #             functionDK[role_choose]=y_
+    #         functionDK['T']=T
+    #         functionDK_people[people]=functionDK
+    #     return functionDK_people
+    
+    # for col in features:
+    #     Col_continuous_function_DK=syncrony.KNNFitting(df_person_segment_feature_DKIndividual_dict,\
+    #                 col, Inspect_roles,\
+    #                 knn_weights=knn_weights,knn_neighbors=knn_neighbors,MinNumTimeSeries=MinNumTimeSeries,\
+    #                 st_col_str='IPU_st', ed_col_str='IPU_ed', aggressive_mode=Knn_aggressive_mode)
+        
+    #     df_syncrony_measurement_col=syncrony._calculate_features_col(Col_continuous_function_DK,col)
+    #     if df_syncrony_measurement_col.isna().any().any():
+    #         print("The columns with Nan is ", col)
+            
+        
+        
+    #     df_syncrony_measurement_merge=pd.concat([df_syncrony_measurement_merge,df_syncrony_measurement_col],axis=1)
+    # df_syncrony_measurement=pd.concat([df_basic_additional_info,df_syncrony_measurement_merge],axis=1)
+        
+        
+        
+if Reorder_type == 'DKcriteria':
+    df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKcriteria_dict,features,PhoneOfInterest_str,\
+                                                                    args.Inspect_roles, Label,\
+                                                                    knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
+                                                                    MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,Knn_aggressive_mode=True)
+                                        
 
 # df_syncrony_measurement=syncrony.calculate_features_continuous(df_person_segment_feature_DKcriteria_dict,features,PhoneOfInterest_str,\
 #                         args.Inspect_roles, Label,\
@@ -726,8 +1144,9 @@ df_syncrony_measurement['timeSeries_len']=df_syncrony_measurement[timeSeries_len
 
 
 pickle.dump(df_syncrony_measurement,open(outpklpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type),"wb"))
-# pickle.dump(df_syncrony_measurement,open(outpklpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type),"wb"))
-
+Aaa=df_syncrony_measurement[df_syncrony_measurement.isna().any(axis=1)]
+print("df_syncrony_measurement", df_syncrony_measurement)
+print("Aaa=df_syncrony_measurement[df_syncrony_measurement.isna().any(axis=1)]", Aaa)
 # =============================================================================
 '''
 

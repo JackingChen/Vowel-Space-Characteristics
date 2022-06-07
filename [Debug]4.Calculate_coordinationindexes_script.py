@@ -45,6 +45,7 @@ from articulation.articulation import Articulation
 import articulation.Multiprocess as Multiprocess
 from datetime import datetime as dt
 import pathlib
+import articulation.HYPERPARAM.FeatureSelect as FeatSel
 
 from scipy import special, stats
 import warnings
@@ -597,48 +598,44 @@ TopTop_data_lst=[]
 # TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_agesexmatch_ASDSevere'])
 ''' Notice, ASD should be on the left '''
 
-TopTop_data_lst.append(['df_feature_ASD','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_ASD','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_low_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
 TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
 TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
 
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_moderate_CSS'])
-TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_high_CSS'])
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_high_CSS'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderate_CSS'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_high_CSS'])
+# TopTop_data_lst.append(['df_feature_low_CSS','df_feature_moderate_CSS'])
+# TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_high_CSS'])
+# TopTop_data_lst.append(['df_feature_low_CSS','df_feature_high_CSS'])
+# TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderate_CSS'])
+# TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_high_CSS'])
 
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_Autism_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Autism_TC','df_feature_TD'])
 
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC'])
-TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_Autism_TC'])
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_Autism_TC'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC'])
+# TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_Autism_TC'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_Autism_TC'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC','df_feature_Autism_TC'])
 
 
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_Autism_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Autism_TS','df_feature_TD'])
 
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS'])
-TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_Autism_TS'])
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_Autism_TS'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS'])
+# TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_Autism_TS'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_Autism_TS'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS','df_feature_Autism_TS'])
 
-TopTop_data_lst.append(['df_feature_Notautism_TSC','df_feature_ASD_TSC'])
-TopTop_data_lst.append(['df_feature_ASD_TSC','df_feature_Autism_TSC'])
-TopTop_data_lst.append(['df_feature_Notautism_TSC','df_feature_Autism_TSC'])
 
-Convergence_cols=[c for c in df_syncrony_measurement.columns if 'Convergence' in c]
-Proximity_cols=[c for c in df_syncrony_measurement.columns if 'Proximity' in c]
-Syncrony_cols=[c for c in df_syncrony_measurement.columns if 'Syncrony' in c]
-Trend_D_cols=[c for c in df_syncrony_measurement.columns if 'Trend' in c and '_d' in c]
-Trend_K_cols=[c for c in df_syncrony_measurement.columns if 'Trend' in c and '_k' in c]
-self_specify_cols=Proximity_cols + Convergence_cols + Syncrony_cols + Trend_D_cols + Trend_K_cols
+self_specify_cols=FeatSel.LOCDEP_Proximity_cols
 # self_specify_cols= 
 Parameters=df_syncrony_measurement.columns
 if len(self_specify_cols) > 0:
@@ -728,106 +725,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import f1_score,recall_score,roc_auc_score
 from sklearn.tree import DecisionTreeClassifier
 
-New_Proximity_cols=[
- 'Proximity[VSA2]',
- 'Proximity[FCR2]',
- 'Proximity[between_covariance_norm(A:,i:,u:)]',
- 'Proximity[between_variance_norm(A:,i:,u:)]',
- 'Proximity[within_covariance_norm(A:,i:,u:)]',
- 'Proximity[within_variance_norm(A:,i:,u:)]',
- 'Proximity[total_covariance_norm(A:,i:,u:)]',
- 'Proximity[total_variance_norm(A:,i:,u:)]',
- 'Proximity[sam_wilks_lin_norm(A:,i:,u:)]',
- 'Proximity[pillai_lin_norm(A:,i:,u:)]',
- 'Proximity[hotelling_lin_norm(A:,i:,u:)]',
- 'Proximity[roys_root_lin_norm(A:,i:,u:)]',
- 'Proximity[Between_Within_Det_ratio_norm(A:,i:,u:)]',
- 'Proximity[Between_Within_Tr_ratio_norm(A:,i:,u:)]',
-  'Proximity[pear_12]',
-  'Proximity[spear_12]',
-  'Proximity[kendall_12]',
-  'Proximity[dcorr_12]'
- ]
-New_Trend_D_cols=[
- 'Trend[VSA2]_d',
- 'Trend[FCR2]_d',
- 'Trend[between_covariance_norm(A:,i:,u:)]_d',
- 'Trend[between_variance_norm(A:,i:,u:)]_d',
- 'Trend[within_covariance_norm(A:,i:,u:)]_d',
- 'Trend[within_variance_norm(A:,i:,u:)]_d',
- 'Trend[total_covariance_norm(A:,i:,u:)]_d',
- 'Trend[total_variance_norm(A:,i:,u:)]_d',
- 'Trend[sam_wilks_lin_norm(A:,i:,u:)]_d',
- 'Trend[pillai_lin_norm(A:,i:,u:)]_d',
- 'Trend[hotelling_lin_norm(A:,i:,u:)]_d',
- 'Trend[roys_root_lin_norm(A:,i:,u:)]_d',
- 'Trend[Between_Within_Det_ratio_norm(A:,i:,u:)]_d',
- 'Trend[Between_Within_Tr_ratio_norm(A:,i:,u:)]_d',
-  'Trend[pear_12]_d',
-  'Trend[spear_12]_d',
-  'Trend[kendall_12]_d',
-  'Trend[dcorr_12]_d'
-    ]
-New_Trend_K_cols=[
- 'Trend[VSA2]_k',
- 'Trend[FCR2]_k',
- 'Trend[between_covariance_norm(A:,i:,u:)]_k',
- 'Trend[between_variance_norm(A:,i:,u:)]_k',
- 'Trend[within_covariance_norm(A:,i:,u:)]_k',
- 'Trend[within_variance_norm(A:,i:,u:)]_k',
- 'Trend[total_covariance_norm(A:,i:,u:)]_k',
- 'Trend[total_variance_norm(A:,i:,u:)]_k',
- 'Trend[sam_wilks_lin_norm(A:,i:,u:)]_k',
- 'Trend[pillai_lin_norm(A:,i:,u:)]_k',
- 'Trend[hotelling_lin_norm(A:,i:,u:)]_k',
- 'Trend[roys_root_lin_norm(A:,i:,u:)]_k',
- 'Trend[Between_Within_Det_ratio_norm(A:,i:,u:)]_k',
- 'Trend[Between_Within_Tr_ratio_norm(A:,i:,u:)]_k',
-  'Trend[pear_12]_k',
-  'Trend[spear_12]_k',
-  'Trend[kendall_12]_k',
-  'Trend[dcorr_12]_k'
-    ]
-New_Convergence_cols=[
- 'Convergence[VSA2]',
- 'Convergence[FCR2]',
- 'Convergence[between_covariance_norm(A:,i:,u:)]',
- 'Convergence[between_variance_norm(A:,i:,u:)]',
- 'Convergence[within_covariance_norm(A:,i:,u:)]',
- 'Convergence[within_variance_norm(A:,i:,u:)]',
- 'Convergence[total_covariance_norm(A:,i:,u:)]',
- 'Convergence[total_variance_norm(A:,i:,u:)]',
- 'Convergence[sam_wilks_lin_norm(A:,i:,u:)]',
- 'Convergence[pillai_lin_norm(A:,i:,u:)]',
- 'Convergence[hotelling_lin_norm(A:,i:,u:)]',
- 'Convergence[roys_root_lin_norm(A:,i:,u:)]',
- 'Convergence[Between_Within_Det_ratio_norm(A:,i:,u:)]',
- 'Convergence[Between_Within_Tr_ratio_norm(A:,i:,u:)]',
-  'Convergence[pear_12]',
-  'Convergence[spear_12]',
-  'Convergence[kendall_12]',
-  'Convergence[dcorr_12]'
- ]
-New_Syncrony_cols=[
- 'Syncrony[VSA2]',
- 'Syncrony[FCR2]',
- 'Syncrony[between_covariance_norm(A:,i:,u:)]',
- 'Syncrony[between_variance_norm(A:,i:,u:)]',
- 'Syncrony[within_covariance_norm(A:,i:,u:)]',
- 'Syncrony[within_variance_norm(A:,i:,u:)]',
- 'Syncrony[total_covariance_norm(A:,i:,u:)]',
- 'Syncrony[total_variance_norm(A:,i:,u:)]',
- 'Syncrony[sam_wilks_lin_norm(A:,i:,u:)]',
- 'Syncrony[pillai_lin_norm(A:,i:,u:)]',
- 'Syncrony[hotelling_lin_norm(A:,i:,u:)]',
- 'Syncrony[roys_root_lin_norm(A:,i:,u:)]',
- 'Syncrony[Between_Within_Det_ratio_norm(A:,i:,u:)]',
- 'Syncrony[Between_Within_Tr_ratio_norm(A:,i:,u:)]',
-  'Syncrony[pear_12]',
-  'Syncrony[spear_12]',
-  'Syncrony[kendall_12]',
-  'Syncrony[dcorr_12]'
-    ]
 # =============================================================================
 lab_chos_lst=['ASDTD']
 # feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','dcorr_12']
@@ -844,7 +741,8 @@ loo=LeaveOneOut()
 CV_settings=10
 pca = PCA(n_components=1)
 
-C_variable=np.array(np.arange(0.1,1.5,0.1))
+# C_variable=np.array(np.arange(0.1,1.5,0.1))
+C_variable=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
 # C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.2))  )
 # C_variable=np.array([0.01, 0.1,0.5,1.0, 5.0])
 n_estimator=[ 32, 50, 64, 100 ,128, 256]
@@ -867,14 +765,12 @@ Classifier['DT']={'model':DecisionTreeClassifier(),\
 clf=Classifier['SVC']
 
 
-
 Comb=Dict()
-Comb['Trend_D_cols']=New_Trend_D_cols
-Comb['Trend_K_cols']=New_Trend_K_cols
-# Comb['Proximity_cols']=Proximity_cols
-Comb['New_Proximity_cols']=New_Proximity_cols
-Comb['Convergence_cols']=New_Convergence_cols
-Comb['Syncrony_cols']=New_Syncrony_cols
+Comb['Trend_D_cols']=FeatSel.LOCDEP_Trend_D_cols
+Comb['Trend_K_cols']=FeatSel.LOCDEP_Trend_K_cols
+Comb['Proximity_cols']=FeatSel.LOCDEP_Proximity_cols
+Comb['Convergence_cols']=FeatSel.LOCDEP_Convergence_cols
+Comb['Syncrony_cols']=FeatSel.LOCDEP_Syncrony_cols
 
 combinations_lsts=[ Comb[k] for k in Comb.keys()]
 combinations_keylsts=[ k for k in Comb.keys()]
@@ -947,6 +843,11 @@ for Expiment_str, values in Top_RESULT_dict.items():
 
 df_Result_UAR_summary_list=pd.DataFrame.from_dict(Result_UAR_summary,orient='index')
 
+del Gclf
+
+
+
+#%%
 out_df_str='df_Result_UAR_summary_list_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx'.format(knn_weights=knn_weights,\
                                                                                             knn_neighbors=knn_neighbors,\
                                                                                             Reorder_type=Reorder_type)

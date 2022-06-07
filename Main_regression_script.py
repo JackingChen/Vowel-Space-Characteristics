@@ -40,6 +40,7 @@ from sklearn.metrics import recall_score, make_scorer
 
 from articulation.HYPERPARAM import phonewoprosody, Label
 import articulation.HYPERPARAM.FeatureSelect as FeatSel
+import articulation.HYPERPARAM.PaperNameMapping as PprNmeMp
 
 import articulation.articulation
 from sklearn.metrics import roc_auc_score
@@ -89,11 +90,11 @@ def get_args():
                         help='')
     parser.add_argument('--knn_weights', default='distance',
                             help='path of the base directory')
-    parser.add_argument('--knn_neighbors', default=2,  type=int,
+    parser.add_argument('--knn_neighbors', default=3,  type=int,
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--Add_UttLvl_feature', default=True,
+    parser.add_argument('--Add_UttLvl_feature', default=False, type=bool,
                             help='[DKIndividual, DKcriteria]')
     args = parser.parse_args()
     return args
@@ -222,7 +223,9 @@ else:
 
 # label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
 # label_choose=['ADOS_S','ADOS_C']
+# label_choose=['ADOS_D']
 label_choose=['ADOS_C']
+# label_choose=['ADOS_S']
 # label_choose=['ADOS_cate','ASDTD']
 
 pearson_scorer = make_scorer(pearsonr, greater_is_better=False)
@@ -237,6 +240,7 @@ class ADOSdataset():
         self.LabelType=Dict()
         self.LabelType['ADOS_S']='regression'
         self.LabelType['ADOS_C']='regression'
+        self.LabelType['ADOS_D']='regression'
         self.LabelType['ADOS_cate']='classification'
         self.LabelType['ASDTD']='classification'
         self.Fractionfeatures_str='Features/artuculation_AUI/Vowels/Fraction/*.pkl'    
@@ -261,13 +265,23 @@ class ADOSdataset():
         if filterbyNum:
             df_tmp=arti.BasicFilter_byNum(df_tmp,N=self.N)
         
-        if label_choose not in df_tmp.columns:
-            for people in df_tmp.index:
-                lab=Label.label_raw[label_choose][Label.label_raw['name']==people]
-                df_tmp.loc[people,'ADOS']=lab.values
-            df_y=df_tmp['ADOS'] #Still keep the form of dataframe
-        else:
-            df_y=df_tmp[label_choose] #Still keep the form of dataframe
+        # if label_choose not in df_tmp.columns:
+        #     # print("len(df_tmp): ", len(df_tmp))
+        #     # print("Feature name = ", os.path.basename(pickle_path))
+        #     for people in df_tmp.index:
+        #         lab=Label.label_raw[label_choose][Label.label_raw['name']==people]
+        #         df_tmp.loc[people,'ADOS']=lab.values
+        #     df_y=df_tmp['ADOS'] #Still keep the form of dataframe
+        # else:
+        #     df_y=df_tmp[label_choose] #Still keep the form of dataframe
+        
+        # Always update the label from Label
+        for people in df_tmp.index:
+            lab=Label.label_raw[label_choose][Label.label_raw['name']==people]
+            df_tmp.loc[people,'ADOS']=lab.values
+        df_y=df_tmp['ADOS'] #Still keep the form of dataframe
+        
+        
         feature_array=df_tmp[featuresOfInterest]
         
             
@@ -295,31 +309,43 @@ Session_level_all=Dict()
 if Add_UttLvl_feature==True:
     Merge_feature_path='RegressionMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 else:
-    Merge_feature_path='RegressionMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
-for feature_paths in [Merge_feature_path]:
-    files = glob.glob(ados_ds.featurepath +'/'+ feature_paths+'/*.pkl')
-    # load features from file
-    for file in files: #iterate over features
-        feat_=os.path.basename(file).split(".")[0]  
-        
-        if type(featuresOfInterest)==dict or type(featuresOfInterest)==Dict:
-            column_dict=featuresOfInterest[feat_]
-        elif type(featuresOfInterest)==list:
-            column_dict=featuresOfInterest
-        else:
-            raise KeyError()
-        
-        for key,feat_col in column_dict.items():
-            # if len(feat_col)==1:
-            #     feat_col_ = list([feat_col]) # ex: ['MSB_f1']
-            # else:
-            feat_col_ = list(feat_col) # ex: ['MSB_f1']
-            for lab_ in label_choose:
-                X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path=file,featuresOfInterest=feat_col_,filterbyNum=False)
-                Item_name="{feat}::{lab}".format(feat='-'.join([feat_]+[key]),lab=lab_)
-                Session_level_all[Item_name].X, \
-                    Session_level_all[Item_name].y, \
-                        Session_level_all[Item_name].feattype = X,y, featType
+    Merge_feature_path='RegressionMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
+
+ChooseData_manual=['static_feautre_LOC','dynamic_feature_LOC','dynamic_feature_phonation']
+
+# for feature_paths in [Merge_feature_path]:
+if ChooseData_manual==None:
+    files = glob.glob(ados_ds.featurepath +'/'+ Merge_feature_path+'/*.pkl')
+else:
+    files=[]
+    for d in ChooseData_manual:
+        files.append(ados_ds.featurepath +'/'+ Merge_feature_path+'/{}.pkl'.format(d))
+
+
+# load features from file
+for file in files: #iterate over features
+    feat_=os.path.basename(file).split(".")[0]  
+    
+    if type(featuresOfInterest)==dict or type(featuresOfInterest)==Dict:
+        column_dict=featuresOfInterest[feat_]
+    elif type(featuresOfInterest)==list:
+        column_dict=featuresOfInterest
+    else:
+        raise KeyError()
+    
+    for key,feat_col in column_dict.items():
+        # if len(feat_col)==1:
+        #     feat_col_ = list([feat_col]) # ex: ['MSB_f1']
+        # else:
+        feat_col_ = list(feat_col) # ex: ['MSB_f1']
+        for lab_ in label_choose:
+            X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path=file,featuresOfInterest=feat_col_,filterbyNum=False)
+            Item_name="{feat}::{lab}".format(feat='-'.join([feat_]+[key]),lab=lab_)
+            Session_level_all[Item_name].X, \
+                Session_level_all[Item_name].y, \
+                    Session_level_all[Item_name].feattype = X,y, featType
+        assert y.isna().any() !=True
+
 # =============================================================================
 '''
 
@@ -362,69 +388,15 @@ if args.Mergefeatures:
         pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
         
     
-    
-    
-# [TMP] Should remove soon
-# Feat_path1='Features/artuculation_AUI/Vowels/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl'
-# Feat_path2='Features/CombinedassistFeature/df_SegLvl_features_PhonationEnergyLOC.pkl'
-# df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID=pickle.load(open(Feat_path1,"rb"))[columns+['u_num','a_num','i_num','ADOS_C']]
-# df_PhonationEnergyLOC=pickle.load(open(Feat_path2,"rb"))[columns+['u_num','a_num','i_num','ADOS_C']]
-
-
-# from metric import Evaluation_method 
-# label_correlation_choose_lst=['ADOS_C']
-# N=2
-# Eval_med=Evaluation_method()
-# Aaadf_spearmanr_table_NoLimit1=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
-# Aaadf_spearmanr_table_NoLimit2=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_PhonationEnergyLOC,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
-
-
-# CheckFeat_path='Features/checkFeatures'
-# pickle.dump(df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID,open(CheckFeat_path+'/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl',"wb"))
-# pickle.dump(df_PhonationEnergyLOC,open(CheckFeat_path+'/PhonationEnergyLOC.pkl',"wb"))
-# (df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID - df_PhonationEnergyLOC).sum().sum()
-
-
-paper_name_map={}    
-paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]']='$Div(Norm(Pillai))$'
-paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(Pillai))_{inv}$'
-paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(Pillai))_{part}$'
-paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]']='$Div(Norm(WCC))$'
-paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCC))_{inv}$'
-paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCC))_{part}$'
-paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]']='$Div(Norm(WCV))$'
-paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCV))_{inv}$'
-paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCV))_{part}$'
-paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]']='$Div(Norm(Wilks))$'
-paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(Wilks))_{inv}$'
-paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(Wilks))_{part}$'
-paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]']='$Div(Norm(BCC))$'
-paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(BCC))_{inv}$'
-paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(BCC))_{part}$'
-paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]']='$Div(Norm(BCV))$'
-paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(BCV))_{inv}$'
-paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(BCV))_{part}$'
-paper_name_map['between_covariance_norm(A:,i:,u:)']='$BCC$'
-paper_name_map['between_variance_norm(A:,i:,u:)']='$BCV$'
-paper_name_map['within_covariance_norm(A:,i:,u:)']='$WCC$'
-paper_name_map['within_variance_norm(A:,i:,u:)']='$WCV$'
-# paper_name_map['total_covariance_norm(A:,i:,u:)']='$TC$'
-# paper_name_map['total_variance_norm(A:,i:,u:)']='$TV$'
-paper_name_map['sam_wilks_lin_norm(A:,i:,u:)']='$Wilks$'
-paper_name_map['pillai_lin_norm(A:,i:,u:)']='$Pillai$'
-paper_name_map['hotelling_lin_norm(A:,i:,u:)']='$Hotel$'
-paper_name_map['roys_root_lin_norm(A:,i:,u:)']='$Roys$'
-paper_name_map['Between_Within_Det_ratio_norm(A:,i:,u:)']='$Det(B_W)$'
-paper_name_map['Between_Within_Tr_ratio_norm(A:,i:,u:)']='$Tr(B_W)$'
-
-
 # =============================================================================
 # Model parameters
 # =============================================================================
 # C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
 # C_variable=np.array(np.arange(0.1,1.1,0.2))
 # C_variable=np.array([0.1,0.5,0.9])
-epsilon=np.array(np.arange(0.1,1.5,0.1) )
+# epsilon=np.array(np.arange(0.1,1.5,0.1) )
+epsilon=np.array([0.001,0.01,0.1,0.5,1,5,10.0,25,50,75,100])
+# C_variable=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
 # epsilon=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
 # C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.2))  )
 # C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.1))  )
@@ -526,7 +498,7 @@ df_best_result_allThreeClassifiers=pd.DataFrame([])
 if Add_UttLvl_feature==True:
     Result_path="RESULTS/ADDed_UttFeat/"
 else:
-    Result_path="RESULTS/"
+    Result_path="RESULTS/Fusion_result/"
 if not os.path.exists(Result_path):
     os.makedirs(Result_path)
 final_result_file="_ADOS_{}.xlsx".format(args.suffix)
@@ -543,8 +515,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         feature_keys, label_keys= feature_lab_str.split("::")
         feature_rawname=feature_keys[feature_keys.find('-')+1:]
         feature_filename=feature_keys[:feature_keys.find('-')]
-        if feature_rawname in paper_name_map.keys():
-            featurename_paper=paper_name_map[feature_rawname]
+        if feature_rawname in PprNmeMp.Paper_name_map.keys():
+            featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
             feature_keys=feature_keys.replace(feature_rawname,featurename_paper)
             
         Labels = Session_level_all.X[feature_keys]
@@ -572,6 +544,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             r2=r2_score(features.y,CVpredict )
             n,p=features.X.shape
             r2_adj=1-(1-r2)*(n-1)/(n-p-1)
+            MSE=sklearn.metrics.mean_squared_error(features.y.values.ravel(),CVpredict)
             pearson_result, pearson_p=pearsonr(features.y,CVpredict )
             spear_result, spearman_p=spearmanr(features.y,CVpredict )
             print('Feature {0}, label {1} ,spear_result {2}'.format(feature_keys, label_keys,spear_result))
@@ -626,8 +599,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             df_best_result_spear.loc[feature_keys,label_keys]='{0}/{1}'.format(np.round(spear_result,3),np.round(spearman_p,6))
             df_best_result_spear.loc[feature_keys,'de-zero_num']=len(features.X)
             # df_best_cross_score.loc[feature_keys,label_keys]=Score.mean()
-            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (R2adj/pear/spear)'.format(label_keys,clf_keys)]\
-                        ='{0}/{1}/{2}'.format(np.round(r2_adj,3),np.round(pearson_result,3),np.round(spear_result,3))
+            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (MSE/pear/spear)'.format(label_keys,clf_keys)]\
+                        ='{0}/{1}/{2}'.format(np.round(MSE,3),np.round(pearson_result,3),np.round(spear_result,3))
 
         elif features.feattype == 'classification':
             df_best_result_UAR.loc[feature_keys,label_keys]='{0}'.format(UAR)
@@ -651,4 +624,4 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
 writer_clf.save()
 print(df_best_result_allThreeClassifiers)
 df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Regression_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type))
-print()
+print('generated at',Result_path+"/"+"Regression_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type) )

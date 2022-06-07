@@ -76,6 +76,7 @@ class slidingwindow:
         Formants_people_segment_role_utt_dict=Dict()
         
         FormantsUttKeys_numberOrder=sorted(list(Formants_utt_symb.keys()),key=lambda x: (x[:re.search("_[K|D]_",x).start()], int(x.split("_")[-1])))
+
         segment_Num=0
         print(" =====*****  Reorder2_PER_utt start  *****=====")
         for i, keys in tqdm(enumerate(FormantsUttKeys_numberOrder)):
@@ -173,10 +174,17 @@ class slidingwindow:
         Formants_people_segment_role_utt_dict=Dict()
         
         FormantsUttKeys_numberOrder=sorted(list(Formants_utt_symb.keys()),key=lambda x: (x[:re.search("_[K|D]_",x).start()], int(x.split("_")[-1])))
+        
+        # Inspect_certain_people=[e for e in FormantsUttKeys_numberOrder if '2015_12_06_01_097' in e] # For debugging 
+        
+        
         NumberOrder_checkdict=Dict()
         segment_Num=0
+        # values_bag=[]
+        # for i, keys in enumerate(Inspect_certain_people):
         for i, keys in enumerate(FormantsUttKeys_numberOrder):
             values= Formants_utt_symb[keys]
+            # values_bag.append(values['text'].values.tolist())
             name=keys[:re.search("_[K|D]_",keys).start()]
             if i < len(FormantsUttKeys_numberOrder)-1:
                 nextname=FormantsUttKeys_numberOrder[i+1][:re.search("_[K|D]_",FormantsUttKeys_numberOrder[i+1]).start()]
@@ -198,6 +206,7 @@ class slidingwindow:
             cond = Refill_VowelStack_condition(Vowel_stack_DK, minNum=MinNum) # The condition to renew the Vowel_stack is that both Doc and Kid should have enough PhoneOfInterests
             # cond=Check_VowelStackFull(Vowel_stack_DK[role], minNum=2)
             Formants_people_segment_role_utt_dict[name][segment_Num][role][keys]=values
+            # print ("Now the vowel stack is ",Vowel_stack_DK)
             if Check_nextperson(nextname, name) or i == len(FormantsUttKeys_numberOrder)-1: 
                                                   # If next utterance is from another person (or last person)
                                                   # Reinitialize Vowel_stack, set segment_Num to 0 

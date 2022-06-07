@@ -91,10 +91,10 @@ def get_args():
                         help='path of the base directory', dest='base_path')
     parser.add_argument('--base_path_phf', default='/homes/ssd1/jackchen/gop_prediction/data',
                         help='path of the base directory')
-    parser.add_argument('--filepath', default='/homes/ssd1/jackchen/DisVoice/data/Segmented_ADOS_TD_normalized',
+    parser.add_argument('--filepath', default='/homes/ssd1/jackchen/DisVoice/data/Segmented_ADOS_normalized',
                         help='''/homes/ssd1/jackchen/DisVoice/data/{Segmented_ADOS_normalized|Segmented_ADOS_emotion_normalized|Segmented_ADOS_TD_normalized|Segmented_ADOS_TD_emotion_normalized}
                               注意！trnpath 是依賴filepath的，兩者的{filename}.txt, {filename}.wav filename要一模一樣''')
-    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/DOC_FromTD_DOCKID/ADOS_tdnn_fold_transfer',
+    parser.add_argument('--trnpath', default='/mnt/sdd/jackchen/egs/formosa/s6/Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/KID_FromASD_DOCKID/ADOS_tdnn_fold_transfer',
                         help='''/mnt/sdd/jackchen/egs/formosa/s6/{Alignment_DAAIKidFullDeceptCSRCformosa_all_Trans_ADOS_train_happynvalid_langMapped_chain/new_system/{kid88|kid_TD|ASD_DOCKID|ASD_DOCKID_emotion|TD_DOCKID_emotion}/ADOS_tdnn_fold_transfer | Alignment_human/kid/Audacity_phone|
                               注意！trnpath 是依賴filepath的，兩者的{filename}.txt, {filename}.wav filename要一模一樣''')
     parser.add_argument('--outpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
@@ -199,7 +199,7 @@ multi._updatePhonedict(phonewoprosody.Phoneme_sets)
 multi._updateLeftSymbMapp(phonewoprosody.LeftSymbMapp)
 # multi.MEASURE_PHONATION=True
 multi._measurephonation()
-multi._updateISSegmentFeature(True)
+# multi._updateISSegmentFeature(True)
 # final_results=pool.starmap(process_audio, [([file_block,silence,trnpath,PoolFormantWindow]) for file_block in tqdm(keys)])
 final_results=pool.starmap(multi.process_audio, [([file_block,silence,trnpath,PoolFormantWindow]) for file_block in tqdm(keys)])
 

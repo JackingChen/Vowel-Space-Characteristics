@@ -48,6 +48,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from itertools import combinations
+import shap
 def Assert_labelfeature(feat_name,lab_name):
     # =============================================================================
     #     To check if the label match with feature
@@ -87,6 +88,14 @@ def get_args():
                         help='')
     parser.add_argument('--Mergefeatures', default=False,
                         help='')
+    parser.add_argument('--knn_weights', default='distance',
+                            help='path of the base directory')
+    parser.add_argument('--knn_neighbors', default=3,  type=int,
+                            help='path of the base directory')
+    parser.add_argument('--Reorder_type', default='DKIndividual',
+                            help='[DKIndividual, DKcriteria]')
+    parser.add_argument('--Add_UttLvl_feature', default=True, type=bool,
+                            help='[DKIndividual, DKcriteria]')
     args = parser.parse_args()
     return args
 
@@ -94,93 +103,17 @@ def get_args():
 args = get_args()
 start_point=args.start_point
 experiment=args.experiment
+knn_weights=args.knn_weights
+knn_neighbors=args.knn_neighbors
+Reorder_type=args.Reorder_type
+Add_UttLvl_feature=args.Add_UttLvl_feature
 
-# =============================================================================
-# Feature
-
-columns=[
-    # 'FCR2+AUINum',
-    # 'VSA2+AUINum',
-    # 'FCR2*AUINum',
-    # 'VSA2*AUINum',
-    'FCR2',
-    'VSA2',
-    'between_covariance_norm(A:,i:,u:)', 
-    'between_variance_norm(A:,i:,u:)',
-    'within_covariance_norm(A:,i:,u:)', 
-    'within_variance_norm(A:,i:,u:)',
-    'total_covariance_norm(A:,i:,u:)', 
-    'total_variance_norm(A:,i:,u:)',
-    'sam_wilks_lin_norm(A:,i:,u:)', 
-    'pillai_lin_norm(A:,i:,u:)',
-    'hotelling_lin_norm(A:,i:,u:)', 
-    'roys_root_lin_norm(A:,i:,u:)',
-    'Between_Within_Det_ratio_norm(A:,i:,u:)',
-    'Between_Within_Tr_ratio_norm(A:,i:,u:)',
-    'pear_12',
-    'spear_12',
-    'kendall_12',
-    'dcorr_12'
-    # 'u_num+i_num+a_num',
-    ]
-# columns=[
-# 'intensity_mean_mean(A:,i:,u:)', 'meanF0_mean(A:,i:,u:)',
-#        'stdevF0_mean(A:,i:,u:)', 'hnr_mean(A:,i:,u:)',
-#        'localJitter_mean(A:,i:,u:)', 'localabsoluteJitter_mean(A:,i:,u:)',
-#        'rapJitter_mean(A:,i:,u:)', 'ddpJitter_mean(A:,i:,u:)',
-#        'localShimmer_mean(A:,i:,u:)', 'localdbShimmer_mean(A:,i:,u:)',
-       # 'intensity_mean_var(A:,i:,u:)', 'meanF0_var(A:,i:,u:)',
-       # 'stdevF0_var(A:,i:,u:)', 'hnr_var(A:,i:,u:)',
-       # 'localJitter_var(A:,i:,u:)', 'localabsoluteJitter_var(A:,i:,u:)',
-       # 'rapJitter_var(A:,i:,u:)', 'ddpJitter_var(A:,i:,u:)',
-       # 'localShimmer_var(A:,i:,u:)', 'localdbShimmer_var(A:,i:,u:)',
-       # 'intensity_mean_max(A:,i:,u:)', 'meanF0_max(A:,i:,u:)',
-       # 'stdevF0_max(A:,i:,u:)', 'hnr_max(A:,i:,u:)',
-       # 'localJitter_max(A:,i:,u:)', 'localabsoluteJitter_max(A:,i:,u:)',
-       # 'rapJitter_max(A:,i:,u:)', 'ddpJitter_max(A:,i:,u:)',
-       # 'localShimmer_max(A:,i:,u:)', 'localdbShimmer_max(A:,i:,u:)'
-# ]
-# 這些會有虛數
-# 'Norm(B_CRatio)_sam_wilks_DKRaito', 'Norm(B_CRatio)_pillai_DKRaito',
-# 'Norm(B_CRatio)_hotelling_DKRaito', 'Norm(B_CRatio)_roys_root_DKRaito',
-# 'Norm(B_CRatio)_Det_DKRaito', 'Norm(B_CRatio)_Tr_DKRaito',
-# columns=[
-#     'Norm(WC)_sam_wilks_DKRaito', 'Norm(WC)_pillai_DKRaito',
-#     'Norm(WC)_hotelling_DKRaito', 'Norm(WC)_roys_root_DKRaito',
-#     'Norm(WC)_Det_DKRaito', 'Norm(WC)_Tr_DKRaito',
-#     'Norm(BC)_sam_wilks_DKRaito', 'Norm(BC)_pillai_DKRaito',
-#     'Norm(BC)_hotelling_DKRaito', 'Norm(BC)_roys_root_DKRaito',
-#     'Norm(BC)_Det_DKRaito', 'Norm(BC)_Tr_DKRaito',
-
-#     'Norm(TotalVar)_sam_wilks_DKRaito', 'Norm(TotalVar)_pillai_DKRaito',
-#     'Norm(TotalVar)_hotelling_DKRaito', 'Norm(TotalVar)_roys_root_DKRaito',
-#     'Norm(TotalVar)_Det_DKRaito', 'Norm(TotalVar)_Tr_DKRaito'
-# ]
-
-
-Comb=Dict()
-Comb[0]=FeatSel.Utt_prosodyF0
-Comb[1]=FeatSel.Utt_prosodyF0 + FeatSel.LOC_columns
-Comb[2]=FeatSel.Utt_VoiceQuality
-Comb[3]=FeatSel.Utt_VoiceQuality + FeatSel.LOC_columns
-Comb[4]=FeatSel.Utt_energy
-Comb[5]=FeatSel.Utt_energy + FeatSel.LOC_columns 
-Comb[6]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy 
-Comb[7]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy + FeatSel.LOC_columns
-Comb[8]=FeatSel.Utt_VoiceQuality + FeatSel.Utt_energy 
-Comb[9]=FeatSel.Utt_VoiceQuality + FeatSel.Utt_energy + FeatSel.LOC_columns
-Comb[10]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy + FeatSel.Utt_VoiceQuality
-Comb[11]=FeatSel.Utt_prosodyF0 + FeatSel.Utt_energy + FeatSel.Utt_VoiceQuality+ FeatSel.LOC_columns
-
-# 用comb來組合multifeature fusion
-# featuresOfInterest=[ [col] for col in columns]
-
-featuresOfInterest=[ Comb[k] for k in Comb.keys()]
-
-# featuresOfInterest=FeatSel.Columns_comb
 
 # label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
-label_choose=['ADOS_S','ADOS_C']
+# label_choose=['ADOS_S','ADOS_C']
+# label_choose=['ADOS_D']
+label_choose=['ADOS_C']
+# label_choose=['ADOS_S']
 # label_choose=['ADOS_cate','ASDTD']
 
 pearson_scorer = make_scorer(pearsonr, greater_is_better=False)
@@ -195,6 +128,7 @@ class ADOSdataset():
         self.LabelType=Dict()
         self.LabelType['ADOS_S']='regression'
         self.LabelType['ADOS_C']='regression'
+        self.LabelType['ADOS_D']='regression'
         self.LabelType['ADOS_cate']='classification'
         self.LabelType['ASDTD']='classification'
         self.Fractionfeatures_str='Features/artuculation_AUI/Vowels/Fraction/*.pkl'    
@@ -219,13 +153,23 @@ class ADOSdataset():
         if filterbyNum:
             df_tmp=arti.BasicFilter_byNum(df_tmp,N=self.N)
         
-        if label_choose not in df_tmp.columns:
-            for people in df_tmp.index:
-                lab=Label.label_raw[label_choose][Label.label_raw['name']==people]
-                df_tmp.loc[people,'ADOS']=lab.values
-            df_y=df_tmp['ADOS'] #Still keep the form of dataframe
-        else:
-            df_y=df_tmp[label_choose] #Still keep the form of dataframe
+        # if label_choose not in df_tmp.columns:
+        #     # print("len(df_tmp): ", len(df_tmp))
+        #     # print("Feature name = ", os.path.basename(pickle_path))
+        #     for people in df_tmp.index:
+        #         lab=Label.label_raw[label_choose][Label.label_raw['name']==people]
+        #         df_tmp.loc[people,'ADOS']=lab.values
+        #     df_y=df_tmp['ADOS'] #Still keep the form of dataframe
+        # else:
+        #     df_y=df_tmp[label_choose] #Still keep the form of dataframe
+        
+        # Always update the label from Label
+        for people in df_tmp.index:
+            lab=Label.label_raw[label_choose][Label.label_raw['name']==people]
+            df_tmp.loc[people,'ADOS']=lab.values
+        df_y=df_tmp['ADOS'] #Still keep the form of dataframe
+        
+        
         feature_array=df_tmp[featuresOfInterest]
         
             
@@ -250,52 +194,51 @@ ados_ds=ADOSdataset()
 ErrorFeat_bookeep=Dict()
 Session_level_all=Dict()
 
-Pseudo_CtxDepPhone_path='artuculation_AUI/Pseudo_CtxDepVowels'
-CtxDepPhone_path='artuculation_AUI/CtxDepVowels/bkup0729'
-Vowel_path='artuculation_AUI/Vowels/Formants'
-Vowel_Ratio_path='artuculation_AUI/Vowels/DKRatios'
-Interactionfeat_path='artuculation_AUI/Interaction'
-OtherFeat_path='Other/Static_BasicInfo'
-CombinedassistFeature_path='CombinedassistFeature'
-CheckFeat_path='checkFeatures'
-Phonation_static_path='artuculation_AUI/Vowels/Phonation'
-Merge_feature_path='RegressionMerged_dfs/distance_3_DKIndividual'
-# for feature_paths in [Vowel_path, CtxDepPhone_path, Pseudo_CtxDepPhone_path]:
-# for feature_paths in [Vowel_path]:
-# for feature_paths in [Phonation_static_path]:
-# for feature_paths in [Interactionfeat_path]:
-for feature_paths in [Merge_feature_path]:
-# for feature_paths in [CombinedassistFeature_path]:
-# for feature_paths in [CheckFeat_path]:
-# for feature_paths in [Vowel_path, CtxDepPhone_path]:
-    files = glob.glob(ados_ds.featurepath +'/'+ feature_paths+'/*.pkl')
+# All_combination_keys=[key2 for key in All_combinations.keys() for key2 in sorted(All_combinations[key], key=len, reverse=True)]
+featuresOfInterest=FeatSel.Columns_comb4.copy()
+# =============================================================================
+# 1. 如果要做全盤的實驗的話用這一區
+# FeatureLabelMatch_manual=[]
+# All_combinations=featuresOfInterest
+# # All_combinations4=FeatSel.Columns_comb4.copy()
+# for key_layer1 in All_combinations.keys():
+#     for key_layer2 in All_combinations[key_layer1].keys():
+#         if 'Utt_prosodyF0_VoiceQuality_energy' in key_layer2:
+#             FeatureLabelMatch_manual.append('{0}-{1}'.format(key_layer1,key_layer2))
+    
+
+# 2. 如果要手動設定實驗的話用這一區
+FeatureLabelMatch_manual=[
+    # Rule: {layer1}-{layer2}
+    'Utt_feature+static_feautre_LOC+dynamic_feature_LOC-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+Utt_prosodyF0_VoiceQuality_energy',
+    'Utt_feature+static_feautre_LOC+dynamic_feature_LOC-LOC_columns+DEP_columns+Utt_prosodyF0_VoiceQuality_energy',
+    'Utt_feature+static_feautre_LOC+dynamic_feature_LOC-LOCDEP_Proximity_cols+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+LOCDEP_Convergence_cols+LOCDEP_Syncrony_cols+Utt_prosodyF0_VoiceQuality_energy',
+    'Utt_feature+static_feautre_LOC+dynamic_feature_LOC-Utt_prosodyF0_VoiceQuality_energy',
+    ]
+# =============================================================================
+
+
+if Add_UttLvl_feature==True:
+    Merge_feature_path='RegressionMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
+else:
+    Merge_feature_path='RegressionMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
+
+for exp_str in FeatureLabelMatch_manual:
+    Layer1Feat, Layer2Feat=exp_str.split("-")
+    
     # load features from file
-    for file in files: #iterate over features
-        feat_=os.path.basename(file).split(".")[0]  
-        
-        if type(featuresOfInterest)==dict:
-            column_dict=featuresOfInterest[feat_]
-            for key,feat_col in column_dict.items():
-                feat_col_ = list(feat_col) # ex: ['MSB_f1']
-                for lab_ in label_choose:
-                    X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path=file,featuresOfInterest=feat_col_,filterbyNum=False)
-                    Item_name="{feat}::{lab}".format(feat='-'.join([feat_]+[key]),lab=lab_)
-                    Session_level_all[Item_name].X, \
-                        Session_level_all[Item_name].y, \
-                            Session_level_all[Item_name].feattype = X,y, featType
-        elif type(featuresOfInterest)==list:
-            for feat_col in featuresOfInterest:
-                feat_col_ = list(feat_col) # ex: ['MSB_f1']
-                for lab_ in label_choose:
-                    X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path=file,featuresOfInterest=feat_col_,filterbyNum=False)
-                    Item_name="{feat}::{lab}".format(feat='-'.join([feat_]+feat_col),lab=lab_)
-                    Session_level_all[Item_name].X, \
-                        Session_level_all[Item_name].y, \
-                            Session_level_all[Item_name].feattype = X,y, featType
-            
-        else:
-            raise KeyError()
-        
+    data=ados_ds.featurepath +'/'+ Merge_feature_path+'{}.pkl'.format(Layer1Feat)
+    
+
+    feat_col_ = featuresOfInterest[Layer1Feat][Layer2Feat] # ex: ['MSB_f1']
+    for lab_ in label_choose:
+        X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path=data,featuresOfInterest=feat_col_,filterbyNum=False)
+        Item_name="{feat}::{lab}".format(feat='-'.join([Layer1Feat]+[Layer2Feat]),lab=lab_)
+        Session_level_all[Item_name].X, \
+            Session_level_all[Item_name].y, \
+                Session_level_all[Item_name].feattype = X,y, featType
+    assert len(X.columns) >0
+    assert y.isna().any() !=True
 
 # =============================================================================
 '''
@@ -341,26 +284,6 @@ if args.Mergefeatures:
     
     
     
-# [TMP] Should remove soon
-# Feat_path1='Features/artuculation_AUI/Vowels/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl'
-# Feat_path2='Features/CombinedassistFeature/df_SegLvl_features_PhonationEnergyLOC.pkl'
-# df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID=pickle.load(open(Feat_path1,"rb"))[columns+['u_num','a_num','i_num','ADOS_C']]
-# df_PhonationEnergyLOC=pickle.load(open(Feat_path2,"rb"))[columns+['u_num','a_num','i_num','ADOS_C']]
-
-
-# from metric import Evaluation_method 
-# label_correlation_choose_lst=['ADOS_C']
-# N=2
-# Eval_med=Evaluation_method()
-# Aaadf_spearmanr_table_NoLimit1=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
-# Aaadf_spearmanr_table_NoLimit2=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_PhonationEnergyLOC,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
-
-
-# CheckFeat_path='Features/checkFeatures'
-# pickle.dump(df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID,open(CheckFeat_path+'/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl',"wb"))
-# pickle.dump(df_PhonationEnergyLOC,open(CheckFeat_path+'/PhonationEnergyLOC.pkl',"wb"))
-# (df_Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID - df_PhonationEnergyLOC).sum().sum()
-
 
 paper_name_map={}    
 paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]']='$Div(Norm(Pillai))$'
@@ -403,6 +326,8 @@ paper_name_map['Between_Within_Tr_ratio_norm(A:,i:,u:)']='$Tr(B_W)$'
 # C_variable=np.array([0.1,0.5,0.9])
 # epsilon=np.array(np.arange(0.1,1.5,0.1) )
 epsilon=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
+
+# C_variable=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
 # epsilon=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
 # C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.2))  )
 # C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.1))  )
@@ -501,7 +426,10 @@ df_best_result_AUC=pd.DataFrame([])
 df_best_result_f1=pd.DataFrame([])
 df_best_result_allThreeClassifiers=pd.DataFrame([])
 # =============================================================================
-Result_path="RESULTS/"
+if Add_UttLvl_feature==True:
+    Result_path="RESULTS/ADDed_UttFeat/"
+else:
+    Result_path="RESULTS/"
 if not os.path.exists(Result_path):
     os.makedirs(Result_path)
 final_result_file="_ADOS_{}.xlsx".format(args.suffix)
@@ -512,6 +440,10 @@ count=0
 OutFeature_dict=Dict()
 Best_param_dict=Dict()
 
+# ''' 要手動執行一次從Incorrect2Correct_indexes和Correct2Incorrect_indexes決定哪些indexes 需要算shap value 再在這邊指定哪些fold需要停下來算SHAP value '''
+# SHAP_inspect_idxs_manual=[]
+SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
+# SHAP_inspect_idxs_manual=[1,3,5] # empty list means we do not execute shap function
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
     writer_clf = pd.ExcelWriter(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_"+final_result_file, engine = 'xlsxwriter')
     for feature_lab_str, features in Session_level_all.items():
@@ -521,14 +453,63 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         if feature_rawname in paper_name_map.keys():
             featurename_paper=paper_name_map[feature_rawname]
             feature_keys=feature_keys.replace(feature_rawname,featurename_paper)
-            
+        
+        if SHAP_inspect_idxs_manual != None:
+            SHAP_inspect_idxs=SHAP_inspect_idxs_manual
+        else:
+            SHAP_inspect_idxs=range(len(features.y))
+        
         Labels = Session_level_all.X[feature_keys]
         print("=====================Cross validation start==================")
         pipe = Pipeline(steps=[('scalar',StandardScaler()),("model", clf['model'])])
         p_grid=clf['parameters']
         Gclf = GridSearchCV(estimator=pipe, param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
+        Gclf_manual = GridSearchCV(estimator=pipe, param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
         # Score=cross_val_score(Gclf, features.X, features.y, cv=CV_settings, scoring=pearson_scorer) 
-        CVpredict=cross_val_predict(Gclf, features.X, features.y, cv=CV_settings)           
+        CVpredict=cross_val_predict(Gclf, features.X, features.y, cv=CV_settings)  
+        
+        # The cv is as the one in cross_val_predict function
+        cv = sklearn.model_selection.check_cv(CV_settings,features.y,classifier=sklearn.base.is_classifier(Gclf))
+        splits = list(cv.split(features.X, features.y, groups=None))
+        test_indices = np.concatenate([test for _, test in splits])
+
+        
+        CVpredict_manual=np.zeros(len(features.y))
+        for i, (train_index, test_index) in enumerate(splits):
+            X_train, X_test = features.X.iloc[train_index], features.X.iloc[test_index]
+            y_train, y_test = features.y.iloc[train_index], features.y.iloc[test_index]
+            Gclf_manual.fit(X_train,y_train)
+            result_bestmodel=Gclf_manual.predict(X_test)
+            
+            CVpredict_manual[test_index]=result_bestmodel
+            
+            # result_bestmodel_fitted_again=best_model_fittedagain.predict(X_test_encoded)
+            CVpred_fromFunction=CVpredict[test_index]
+            
+
+            # If the indexes we want to examine are in that fold, store the whole fold
+            # 先把整個fold記錄下來然後在analysis area再拆解
+            SHAP_exam_lst=[i for i in test_index if i in SHAP_inspect_idxs]
+            if len(SHAP_exam_lst) != 0:
+                explainer = shap.KernelExplainer(Gclf_manual.predict, X_train)
+                shap_values = explainer.shap_values(X_test)
+                Session_level_all[feature_lab_str]['SHAP_info']['_'.join(test_index.astype(str))].explainer_expected_value=explainer.expected_value
+                Session_level_all[feature_lab_str]['SHAP_info']['_'.join(test_index.astype(str))].shap_values=shap_values # shap_values= [logit, index, feature]
+                Session_level_all[feature_lab_str]['SHAP_info']['_'.join(test_index.astype(str))].XTest=X_test
+                # Session_level_all[feature_lab_str]['SHAP_info']['_'.join(test_index)].testIndex=test_index
+            # shap.force_plot(explainer.expected_value[logit_number], shap_values[logit_number][inspect_sample,:], X_test.iloc[inspect_sample,:], matplotlib=True,show=False)
+            
+            
+            # assert (result_bestmodel==result_bestmodel_fitted_again).all()
+            assert (result_bestmodel==CVpred_fromFunction).all()
+        
+            
+        assert (CVpredict_manual==CVpredict).all()
+        Session_level_all[feature_lab_str]['y_pred']=CVpredict_manual
+        Session_level_all[feature_lab_str]['y_true']=features.y
+
+
+        
         Gclf.fit(features.X,features.y)
         # if clf_keys == "EN":
         #     print('The coefficient of best estimator is: ',Gclf.best_estimator_.coef_)
@@ -547,6 +528,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             r2=r2_score(features.y,CVpredict )
             n,p=features.X.shape
             r2_adj=1-(1-r2)*(n-1)/(n-p-1)
+            MSE=sklearn.metrics.mean_squared_error(features.y.values.ravel(),CVpredict)
             pearson_result, pearson_p=pearsonr(features.y,CVpredict )
             spear_result, spearman_p=spearmanr(features.y,CVpredict )
             print('Feature {0}, label {1} ,spear_result {2}'.format(feature_keys, label_keys,spear_result))
@@ -601,8 +583,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             df_best_result_spear.loc[feature_keys,label_keys]='{0}/{1}'.format(np.round(spear_result,3),np.round(spearman_p,6))
             df_best_result_spear.loc[feature_keys,'de-zero_num']=len(features.X)
             # df_best_cross_score.loc[feature_keys,label_keys]=Score.mean()
-            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (R2adj/pear/spear)'.format(label_keys,clf_keys)]\
-                        ='{0}/{1}/{2}'.format(np.round(r2_adj,3),np.round(pearson_result,3),np.round(spear_result,3))
+            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (MSE/pear/spear)'.format(label_keys,clf_keys)]\
+                        ='{0}/{1}/{2}'.format(np.round(MSE,3),np.round(pearson_result,3),np.round(spear_result,3))
 
         elif features.feattype == 'classification':
             df_best_result_UAR.loc[feature_keys,label_keys]='{0}'.format(UAR)
@@ -625,4 +607,202 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
 
 writer_clf.save()
 print(df_best_result_allThreeClassifiers)
-df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Regression_"+args.Feature_mode+"_3clsferRESULT.xlsx")
+df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Regression_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type))
+print()
+
+
+#%%
+# =============================================================================
+'''
+
+    Analysis part
+
+'''
+# =============================================================================
+
+'''
+
+    Part 1: Check incorrect to correct and correct to incorrect
+
+'''
+
+proposed_expstr='Utt_feature+static_feautre_LOC+dynamic_feature_LOC-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+Utt_prosodyF0_VoiceQuality_energy::ADOS_C'
+baseline_expstr='Utt_feature+static_feautre_LOC+dynamic_feature_LOC-Utt_prosodyF0_VoiceQuality_energy::ADOS_C'
+experiment_title='Regression'
+
+if Session_level_all[proposed_expstr]['feattype'] == 'regression':
+    SHAP_Inspect_logit=0
+
+
+# =============================================================================
+# Error type analyses
+# =============================================================================
+# df_compare_pair=pd.DataFrame(list())
+Y_pred_lst=[
+Session_level_all[proposed_expstr]['y_pred'],
+Session_level_all[baseline_expstr]['y_pred'],
+Session_level_all[proposed_expstr]['y_true'],
+]
+
+df_Y_pred=pd.DataFrame(Y_pred_lst,index=['proposed','baseline','y_true']).T
+
+
+# proposed的距離比baseline 的還要近
+Improved=(df_Y_pred['y_true'] - df_Y_pred['proposed']).abs() < (df_Y_pred['y_true'] - df_Y_pred['baseline']).abs()
+Degraded=(df_Y_pred['y_true'] - df_Y_pred['proposed']).abs() >= (df_Y_pred['y_true'] - df_Y_pred['baseline']).abs()
+
+
+LargerVal= (df_Y_pred['proposed'] - df_Y_pred['baseline'])>0
+LowerVal= (df_Y_pred['proposed'] - df_Y_pred['baseline'])<=0
+ChangedPeople= LargerVal & LowerVal
+
+Improved_indexes=list(df_Y_pred[Improved].index)
+Degraded_indexes=list(df_Y_pred[Degraded].index)
+
+LargerVal_indexes=list(df_Y_pred[LargerVal].index)
+LowerVal_indexes=list(df_Y_pred[LowerVal].index)
+
+assert len(Improved_indexes+Degraded_indexes) == len(LargerVal_indexes+LowerVal_indexes)
+'''
+
+    Part 2: Check the SHAP values based on indexes in part 1
+    
+    先紀錄，再執行分析和畫圖
+
+'''
+def column_index(df, query_cols):
+    # column_index(df, ['peach', 'banana', 'apple'])
+    cols = df.index.values
+    sidx = np.argsort(cols)
+    return sidx[np.searchsorted(cols,query_cols,sorter=sidx)]
+
+def Organize_Needed_SHAP_info(Selected_indexes, Session_level_all, proposed_expstr):
+    Selected_info_dict=Dict()
+    for tst_idx in Selected_indexes:
+        for key, values in Session_level_all[proposed_expstr]['SHAP_info'].items():
+            test_fold_idx=[int(k) for k in key.split("_")]
+            for i,ii in enumerate(test_fold_idx): #ii is the index of the sample, i is the position of this sample in this test fold
+                if tst_idx == ii:
+                    Selected_info_dict[tst_idx]['XTest']=values['XTest'].iloc[i,:]
+                    Selected_info_dict[tst_idx]['explainer_expected_value']=values['explainer_expected_value']
+                    shap_values_array=values['shap_values'][i,:].reshape(1,-1)
+                    df_shap_values=pd.DataFrame(shap_values_array,columns=Selected_info_dict[tst_idx]['XTest'].index)
+                    Selected_info_dict[tst_idx]['shap_values']=df_shap_values
+                    print("testing sample ", ii, "is in the ", i, "position of test fold", key)
+                    assert (Selected_info_dict[tst_idx]['XTest'] == Session_level_all[proposed_expstr]['X'].iloc[tst_idx]).all()
+                    # print("It's feature value captured is", Selected_info_dict[tst_idx]['XTest'])
+                    # print("It's original X value is", Session_level_all[proposed_expstr]['X'].iloc[tst_idx])
+                    # print("See if they match")
+    return Selected_info_dict
+
+def Get_Inspected_SHAP_df(Info_dict,logits=[0,1]):
+    Top_shap_values_collect=Dict()
+    for logit_number in logits:
+        Top_shap_values_collect[logit_number]=pd.DataFrame()
+        
+        for Inspect_samp in Info_dict.keys():
+            shap_info=Info_dict[Inspect_samp]
+            df_shap_values=shap_info['shap_values'].loc[[logit_number]].T
+            df_shap_values.columns=[Inspect_samp]
+            Top_shap_values_collect[logit_number]=pd.concat([Top_shap_values_collect[logit_number],df_shap_values],axis=1)
+
+        Top_shap_values_collect[logit_number]['Average']=Top_shap_values_collect[logit_number].mean(axis=1)
+        Top_shap_values_collect[logit_number]['abs_Average']=Top_shap_values_collect[logit_number].abs().mean(axis=1)
+        Top_shap_values_collect[logit_number]=Top_shap_values_collect[logit_number].sort_values(by='Average')
+    return Top_shap_values_collect
+selected_idxs=LargerVal_indexes+LowerVal_indexes
+Baseline_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, baseline_expstr)
+Proposed_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, proposed_expstr)
+Baseline_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Session_level_all, baseline_expstr)
+Proposed_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Session_level_all, proposed_expstr)
+
+
+
+
+def Prepare_data_for_summaryPlot_regression(SHAPval_info_dict, feature_columns=None):
+    keys_bag=[]
+    XTest_dict={}
+    shap_values_0_bag=[]
+    for people in sorted(SHAPval_info_dict.keys()):
+        keys_bag.append(people)
+        if not feature_columns == None:
+            df_=SHAPval_info_dict[people]['XTest'][feature_columns]
+            df_shape_value=SHAPval_info_dict[people]['shap_values'][feature_columns]
+        else:
+            df_=SHAPval_info_dict[people]['XTest']
+            df_shape_value=SHAPval_info_dict[people]['shap_values']
+        # if not SumCategorical_feats == None:
+        #     for k,values in SumCategorical_feats.items():
+        #         df_[k]=df_.loc[values].sum()
+        XTest_dict[people]=df_        
+        shap_values_0_bag.append(df_shape_value.loc[0].values)
+    shap_values_0_array=np.vstack(shap_values_0_bag)
+    shap_values=shap_values_0_array
+    df_XTest=pd.DataFrame.from_dict(XTest_dict,orient='columns').T
+    return shap_values, df_XTest, keys_bag
+
+
+shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_changed_info_dict,\
+                                                         feature_columns=getattr(FeatSel, 'LOC_columns') + getattr(FeatSel, 'DEP_columns') + getattr(FeatSel, 'LOCDEP_Trend_D_cols'),\
+                                                         )
+
+shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False)
+plt.title(experiment_title)
+plt.show()
+shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_totalPoeple_info_dict,\
+                                                         feature_columns=getattr(FeatSel, 'LOC_columns') + getattr(FeatSel, 'DEP_columns') + getattr(FeatSel, 'LOCDEP_Trend_D_cols'),\
+                                                         )
+
+shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False)
+plt.title(experiment_title)
+plt.show()
+
+
+def Calculate_sum_of_SHAP_vals(df_values,FeatSel_module,FeatureSet_lst=['Phonation_Proximity_cols']):
+    df_FeaSet_avg_Comparison=pd.DataFrame([],columns=FeatureSet_lst)
+    for feat_set in FeatureSet_lst:
+        feature_cols = getattr(FeatSel_module, feat_set)
+        df_FeaSet_avg_Comparison[feat_set]=df_values.loc[feature_cols,:].sum()
+    return df_FeaSet_avg_Comparison
+
+
+Baseline_shap_values=Get_Inspected_SHAP_df(Baseline_totalPoeple_info_dict,logits=[SHAP_Inspect_logit])[SHAP_Inspect_logit]
+Proposed_shap_values=Get_Inspected_SHAP_df(Proposed_totalPoeple_info_dict,logits=[SHAP_Inspect_logit])[SHAP_Inspect_logit]
+# =============================================================================
+# 分析統計整體SHAP value的平均
+#Baseline model    
+baseline_featset_lst=baseline_expstr[re.search("-",baseline_expstr).end():re.search("::",baseline_expstr).start()].split("+")
+proposed_featset_lst=proposed_expstr[re.search("-",proposed_expstr).end():re.search("::",proposed_expstr).start()].split("+")
+
+
+df_FeaSet_avg_Comparison_baseline=Calculate_sum_of_SHAP_vals(Baseline_shap_values,FeatSel_module=FeatSel,FeatureSet_lst=baseline_featset_lst)
+df_FeaSet_avg_Comparison_proposed=Calculate_sum_of_SHAP_vals(Proposed_shap_values,FeatSel_module=FeatSel,FeatureSet_lst=proposed_featset_lst)
+
+LargerVal_indexes=list(df_Y_pred[Improved].index)
+LowerVal_indexes=list(df_Y_pred[Degraded].index)
+# =============================================================================
+'''
+
+    Check feature importance
+
+'''
+# =============================================================================
+
+Proposed_changed_shap_values=Get_Inspected_SHAP_df(Proposed_changed_info_dict,logits=[SHAP_Inspect_logit]) [SHAP_Inspect_logit]
+Proposed_All_shap_values=Get_Inspected_SHAP_df(Proposed_totalPoeple_info_dict,logits=[SHAP_Inspect_logit]) [SHAP_Inspect_logit]
+
+Self_selected_columns=['LOC_columns',
+ 'DEP_columns',
+ 'Trend[LOCDEP]_d',
+]
+
+df_catagorical_featImportance=pd.DataFrame()
+df_catagorical_featImportance.name='CategoricalFeatureImportance'
+for shap_valdfs in ['Proposed_changed_shap_values','Proposed_All_shap_values']:
+    
+    for key in Self_selected_columns:
+        #feature importance is defined as absolute average of SHAP values 
+        #refer to https://christophm.github.io/interpretable-ml-book/shap.html#shap-feature-importance
+        df_catagorical_featImportance.loc[key,shap_valdfs]=vars()[shap_valdfs].loc[FeatSel.CategoricalName2cols[key],'abs_Average'].round(2).sum()
+print(df_catagorical_featImportance)
+

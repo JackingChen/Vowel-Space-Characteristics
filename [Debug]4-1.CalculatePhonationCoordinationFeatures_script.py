@@ -97,8 +97,8 @@ def get_args():
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='TD_DOCKID',
-                            help='[TD_DOCKID_emotion | ASD_DOCKID_emotion | kid_TD | kid88]')
+    parser.add_argument('--dataset_role', default='ASD_DOCKID',
+                            help='[TD_DOCKID_emotion | ASD_DOCKID | kid_TD | kid88]')
     parser.add_argument('--Inspect_roles', default=['D','K'],
                             help='')
     parser.add_argument('--Inspect_features_phonations', default=['intensity_mean', 'meanF0', 'stdevF0', 'hnr', 'localJitter', 'localabsoluteJitter', 'rapJitter', 'ddpJitter', 'localShimmer', 'localdbShimmer'],
@@ -332,8 +332,8 @@ def POI_Str2list(str):
     Calculate syncrony features
 
 '''
-
-for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
+for dataset_role in ['ASD_DOCKID']:
+# for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
     if Reorder_type == 'DKIndividual':
         df_POI_person_segment_DKIndividual_feature_dict=pickle.load(open(outpklpath+"df_POI_person_segment_DKIndividual_feature_dict_{0}_{1}.pkl".format(dataset_role, 'phonation'),"rb"))
     elif Reorder_type == 'DKcriteria':
@@ -377,12 +377,12 @@ for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
             df_syncrony_measurement_phonation=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
                                                                             args.Inspect_roles, Label,\
                                                                             knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                                                                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
+                                                                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,Knn_aggressive_mode=True)
         if Reorder_type == 'DKcriteria':
             df_syncrony_measurement_phonation=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKcriteria_dict,features,PhoneOfInterest_str,\
                                                                             args.Inspect_roles, Label,\
                                                                             knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                                                                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
+                                                                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,Knn_aggressive_mode=True)
                                                     
             
         df_syncrony_measurement_phonation_all=pd.concat([df_syncrony_measurement_phonation_all,df_syncrony_measurement_phonation], axis=1)    
@@ -429,7 +429,21 @@ for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
 
 '''
 # =============================================================================
-
+def Check_person_segment_feature_len():
+    TS_len_dict={}
+    for role in ['D','K']:
+        tmp_dict={}
+        for people in df_person_segment_feature_DKIndividual_dict.keys():
+            tmp_dict[people]=len(df_person_segment_feature_DKIndividual_dict[people][role])
+        df_people=pd.DataFrame.from_dict(tmp_dict,orient='index')
+        TS_len_dict[role]=df_people
+    df_TS_len=pd.DataFrame([],columns=['D','K'],index=df_people.index)
+    df_TS_len['D']=TS_len_dict['D']
+    df_TS_len['K']=TS_len_dict['K']
+    len(np.where(df_TS_len['K']<=2)[0])
+    
+    
+    df_TS_len[df_TS_len['K']==1]
 # label_correlation_choose_lst=label_generate_choose_lst
 # additional_columns=label_correlation_choose_lst+['timeSeries_len']
 
@@ -439,6 +453,7 @@ for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
 
 # Eval_med=Evaluation_method()
 # Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_syncrony_measurement,MinNumTimeSeries-1,columns,constrain_sex=-1, constrain_module=-1,feature_type='Syncrony_formant')
+
 #%%
 # =============================================================================
 '''
@@ -518,46 +533,47 @@ TopTop_data_lst=[]
 # TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_agesexmatch_ASDSevere'])
 ''' Notice, ASD should be on the left '''
 
-TopTop_data_lst.append(['df_feature_ASD','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_TD'])
+TopTop_data_lst=[]
+# TopTop_data_lst.append(['df_feature_ASD','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_low_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
 TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
 TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
 
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_moderate_CSS'])
-TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_high_CSS'])
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_high_CSS'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderate_CSS'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_high_CSS'])
+# TopTop_data_lst.append(['df_feature_low_CSS','df_feature_moderate_CSS'])
+# TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_high_CSS'])
+# TopTop_data_lst.append(['df_feature_low_CSS','df_feature_high_CSS'])
+# TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderate_CSS'])
+# TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_high_CSS'])
 
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_Autism_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Autism_TC','df_feature_TD'])
 
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC'])
-TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_Autism_TC'])
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_Autism_TC'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC'])
+# TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_Autism_TC'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_Autism_TC'])
+# TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC','df_feature_Autism_TC'])
 
 
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_Autism_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_Autism_TS','df_feature_TD'])
 
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS'])
-TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_Autism_TS'])
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_Autism_TS'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS'])
+# TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_Autism_TS'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_Autism_TS'])
+# TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS','df_feature_Autism_TS'])
 
-Convergence_cols=[c for c in df_syncrony_measurement_phonation_all.columns if 'Convergence' in c]
-Proximity_cols=[c for c in df_syncrony_measurement_phonation_all.columns if 'Proximity' in c]
-Syncrony_cols=[c for c in df_syncrony_measurement_phonation_all.columns if 'Syncrony' in c]
-Trend_D_cols=[c for c in df_syncrony_measurement_phonation_all.columns if 'Trend' in c and '_d' in c]
-Trend_K_cols=[c for c in df_syncrony_measurement_phonation_all.columns if 'Trend' in c and '_k' in c]
+
 # self_specify_cols=Proximity_cols + Convergence_cols + Syncrony_cols
-# self_specify_cols=Trend_D_cols + Trend_K_cols
-self_specify_cols=FeatSel.Phonation_Trend_D_cols + FeatSel.Phonation_Trend_K_cols + FeatSel.Phonation_Proximity_cols + FeatSel.Phonation_Convergence_cols + FeatSel.Phonation_Syncrony_cols
+self_specify_cols=FeatSel.Phonation_Proximity_cols
+# self_specify_cols=FeatSel.Phonation_Trend_D_cols + FeatSel.Phonation_Trend_K_cols + FeatSel.Phonation_Proximity_cols + FeatSel.Phonation_Convergence_cols + FeatSel.Phonation_Syncrony_cols
 Parameters=df_syncrony_measurement_phonation_all.columns
 if len(self_specify_cols) > 0:
     inspect_cols=self_specify_cols
@@ -709,12 +725,11 @@ clf=Classifier['SVC']
 
 
 Comb=Dict()
-Comb['Trend_D_cols']=New_Trend_D_cols
-Comb['Trend_K_cols']=New_Trend_K_cols
-# Comb['Proximity_cols']=Proximity_cols
-Comb['New_Proximity_cols']=New_Proximity_cols
-Comb['Convergence_cols']=New_Convergence_cols
-Comb['Syncrony_cols']=New_Syncrony_cols
+Comb['Trend_D_cols']=FeatSel.Phonation_Trend_D_cols
+Comb['Trend_K_cols']=FeatSel.Phonation_Trend_K_cols
+Comb['Proximity_cols']=FeatSel.Phonation_Proximity_cols
+Comb['Convergence_cols']=FeatSel.Phonation_Convergence_cols
+Comb['Syncrony_cols']=FeatSel.Phonation_Syncrony_cols
 
 combinations_lsts=[ Comb[k] for k in Comb.keys()]
 combinations_keylsts=[ k for k in Comb.keys()]
@@ -824,9 +839,10 @@ from sklearn.pipeline import Pipeline
 feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','dcorr_12']
 # baseline_lst=['FCR2']
 
-
+# C_variable=np.array(np.arange(0.1,1.5,0.1))
 # C_variable=np.array([0.001,0.01, 0.1,0.5,1.0,10.0,50,100])
-C_variable=np.array([0.001,0.01, 0.1,0.5,1.0,10.0,50,100])
+# C_variable=np.array([0.001,0.01, 0.1,0.5,1.0,10.0,50,100])
+C_variable=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
 Classifier={}
 loo=LeaveOneOut()
 # CV_settings=loo

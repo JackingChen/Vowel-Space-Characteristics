@@ -51,8 +51,8 @@ outpklpath=args.inpklpath+"/Session_formants_people_vowel_feat/"
 # =============================================================================
 import seaborn as sns
 from pylab import text
-dfFormantStatisticpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
-
+# dfFormantStatisticpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
+dfFormantStatisticpath=os.getcwd()
 
 # feat='Syncrony_measure_of_variance_phonation_DKIndividual' #Dynamic features phonation
 # feat='Syncrony_measure_of_variance_DKIndividual' #Dynamic features LOCDEP
@@ -64,11 +64,12 @@ def Add_label(df_formant_statistic,Label,label_choose='ADOS_S'):
     return df_formant_statistic
 
 # =============================================================================
-df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromASD_DOCKID')
-# df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='ASD_DOCKID')
+    
+# df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromASD_DOCKID')
+df_formant_statistic77_path=dfFormantStatisticpath+'/Features/ClassificationMerged_dfs/distance_3_DKIndividual/ASD_DOCKID/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'
 df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
-df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromTD_DOCKID')
-# df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='TD_DOCKID')
+# df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromTD_DOCKID')
+df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Features/ClassificationMerged_dfs/distance_3_DKIndividual/TD_DOCKID/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'
 if not os.path.exists(df_formant_statistic_ASDTD_path) or not os.path.exists(df_formant_statistic77_path):
     raise FileExistsError
 df_feature_TD=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))
@@ -128,8 +129,9 @@ TopTop_data_lst=[]
 
 # TopTop_data_lst.append(['df_feature_ASD','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_low_CSS','df_feature_TD'])
-# TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
-# TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
+TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderatehigh_CSS'])
@@ -148,7 +150,7 @@ TopTop_data_lst=[]
 # TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_Autism_TC','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_Autism_TC'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_Autism_TC','df_feature_TD'])
+# TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_Autism_TC','df_feature_TD'])
 
 # TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_TD'])
@@ -161,8 +163,8 @@ TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_Autism_TC','
 # TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_Autism_TS'])
 # TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_Autism_TS'])
 
-self_specify_cols=[
-    'FCR2',
+# self_specify_cols=[
+#     'FCR2',
     # 'VSA2',
     # 'between_covariance_norm(A:,i:,u:)', 
     # 'between_variance_norm(A:,i:,u:)',
@@ -180,7 +182,27 @@ self_specify_cols=[
     # 'spear_12',
     # 'kendall_12',
     # 'dcorr_12'
-    ]
+    # ]
+self_specify_cols=[
+# 'Trend[VSA2]_d',
+# 'Trend[FCR2]_d',
+'Trend[between_covariance_norm(A:,i:,u:)]_d',
+'Trend[between_variance_norm(A:,i:,u:)]_d',
+# 'Trend[within_covariance_norm(A:,i:,u:)]_d',
+# 'Trend[within_variance_norm(A:,i:,u:)]_d',
+# 'Trend[total_covariance_norm(A:,i:,u:)]_d',
+# 'Trend[total_variance_norm(A:,i:,u:)]_d',
+# 'Trend[sam_wilks_lin_norm(A:,i:,u:)]_d',
+# 'Trend[pillai_lin_norm(A:,i:,u:)]_d',
+# 'Trend[hotelling_lin_norm(A:,i:,u:)]_d',
+# 'Trend[roys_root_lin_norm(A:,i:,u:)]_d',
+# 'Trend[Between_Within_Det_ratio_norm(A:,i:,u:)]_d',
+# 'Trend[Between_Within_Tr_ratio_norm(A:,i:,u:)]_d', 
+# 'Trend[pear_12]_d',
+# 'Trend[spear_12]_d',
+# 'Trend[kendall_12]_d',
+# 'Trend[dcorr_12]_d'
+]
 
 # self_specify_cols=FeatSel.Phonation_Trend_D_cols + FeatSel.Phonation_Trend_K_cols + FeatSel.Phonation_Proximity_cols + FeatSel.Phonation_Convergence_cols + FeatSel.Phonation_Syncrony_cols
 # self_specify_cols=FeatSel.LOCDEP_Trend_D_cols + FeatSel.LOCDEP_Trend_K_cols + FeatSel.LOCDEP_Proximity_cols + FeatSel.LOCDEP_Convergence_cols + FeatSel.LOCDEP_Syncrony_cols
@@ -189,6 +211,7 @@ if len(self_specify_cols) > 0:
     inspect_cols=self_specify_cols
 # else:
 #     inspect_cols=Parameters
+import scipy.stats as stats
 
 plot=True
 Record_dict=Dict()
@@ -310,6 +333,8 @@ feat='Formant_AUI_tVSAFCRFvals'
 # df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='ASD_DOCKID')
 df_feature_staticLOCDEP=pickle.load(open('/homes/ssd1/jackchen/DisVoice/articulation/Pickles/Session_formants_people_vowel_feat/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl','rb'))
 df_feature_dynamicLOCDEP=pickle.load(open('/homes/ssd1/jackchen/DisVoice/articulation/Pickles/Session_formants_people_vowel_feat/Syncrony_measure_of_variance_DKIndividual_ASD_DOCKID.pkl','rb'))
+df_feature_dynamicLOCDEP=Add_label(df_feature_ASD,Label,label_choose='ADOS_C')
+df_feature_dynamicLOCDEP=Add_label(df_feature_ASD,Label,label_choose='ADOS_S')
 df_feature_dynamicPhonation=pickle.load(open('/homes/ssd1/jackchen/DisVoice/articulation/Pickles/Session_formants_people_vowel_feat/Syncrony_measure_of_variance_phonation_DKIndividual_ASD_DOCKID.pkl','rb'))
 
 N=0

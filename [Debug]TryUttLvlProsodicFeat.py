@@ -149,7 +149,7 @@ def get_args():
         )
     parser.add_argument('--base_path', default='/homes/ssd1/jackchen/DisVoice',
                         help='path of the base directory', dest='base_path')
-    parser.add_argument('--filepath', default='data/Segmented_ADOS_TD_normalized',
+    parser.add_argument('--filepath', default='data/Segmented_ADOS_normalized',
                         help='data/{Segmented_ADOS_TD_normalized|Segmented_ADOS_normalized}')
     parser.add_argument('--inpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
                         help='path of the base directory')
@@ -161,7 +161,7 @@ def get_args():
                         help='')
     parser.add_argument('--checkreliability', default=False,
                             help='path of the base directory')
-    parser.add_argument('--method', default='Disvoice_prosody_energy',
+    parser.add_argument('--method', default='Disvoice_phonation',
                             help='Disvoice_phonation|Disvoice_prosody_energy|Disvoice_prosodyF0|praat')
     args = parser.parse_args()
     return args
@@ -231,15 +231,25 @@ def Get_phonationdictbag_map(files,Info_name_sex):
         maxf0=F0_parameter_dict[gender]['f0_max']
         
         if method == "Disvoice_phonation":
-            phonation_extractor=Phonation(maxf0=maxf0, minf0=minf0)
-            # phonation_extractor._update_pitch_method('praat')
-            # static = True : static feature, False = dynamic feature
-            try:
+            if '2015_12_06_01_097_K' in file: # exception handling only for 2015_12_06_01_097_K
+                phonation_extractor=Phonation(maxf0=maxf0, minf0=minf0, pitch_method="praat")
+                try: 
+                    df_feat_utt=phonation_extractor.extract_features_file(audiofile, fmt="dataframe")
+                    print("Calculating df_feat_utt")
+                    print(df_feat_utt)
+                    
+                except IndexError:
+                    continue
+            else:
+                phonation_extractor=Phonation(maxf0=maxf0, minf0=minf0)
+                # phonation_extractor._update_pitch_method('praat')
+                # static = True : static feature, False = dynamic feature
+                # try:
                 df_feat_utt=phonation_extractor.extract_features_file(audiofile,fmt="dataframe", static=True)
-            except IndexError: 
-                print("Skipped audio file: ", audiofile)
-                Skipped_audio_file.append(audiofile)
-                continue
+                # except IndexError: 
+                #     print("Skipped audio file: ", audiofile)
+                #     Skipped_audio_file.append(audiofile)
+                #     continue
         elif method == "Disvoice_prosody_energy" or method == 'Disvoice_prosodyF0':
             prosody_extractor=Prosody(maxf0=maxf0, minf0=minf0)
             # static = True : static feature, False = dynamic feature
@@ -327,7 +337,8 @@ pickle.dump(Phonation_utt_symb,open(chkptpath,"wb"))
 '''
 
 chkptpath=PhonationPath+"/Phonation_dict_bag_{}.pkl".format(dataset_name)
-
+files_of_2015_12_06_01_097_K = [file for file in files if '2015_12_06_01_097_K' in file]
+files = files_of_2015_12_06_01_097_K
 if not os.path.exists(chkptpath):
     Phonation_dict_bag=Dict()
     for file in tqdm(files):
@@ -344,10 +355,22 @@ if not os.path.exists(chkptpath):
         minf0=F0_parameter_dict[gender]['f0_min']
         maxf0=F0_parameter_dict[gender]['f0_max']
         
-        if method == "Disvoice":
-            phonation_extractor=Phonation(maxf0=maxf0, minf0=minf0)
-            df_feat_utt=phonation_extractor.extract_features_file(audiofile)
-        elif method == "praat":
+        tool=method.split("_")[0]
+        
+        if tool == "Disvoice":
+            if '2015_12_06_01_097_K' in file: # exception handling only for 2015_12_06_01_097_K
+                phonation_extractor=Phonation(maxf0=maxf0, minf0=minf0, pitch_method="praat")
+                try: 
+                    df_feat_utt=phonation_extractor.extract_features_file(audiofile, fmt="dataframe")
+                    print("Calculating df_feat_utt")
+                    print(df_feat_utt)
+                    
+                except IndexError:
+                    continue
+            else:
+                phonation_extractor=Phonation(maxf0=maxf0, minf0=minf0)
+                df_feat_utt=phonation_extractor.extract_features_file(audiofile, fmt="dataframe")
+        elif tool == "praat":
             df_feat_utt=measurePitch(audiofile, minf0, maxf0, "Hertz")
         
         
@@ -361,6 +384,10 @@ if not os.path.exists(chkptpath):
 else:
     Phonation_dict_bag=pickle.load(open(chkptpath,"rb"))
 
+    
+tmpPath=PhonationPath + "/features"
+if not os.path.exists(tmpPath):
+    os.makedirs(tmpPath)
 
 '''
     df_phonation_{role}[utt], role={doc|kid} 
@@ -372,6 +399,8 @@ else:
 
 chkptpath_kid=PhonationPath+"/df_phonation_{method}_kid_{dataset_role}.pkl".format(method=method,dataset_role=dataset_role)
 chkptpath_doc=PhonationPath+"/df_phonation_{method}_doc_{dataset_role}.pkl".format(method=method,dataset_role=dataset_role)
+
+
 
 Phonation_role_dict=Dict()
 for keys, values in Phonation_dict_bag.items():

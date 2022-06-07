@@ -18,7 +18,7 @@ base_dir='/homes/ssd1/jackchen/gop_prediction/'
 # =============================================================================
 label_Bin_all={}
 
-label_path=base_dir+'ADOS_label20220309.xlsx'
+label_path=base_dir+'ADOS_label20220525.xlsx'
 label_raw=pd.read_excel(label_path)
 Labelfile_TD='/homes/ssd1/jackchen/DisVoice/data/ADOS_TD_Label20220219.xlsx'
 df_labels_TD=pd.read_excel(Labelfile_TD)

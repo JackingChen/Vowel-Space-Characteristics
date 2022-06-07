@@ -180,8 +180,8 @@ class Phonation_disvoice:
     >>> features3=phonation.extract_features_path(path_audios, static, plots=False, fmt="dataframe")
 
     """
-    def __init__(self, maxf0=350, minf0=60):
-        self.pitch_method="rapt"
+    def __init__(self, maxf0=350, minf0=60, pitch_method="rapt"):
+        self.pitch_method=pitch_method
         self.size_frame=0.04
         self.size_step=0.02
         self.minf0=minf0
