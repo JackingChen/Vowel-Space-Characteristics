@@ -49,6 +49,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from itertools import combinations
 import shap
+import articulation.HYPERPARAM.PaperNameMapping as PprNmeMp
+import seaborn as sns
 def Assert_labelfeature(feat_name,lab_name):
     # =============================================================================
     #     To check if the label match with feature
@@ -62,7 +64,13 @@ def FilterFile_withinManualName(files,Manual_choosen_feature):
 
 def Merge_dfs(df_1, df_2):
     return pd.merge(df_1,df_2,left_index=True, right_index=True)
-
+def Swap2PaperName(feature_rawname,PprNmeMp):
+    if feature_rawname in PprNmeMp.Paper_name_map.keys():
+        featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
+        feature_keys=featurename_paper
+    else: 
+        feature_keys=feature_rawname
+    return feature_keys
 def get_args():
     # we add compulsary arguments as named arguments for readability
     parser = argparse.ArgumentParser()
@@ -94,8 +102,8 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--Add_UttLvl_feature', default=True, type=bool,
-                            help='[DKIndividual, DKcriteria]')
+    parser.add_argument('--FeatureComb_mode', default='Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation',
+                            help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
     args = parser.parse_args()
     return args
 
@@ -106,7 +114,7 @@ experiment=args.experiment
 knn_weights=args.knn_weights
 knn_neighbors=args.knn_neighbors
 Reorder_type=args.Reorder_type
-Add_UttLvl_feature=args.Add_UttLvl_feature
+
 
 
 # label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
@@ -195,7 +203,20 @@ ErrorFeat_bookeep=Dict()
 Session_level_all=Dict()
 
 # All_combination_keys=[key2 for key in All_combinations.keys() for key2 in sorted(All_combinations[key], key=len, reverse=True)]
-featuresOfInterest=FeatSel.Columns_comb4.copy()
+Top_ModuleColumn_mapping_dict={}
+Top_ModuleColumn_mapping_dict['Add_UttLvl_feature']=FeatSel.Columns_comb2.copy()
+Top_ModuleColumn_mapping_dict['feat_comb']=FeatSel.Columns_comb.copy()
+Top_ModuleColumn_mapping_dict['feat_comb3']=FeatSel.Columns_comb3.copy()
+Top_ModuleColumn_mapping_dict['feat_comb5']=FeatSel.Columns_comb5.copy()
+Top_ModuleColumn_mapping_dict['feat_comb6']=FeatSel.Columns_comb6.copy()
+Top_ModuleColumn_mapping_dict['feat_comb7']=FeatSel.Columns_comb7.copy()
+Top_ModuleColumn_mapping_dict['feat_comb8']=FeatSel.Columns_comb8.copy()
+Top_ModuleColumn_mapping_dict['Comb_dynPhonation']=FeatSel.Comb_dynPhonation.copy()
+Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']=FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation.copy()
+Top_ModuleColumn_mapping_dict['baselineFeats']=FeatSel.Baseline_comb.copy()
+
+featuresOfInterest=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
+
 # =============================================================================
 # 1. 如果要做全盤的實驗的話用這一區
 # FeatureLabelMatch_manual=[]
@@ -210,18 +231,16 @@ featuresOfInterest=FeatSel.Columns_comb4.copy()
 # 2. 如果要手動設定實驗的話用這一區
 FeatureLabelMatch_manual=[
     # Rule: {layer1}-{layer2}
-    'Utt_feature+static_feautre_LOC+dynamic_feature_LOC-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+Utt_prosodyF0_VoiceQuality_energy',
-    'Utt_feature+static_feautre_LOC+dynamic_feature_LOC-LOC_columns+DEP_columns+Utt_prosodyF0_VoiceQuality_energy',
-    'Utt_feature+static_feautre_LOC+dynamic_feature_LOC-LOCDEP_Proximity_cols+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+LOCDEP_Convergence_cols+LOCDEP_Syncrony_cols+Utt_prosodyF0_VoiceQuality_energy',
-    'Utt_feature+static_feautre_LOC+dynamic_feature_LOC-Utt_prosodyF0_VoiceQuality_energy',
+    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+LOCDEP_Syncrony_cols+Phonation_Convergence_cols',
+    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Convergence_cols',
     ]
 # =============================================================================
 
 
-if Add_UttLvl_feature==True:
+if args.FeatureComb_mode == 'Add_UttLvl_feature':
     Merge_feature_path='RegressionMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 else:
-    Merge_feature_path='RegressionMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
+    Merge_feature_path='RegressionMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 
 for exp_str in FeatureLabelMatch_manual:
     Layer1Feat, Layer2Feat=exp_str.split("-")
@@ -426,10 +445,8 @@ df_best_result_AUC=pd.DataFrame([])
 df_best_result_f1=pd.DataFrame([])
 df_best_result_allThreeClassifiers=pd.DataFrame([])
 # =============================================================================
-if Add_UttLvl_feature==True:
-    Result_path="RESULTS/ADDed_UttFeat/"
-else:
-    Result_path="RESULTS/"
+Result_path="RESULTS/"
+
 if not os.path.exists(Result_path):
     os.makedirs(Result_path)
 final_result_file="_ADOS_{}.xlsx".format(args.suffix)
@@ -626,8 +643,9 @@ print()
 
 '''
 
-proposed_expstr='Utt_feature+static_feautre_LOC+dynamic_feature_LOC-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+Utt_prosodyF0_VoiceQuality_energy::ADOS_C'
-baseline_expstr='Utt_feature+static_feautre_LOC+dynamic_feature_LOC-Utt_prosodyF0_VoiceQuality_energy::ADOS_C'
+
+proposed_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+LOCDEP_Syncrony_cols+Phonation_Convergence_cols::ADOS_C'
+baseline_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Convergence_cols::ADOS_C'
 experiment_title='Regression'
 
 if Session_level_all[proposed_expstr]['feattype'] == 'regression':
@@ -654,13 +672,33 @@ Degraded=(df_Y_pred['y_true'] - df_Y_pred['proposed']).abs() >= (df_Y_pred['y_tr
 
 LargerVal= (df_Y_pred['proposed'] - df_Y_pred['baseline'])>0
 LowerVal= (df_Y_pred['proposed'] - df_Y_pred['baseline'])<=0
-ChangedPeople= LargerVal & LowerVal
+ChangedPeople= LargerVal | LowerVal
+
 
 Improved_indexes=list(df_Y_pred[Improved].index)
 Degraded_indexes=list(df_Y_pred[Degraded].index)
 
 LargerVal_indexes=list(df_Y_pred[LargerVal].index)
 LowerVal_indexes=list(df_Y_pred[LowerVal].index)
+
+proposed_ypred_array=df_Y_pred['proposed'].values
+baseline_ypred_array=df_Y_pred['baseline'].values
+
+# 這邊計算出變高的人誤差修正（增加/減少）了多少，變低的人誤差修正（增加/減少）了多少
+# 3.675 -> 3.167
+for insp_instances_bool_str in ['LargerVal','LowerVal','ChangedPeople']:
+    insp_instances_bool=vars()[insp_instances_bool_str]
+    delta_proposed_diff_squared=(df_Y_pred[insp_instances_bool]['proposed'] - df_Y_pred[insp_instances_bool]['y_true'])**2
+    delta_proposed_diff_MSE=delta_proposed_diff_squared.sum()/len(df_Y_pred)
+    delta_baseline_diff_squared=(df_Y_pred[insp_instances_bool]['baseline'] - df_Y_pred[insp_instances_bool]['y_true'])**2
+    delta_baseline_diff_MSE=delta_baseline_diff_squared.sum()/len(df_Y_pred)
+    assert len(delta_proposed_diff_squared) == len(delta_baseline_diff_squared)
+    print(insp_instances_bool_str,": have changed MSE",delta_proposed_diff_MSE-delta_baseline_diff_MSE)
+
+
+# 這邊秀出proposed和baseline的實際改變
+sns.scatterplot(data=df_Y_pred)
+
 
 assert len(Improved_indexes+Degraded_indexes) == len(LargerVal_indexes+LowerVal_indexes)
 '''
@@ -719,7 +757,7 @@ Proposed_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Sessio
 
 
 
-def Prepare_data_for_summaryPlot_regression(SHAPval_info_dict, feature_columns=None):
+def Prepare_data_for_summaryPlot_regression(SHAPval_info_dict, feature_columns=None,PprNmeMp=None):
     keys_bag=[]
     XTest_dict={}
     shap_values_0_bag=[]
@@ -739,23 +777,87 @@ def Prepare_data_for_summaryPlot_regression(SHAPval_info_dict, feature_columns=N
     shap_values_0_array=np.vstack(shap_values_0_bag)
     shap_values=shap_values_0_array
     df_XTest=pd.DataFrame.from_dict(XTest_dict,orient='columns').T
+    if PprNmeMp!=None:
+        df_XTest.columns=[Swap2PaperName(k,PprNmeMp) for k in df_XTest.columns]
     return shap_values, df_XTest, keys_bag
 
+# inspect_featuresets='Trend[LOCDEP]_d'  #Trend[LOCDEP]d + Proximity[phonation]
+# inspect_featuresets='LOC_columns'  #LOC_columns + Syncrony[phonation]
+inspect_featuresets_lst=['LOC_columns','DEP_columns','Trend[LOCDEP]_d','Trend[LOCDEP]_k','Syncrony[LOCDEP]']
 
-shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_changed_info_dict,\
-                                                         feature_columns=getattr(FeatSel, 'LOC_columns') + getattr(FeatSel, 'DEP_columns') + getattr(FeatSel, 'LOCDEP_Trend_D_cols'),\
-                                                         )
-
-shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False)
-plt.title(experiment_title)
-plt.show()
+featuresetsListTotal_lst=[]
+for inspect_featuresets in inspect_featuresets_lst:
+    featuresetsListTotal_lst+=FeatSel.CategoricalName2cols[inspect_featuresets]
 shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_totalPoeple_info_dict,\
-                                                         feature_columns=getattr(FeatSel, 'LOC_columns') + getattr(FeatSel, 'DEP_columns') + getattr(FeatSel, 'LOCDEP_Trend_D_cols'),\
-                                                         )
+                                                          feature_columns=featuresetsListTotal_lst,\
+                                                          PprNmeMp=PprNmeMp)
 
-shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False)
+
+def ReorganizeFeatures4SummaryPlot(shap_values_logit, df_XTest,FeatureSet_lst=None,Featurechoose_lst=None):
+    # step1 convert shapvalue to df_shapvalues
+    df_shap_values=pd.DataFrame(shap_values_logit,columns=df_XTest.columns)
+    # step2 Categorize according to FeatureSet_lst
+    df_Reorganized_shap_values=pd.DataFrame()
+    df_Reorganized_XTest=pd.DataFrame()
+    if FeatureSet_lst!=None:
+        for FSL in FeatureSet_lst:
+            FSL_papercolumns=[Swap2PaperName(k,PprNmeMp) for k in FeatSel.CategoricalName2cols[FSL]]
+        
+            df_Reorganized_shap_values=pd.concat([df_Reorganized_shap_values,df_shap_values[FSL_papercolumns]],axis=1)
+            df_Reorganized_XTest=pd.concat([df_Reorganized_XTest,df_XTest[FSL_papercolumns]],axis=1)
+    elif Featurechoose_lst!=None:
+        FSL_papercolumns=[Swap2PaperName(k,PprNmeMp) for k in Featurechoose_lst]
+        df_Reorganized_shap_values=df_shap_values[FSL_papercolumns]
+        df_Reorganized_XTest=df_XTest[FSL_papercolumns]
+
+    assert df_Reorganized_shap_values.shape == df_Reorganized_XTest.shape
+    return df_Reorganized_shap_values.values, df_Reorganized_XTest
+
+FeatureSet_lst=['Vowel_dispersion_inter__vowel_centralization','Vowel_dispersion_inter__vowel_dispersion',#LOC_columns
+                'formant_dependency',#DEP_columns
+                'Trend[Vowel_dispersion_inter__vowel_centralization]_d','Trend[Vowel_dispersion_inter__vowel_dispersion]_d','Trend[Vowel_dispersion_intra]_d','Trend[formant_dependency]_d',#Trend[LOCDEP]_d
+                'Trend[Vowel_dispersion_inter__vowel_centralization]_k','Trend[Vowel_dispersion_inter__vowel_dispersion]_k','Trend[Vowel_dispersion_intra]_k','Trend[formant_dependency]_k',#Trend[LOCDEP]_k
+                'Syncrony[Vowel_dispersion_inter__vowel_centralization]','Syncrony[Vowel_dispersion_inter__vowel_dispersion]','Syncrony[Vowel_dispersion_intra]','Syncrony[formant_dependency]',#Syncrony[LOCDEP]
+                ]
+
+FeatureChoose_lst=[
+    'FCR2',
+    '$Wilks$',
+    'VSA2',
+    '$BCC$',
+    '$BCV$',
+    '$Pillai$',
+    '$Hotel$',
+    '$Roys$',
+    '$Det(W^{-1}B)$',
+    '$Tr(W^{-1}B)$',
+    'pear_12',
+    'spear_12',
+    'kendall_12',
+    'dcorr_12',
+    # 'Proximity[dcorr_12]',
+    # 'Convergence[pear_12',
+    # 'Convergence[dcorr_12]',
+    ]
+
+Reorganized_shap_values, df_Reorganized_XTest=ReorganizeFeatures4SummaryPlot(shap_values, df_XTest, Featurechoose_lst=FeatureChoose_lst)
+shap.summary_plot(Reorganized_shap_values, df_Reorganized_XTest,show=False, max_display=len(df_XTest.columns),sort=False)
 plt.title(experiment_title)
 plt.show()
+# shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_changed_info_dict,\
+#                                                          feature_columns=getattr(FeatSel, 'LOC_columns') + getattr(FeatSel, 'DEP_columns') + getattr(FeatSel, 'LOCDEP_Trend_D_cols'),\
+#                                                          )
+
+# shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False)
+# plt.title(experiment_title)
+# plt.show()
+# shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_totalPoeple_info_dict,\
+#                                                          feature_columns=getattr(FeatSel, 'LOC_columns') + getattr(FeatSel, 'DEP_columns') + getattr(FeatSel, 'LOCDEP_Trend_D_cols'),\
+#                                                          )
+
+# shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False)
+# plt.title(experiment_title)
+# plt.show()
 
 
 def Calculate_sum_of_SHAP_vals(df_values,FeatSel_module,FeatureSet_lst=['Phonation_Proximity_cols']):

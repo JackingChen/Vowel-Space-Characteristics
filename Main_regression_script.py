@@ -49,6 +49,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from itertools import combinations
+from tqdm import tqdm
 def Assert_labelfeature(feat_name,lab_name):
     # =============================================================================
     #     To check if the label match with feature
@@ -94,8 +95,8 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--Add_UttLvl_feature', default=False, type=bool,
-                            help='[DKIndividual, DKcriteria]')
+    parser.add_argument('--FeatureComb_mode', default='Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation',
+                            help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
     args = parser.parse_args()
     return args
 
@@ -106,7 +107,7 @@ experiment=args.experiment
 knn_weights=args.knn_weights
 knn_neighbors=args.knn_neighbors
 Reorder_type=args.Reorder_type
-Add_UttLvl_feature=args.Add_UttLvl_feature
+# Add_UttLvl_feature=args.Add_UttLvl_feature
 # =============================================================================
 # Feature
 # columns=[
@@ -216,10 +217,20 @@ columns=[
 # featuresOfInterest=[ [col] + ['u_num+i_num+a_num'] for col in columns]
 # featuresOfInterest=[ [col] for col in columns]
 # featuresOfInterest=[ Comb[k] for k in Comb.keys()]
-if Add_UttLvl_feature==True:
-    featuresOfInterest=FeatSel.Columns_comb2
-else:
-    featuresOfInterest=FeatSel.Columns_comb
+Top_ModuleColumn_mapping_dict={}
+Top_ModuleColumn_mapping_dict['Add_UttLvl_feature']=FeatSel.Columns_comb2.copy()
+Top_ModuleColumn_mapping_dict['feat_comb']=FeatSel.Columns_comb.copy()
+Top_ModuleColumn_mapping_dict['feat_comb3']=FeatSel.Columns_comb3.copy()
+Top_ModuleColumn_mapping_dict['feat_comb5']=FeatSel.Columns_comb5.copy()
+Top_ModuleColumn_mapping_dict['feat_comb6']=FeatSel.Columns_comb6.copy()
+Top_ModuleColumn_mapping_dict['feat_comb7']=FeatSel.Columns_comb7.copy()
+Top_ModuleColumn_mapping_dict['feat_comb8']=FeatSel.Columns_comb8.copy()
+Top_ModuleColumn_mapping_dict['Comb_dynPhonation']=FeatSel.Comb_dynPhonation.copy()
+Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']=FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation.copy()
+Top_ModuleColumn_mapping_dict['baselineFeats']=FeatSel.Baseline_comb.copy()
+
+featuresOfInterest=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
+
 
 # label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
 # label_choose=['ADOS_S','ADOS_C']
@@ -306,12 +317,14 @@ ados_ds=ADOSdataset()
 ErrorFeat_bookeep=Dict()
 Session_level_all=Dict()
 
-if Add_UttLvl_feature==True:
+
+if args.FeatureComb_mode == 'Add_UttLvl_feature':
     Merge_feature_path='RegressionMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 else:
     Merge_feature_path='RegressionMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 
-ChooseData_manual=['static_feautre_LOC','dynamic_feature_LOC','dynamic_feature_phonation']
+# ChooseData_manual=['static_feautre_LOC','dynamic_feature_LOC','dynamic_feature_phonation']
+ChooseData_manual=['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']
 
 # for feature_paths in [Merge_feature_path]:
 if ChooseData_manual==None:
@@ -320,7 +333,6 @@ else:
     files=[]
     for d in ChooseData_manual:
         files.append(ados_ds.featurepath +'/'+ Merge_feature_path+'/{}.pkl'.format(d))
-
 
 # load features from file
 for file in files: #iterate over features
@@ -333,7 +345,8 @@ for file in files: #iterate over features
     else:
         raise KeyError()
     
-    for key,feat_col in column_dict.items():
+    
+    for key,feat_col in tqdm(column_dict.items()):
         # if len(feat_col)==1:
         #     feat_col_ = list([feat_col]) # ex: ['MSB_f1']
         # else:
@@ -344,6 +357,7 @@ for file in files: #iterate over features
             Session_level_all[Item_name].X, \
                 Session_level_all[Item_name].y, \
                     Session_level_all[Item_name].feattype = X,y, featType
+        
         assert y.isna().any() !=True
 
 # =============================================================================
@@ -495,10 +509,9 @@ df_best_result_AUC=pd.DataFrame([])
 df_best_result_f1=pd.DataFrame([])
 df_best_result_allThreeClassifiers=pd.DataFrame([])
 # =============================================================================
-if Add_UttLvl_feature==True:
-    Result_path="RESULTS/ADDed_UttFeat/"
-else:
-    Result_path="RESULTS/Fusion_result/"
+Result_path="RESULTS/Fusion_result/{}/".format(args.FeatureComb_mode)
+
+
 if not os.path.exists(Result_path):
     os.makedirs(Result_path)
 final_result_file="_ADOS_{}.xlsx".format(args.suffix)

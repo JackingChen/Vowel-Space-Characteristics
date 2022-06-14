@@ -358,7 +358,10 @@ Utt_prosodyF0_VoiceQuality_energy=Utt_prosodyF0+Utt_VoiceQuality+Utt_energy
 '''
 # =============================================================================
 
-LOC_columns=[ 'between_covariance_norm(A:,i:,u:)',
+LOC_columns=[ 
+        'VSA2',
+        'FCR2',
+        'between_covariance_norm(A:,i:,u:)',
         'between_variance_norm(A:,i:,u:)',
         'total_covariance_norm(A:,i:,u:)',
         'total_variance_norm(A:,i:,u:)', 
@@ -369,6 +372,12 @@ LOC_columns=[ 'between_covariance_norm(A:,i:,u:)',
         'Between_Within_Det_ratio_norm(A:,i:,u:)',
         'Between_Within_Tr_ratio_norm(A:,i:,u:)',
        ]
+
+
+LOC_columns_Intra=[ 
+    'within_covariance_norm(A:,i:,u:)',
+    'within_variance_norm(A:,i:,u:)',
+    ]
 
 DEP_columns=[
     'pear_12',
@@ -550,6 +559,8 @@ def Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Phonati
         for c_layer1 in Comb1_result:
             comb1_dict['+'.join(c_layer1)+'+'+SelectedFeat]=[]
             for c_layer2 in c_layer1:
+                # print(c_layer2)
+                # print(Block_columns_dict[c_layer2] )
                 comb1_dict['+'.join(c_layer1)+'+'+SelectedFeat]+=Block_columns_dict[c_layer2] 
             comb1_dict['+'.join(c_layer1)+'+'+SelectedFeat]+=Block_columns_dict[SelectedFeat]
         return comb1_dict
@@ -563,7 +574,7 @@ def Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Phonati
 # =============================================================================
 import itertools
 
-static_feautre_LOC=['LOC_columns','DEP_columns','LOCDEP_columns']
+static_feautre_LOC=['LOC_columns','DEP_columns','LOCDEP_columns','LOC_columns_Intra']
 static_feautre_phonation=['Phonation_columns']
 dynamic_feature_LOC=['LOCDEP_Proximity_cols','LOCDEP_Trend_D_cols','LOCDEP_Trend_K_cols','LOCDEP_Convergence_cols','LOCDEP_Syncrony_cols']
 dynamic_feature_phonation=['Phonation_Trend_D_cols','Phonation_Trend_K_cols','Phonation_Proximity_cols','Phonation_Convergence_cols','Phonation_Syncrony_cols']
@@ -619,7 +630,7 @@ for key_utt in Utt_feature:
 
 
 ''' Columns_comb3 = All possible feature combination + phonation_proximity_col'''
-Comb1=['LOC_columns','DEP_columns']+dynamic_feature_LOC
+Comb1=['LOC_columns','DEP_columns','LOC_columns_Intra']+dynamic_feature_LOC
 Columns_comb3=Dict()
 Columns_comb3['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=\
     Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Phonation_Proximity_cols')
@@ -631,10 +642,11 @@ Columns_comb4['Utt_feature+static_feautre_LOC+dynamic_feature_LOC']=\
 # Columns_comb['static_feautre_LOC+static_feautre_phonation']+=Get_columnproduct(Comb2,Block_columns_dict)
 
 ''' Columns_comb5 = All possible feature combination + Phonation_Syncrony_cols'''
-Comb1=['LOC_columns','DEP_columns']+dynamic_feature_LOC
+Comb1=['LOC_columns','LOC_columns_Intra','DEP_columns']+dynamic_feature_LOC
 Columns_comb5=Dict()
 Columns_comb5['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=\
     Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Phonation_Syncrony_cols')
+
 ''' Columns_comb6 = All possible feature combination + Phonation_Trend_D_cols'''
 Comb1=['LOC_columns','DEP_columns']+dynamic_feature_LOC
 Columns_comb6=Dict()
@@ -645,6 +657,11 @@ Comb1=['LOC_columns','DEP_columns']+dynamic_feature_LOC
 Columns_comb7=Dict()
 Columns_comb7['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=\
     Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Phonation_Trend_D_cols+Phonation_Proximity_cols')
+''' Columns_comb8 = All possible feature combination + Phonation_Trend_K_cols'''
+Comb1=['LOC_columns','LOC_columns_Intra','DEP_columns']+dynamic_feature_LOC
+Columns_comb8=Dict()
+Columns_comb8['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=\
+    Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Phonation_Trend_K_cols')
 
 
 ''' Columns_comb_dynPhonation = All possible feature combination within dynamic_feature_phonation'''
@@ -653,6 +670,7 @@ Comb_dynPhonation=Dict()
 Comb_dynPhonation['dynamic_feature_phonation']=Get_Combs_Feat(Comb2,Block_columns_dict)
     
 ''' Columns_TotalComb = All possible feature combination of static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation'''
+# Comb3=['LOC_columns','DEP_columns','LOC_columns_Intra'] + dynamic_feature_LOC + dynamic_feature_phonation
 Comb3=['LOC_columns','DEP_columns'] + dynamic_feature_LOC + dynamic_feature_phonation
 Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation=Dict()
 Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=Get_Combs_Feat(Comb3,Block_columns_dict)

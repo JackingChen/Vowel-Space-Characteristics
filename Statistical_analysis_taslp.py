@@ -15,11 +15,13 @@ from articulation.HYPERPARAM import phonewoprosody, Label
 
 from articulation.HYPERPARAM.PeopleSelect import SellectP_define
 import articulation.HYPERPARAM.FeatureSelect as FeatSel
+import articulation.HYPERPARAM.PaperNameMapping as PprNmeMp
 import matplotlib.pyplot as plt
 from scipy import stats
 from scipy.stats import spearmanr,pearsonr 
-
+from sklearn import neighbors
 from metric import Evaluation_method 
+import scipy.stats as stats
 # =============================================================================
 def get_args():
     # we add compulsary arguments as named arguments for readability
@@ -32,6 +34,12 @@ def get_args():
                             help=['ADOS_C','dia_num'])
     parser.add_argument('--dataset_role', default='TD_DOCKID',
                             help='[TD_DOCKID_emotion | ASD_DOCKID_emotion | kid_TD | kid88]')
+    parser.add_argument('--knn_weights', default='distance',
+                            help='path of the base directory')
+    parser.add_argument('--knn_neighbors', default=3,  type=int,
+                            help='path of the base directory')
+    parser.add_argument('--Reorder_type', default='DKIndividual',
+                            help='[DKIndividual, DKcriteria]')
     args = parser.parse_args()
     return args
 
@@ -40,6 +48,9 @@ args = get_args()
 pklpath=args.inpklpath
 label_choose_lst=args.label_choose_lst # labels are too biased
 dataset_role=args.dataset_role
+knn_weights=args.knn_weights
+knn_neighbors=args.knn_neighbors
+Reorder_type=args.Reorder_type
 # Randseed=args.Randseed
 outpklpath=args.inpklpath+"/Session_formants_people_vowel_feat/"
 # =============================================================================
@@ -66,10 +77,10 @@ def Add_label(df_formant_statistic,Label,label_choose='ADOS_S'):
 # =============================================================================
     
 # df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromASD_DOCKID')
-df_formant_statistic77_path=dfFormantStatisticpath+'/Features/ClassificationMerged_dfs/distance_3_DKIndividual/ASD_DOCKID/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'
+df_formant_statistic77_path=dfFormantStatisticpath+'/Features/ClassificationMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
 # df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromTD_DOCKID')
-df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Features/ClassificationMerged_dfs/distance_3_DKIndividual/TD_DOCKID/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'
+df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Features/ClassificationMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/TD_DOCKID/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 if not os.path.exists(df_formant_statistic_ASDTD_path) or not os.path.exists(df_formant_statistic77_path):
     raise FileExistsError
 df_feature_TD=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))
@@ -186,8 +197,8 @@ TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
 self_specify_cols=[
 # 'Trend[VSA2]_d',
 # 'Trend[FCR2]_d',
-'Trend[between_covariance_norm(A:,i:,u:)]_d',
-'Trend[between_variance_norm(A:,i:,u:)]_d',
+# 'Trend[between_covariance_norm(A:,i:,u:)]_d',
+# 'Trend[between_variance_norm(A:,i:,u:)]_d',
 # 'Trend[within_covariance_norm(A:,i:,u:)]_d',
 # 'Trend[within_variance_norm(A:,i:,u:)]_d',
 # 'Trend[total_covariance_norm(A:,i:,u:)]_d',
@@ -203,25 +214,46 @@ self_specify_cols=[
 # 'Trend[kendall_12]_d',
 # 'Trend[dcorr_12]_d'
 ]
+# self_specify_cols=FeatSel.Phonation_Syncrony_cols
 
-# self_specify_cols=FeatSel.Phonation_Trend_D_cols + FeatSel.Phonation_Trend_K_cols + FeatSel.Phonation_Proximity_cols + FeatSel.Phonation_Convergence_cols + FeatSel.Phonation_Syncrony_cols
-# self_specify_cols=FeatSel.LOCDEP_Trend_D_cols + FeatSel.LOCDEP_Trend_K_cols + FeatSel.LOCDEP_Proximity_cols + FeatSel.LOCDEP_Convergence_cols + FeatSel.LOCDEP_Syncrony_cols
+# FeatureSet_lst=['Trend[Vowel_dispersion_inter__vowel_centralization]_d','Trend[Vowel_dispersion_inter__vowel_dispersion]_d',\
+#                 'Trend[Vowel_dispersion_intra]_d','Trend[formant_dependency]_d'] #Trend[LOCDEP]d + Proximity[phonation]
+# FeatureSet_lst=['Vowel_dispersion_inter__vowel_centralization','Vowel_dispersion_inter__vowel_dispersion',\
+#                 ]     #Inter vowel dispersion + Syncrony[phonation]
+FeatureSet_lst=['Trend[Vowel_dispersion_inter__vowel_centralization]_d','Trend[Vowel_dispersion_inter__vowel_dispersion]_d',\
+                'Trend[Vowel_dispersion_intra]_d','Trend[formant_dependency]_d',
+                'Trend[Vowel_dispersion_inter__vowel_centralization]_k','Trend[Vowel_dispersion_inter__vowel_dispersion]_k',\
+                'Trend[Vowel_dispersion_intra]_k','Trend[formant_dependency]_k',
+                'Vowel_dispersion_inter__vowel_centralization','Vowel_dispersion_inter__vowel_dispersion','formant_dependency'\
+                ]
+self_specify_cols=[]
+for col in FeatureSet_lst:
+    self_specify_cols+=FeatSel.CategoricalName2cols[col]
 
 if len(self_specify_cols) > 0:
     inspect_cols=self_specify_cols
-# else:
-#     inspect_cols=Parameters
-import scipy.stats as stats
+else:
+    inspect_cols=Parameters
 
-plot=True
+
+def Swap2PaperName(feature_rawname,PprNmeMp):
+    if feature_rawname in PprNmeMp.Paper_name_map.keys():
+        featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
+        feature_keys=featurename_paper
+    else: 
+        feature_keys=feature_rawname
+    return feature_keys
+plot=False
 Record_dict=Dict()
 All_cmp_dict=Dict()
 for Top_data_lst in TopTop_data_lst:
     Record_dict[' vs '.join(Top_data_lst)]=pd.DataFrame(index=inspect_cols)
-    All_cmp_dict[' vs '.join(Top_data_lst)]=pd.DataFrame(index=inspect_cols)
+    # All_cmp_dict[' vs '.join(Top_data_lst)]=pd.DataFrame(index=inspect_cols)
+    All_cmp_dict[' vs '.join(Top_data_lst)]=pd.DataFrame()
     import warnings
     warnings.filterwarnings("ignore")
     for columns in inspect_cols:
+        columns_papername=Swap2PaperName(columns,PprNmeMp)
         # =============================================================================
         if plot:
             fig, ax = plt.subplots()
@@ -240,27 +272,27 @@ for Top_data_lst in TopTop_data_lst:
                 plt.title( title )
             fig.legend(labels=dataname)  
         # =============================================================================
-        for tests in [stats.mannwhitneyu, stats.ttest_ind]:
+        for tests in [stats.f_oneway, stats.ttest_ind]:
             test_results=tests(vars()[Top_data_lst[0]][columns],vars()[Top_data_lst[1]][columns])
             p_val=test_results[1]
 
-            if tests == stats.mannwhitneyu:
+            if tests == stats.f_oneway:
                 mean_difference=vars()[Top_data_lst[0]][columns].median() - vars()[Top_data_lst[1]][columns].median()
-                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+' - '.join(Top_data_lst)]=mean_difference
-                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+'p']=p_val
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns_papername,'FTest'+' - '.join(Top_data_lst)]=np.round(mean_difference,3)
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns_papername,'FTest'+'p']=np.round(p_val,3)
             elif tests == stats.ttest_ind:
                 mean_difference=vars()[Top_data_lst[0]][columns].mean() - vars()[Top_data_lst[1]][columns].mean()
-                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+' - '.join(Top_data_lst)]=mean_difference
-                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+'p']=p_val
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns_papername,'TTest'+' - '.join(Top_data_lst)]=np.round(mean_difference,3)
+                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns_papername,'TTest'+'p']=np.round(p_val,3)
             if p_val < 0.05:
-                print('Testing Feature: ',columns)
+                print('Testing Feature: ',columns_papername)
                 print(mean_difference , np.round(test_results[1],6))
-                if tests == stats.mannwhitneyu:
-                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+' - '.join(Top_data_lst)]=mean_difference
-                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+'p']=p_val
+                if tests == stats.f_oneway:
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns_papername,'FTest'+' - '.join(Top_data_lst)]=mean_difference
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns_papername,'FTest'+'p']=p_val
                 if tests == stats.ttest_ind:
-                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+' - '.join(Top_data_lst)]=mean_difference
-                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+'p']=p_val
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns_papername,'TTest'+' - '.join(Top_data_lst)]=mean_difference
+                    Record_dict[' vs '.join(Top_data_lst)].loc[columns_papername,'TTest'+'p']=p_val
         # =============================================================================
         if plot:
             addtext='{0}/({1})'.format(np.round(mean_difference,3),np.round(p_val,3))
@@ -270,44 +302,67 @@ for Top_data_lst in TopTop_data_lst:
         # =============================================================================
     warnings.simplefilter('always')
 
-# Record_certainCol_dict={}
-# df_CertainCol=pd.DataFrame()
-# for test_name, values in Record_dict.items():
-#     df_proximity=values.loc[values.index.str.startswith("Proximity"),:].iloc[:,0]
-#     df_proximity.columns=[test_name]
-#     df_CertainCol=pd.concat([df_CertainCol,df_proximity],axis=1)
-# df_CertainCol=df_CertainCol.T
-
-
-# dynamic_cols_sel='Convergence'
 dynamic_cols_sel='' #This means do not specify any columns
 # Record_certainCol_dict={}
-df_CertainCol_U=pd.DataFrame()
 df_CertainCol_T=pd.DataFrame()
-for test_name, values in Record_dict.items():
+for test_name, values in All_cmp_dict.items():
+    
+    ASD_group_name=test_name.split(" vs ")[0].replace('df_feature_','')
     
     data_T=values.loc[values.index.str.startswith(dynamic_cols_sel),values.columns.str.startswith("TTest")]
-    data_U=values.loc[values.index.str.startswith(dynamic_cols_sel),values.columns.str.startswith("UTest")]
-    # Utest results
-    if len(data_U.columns) == 2:
-        df_feat=data_U.iloc[:,0]
-        df_feat.columns=[test_name]
-    elif len(data_U.columns) == 0:
-        df_feat=data_U
-        df_feat[test_name]=np.nan
-    df_CertainCol_U=pd.concat([df_CertainCol_U,df_feat],axis=1)
-    
-    # Ttest results
-    if len(data_T.columns) == 2:
-        df_feat=data_T.iloc[:,0]
-        df_feat.columns=[test_name]
-    elif len(data_T.columns) == 0:
-        df_feat=data_T
-        df_feat[test_name]=np.nan
+    for idx in data_T.index:
+        # for col in data_T.columns:
+        # Fill in direction: ASD < TD or ASD >= TD
+        if data_T.loc[idx,data_T.columns[0]]<0:
+            df_CertainCol_T.loc[idx,ASD_group_name]='ASD $<$ TD'
+        elif data_T.loc[idx,data_T.columns[0]]>0:
+            df_CertainCol_T.loc[idx,ASD_group_name]='ASD $>$ TD'
+        else:
+            df_CertainCol_T.loc[idx,ASD_group_name]='ASD $=$ TD'
+        
+        if data_T.loc[idx,data_T.columns[1]]>0.05:
+            df_CertainCol_T.loc[idx,ASD_group_name+'_p']='n.s.'
+        else:
+            df_CertainCol_T.loc[idx,ASD_group_name+'_p']=data_T.loc[idx,data_T.columns[1]]
+# df_CertainCol_T=df_CertainCol_T.T
 
-    df_CertainCol_T=pd.concat([df_CertainCol_T,df_feat],axis=1)
-df_CertainCol_U=df_CertainCol_U.T
-df_CertainCol_T=df_CertainCol_T.T
+
+
+
+
+
+
+def Record_dict2Record_dictdf():
+    # 舊的function 先放著
+    dynamic_cols_sel='' #This means do not specify any columns
+    # Record_certainCol_dict={}
+    df_CertainCol_U=pd.DataFrame()
+    df_CertainCol_T=pd.DataFrame()
+    for test_name, values in Record_dict.items():
+        
+        data_T=values.loc[values.index.str.startswith(dynamic_cols_sel),values.columns.str.startswith("TTest")]
+        data_U=values.loc[values.index.str.startswith(dynamic_cols_sel),values.columns.str.startswith("UTest")]
+        # Utest results
+        if len(data_U.columns) == 2:
+            df_feat=data_U.iloc[:,0]
+            df_feat.columns=[test_name]
+        elif len(data_U.columns) == 0:
+            df_feat=data_U
+            df_feat[test_name]=np.nan
+        df_CertainCol_U=pd.concat([df_CertainCol_U,df_feat],axis=1)
+        
+        # Ttest results
+        
+        if len(data_T.columns) == 2:
+            df_feat=data_T.iloc[:,0]
+            df_feat.columns=[test_name]
+        elif len(data_T.columns) == 0:
+            df_feat=data_T
+            df_feat[test_name]=np.nan
+    
+        df_CertainCol_T=pd.concat([df_CertainCol_T,df_feat],axis=1)
+    df_CertainCol_U=df_CertainCol_U.T
+    df_CertainCol_T=df_CertainCol_T.T
 
 
 #Clear Record_dict
@@ -345,18 +400,32 @@ staticLOCDEP_cols=FeatSel.LOC_columns + FeatSel.DEP_columns
 dynamicPhonation_cols=FeatSel.Phonation_Trend_D_cols + FeatSel.Phonation_Trend_K_cols + FeatSel.Phonation_Proximity_cols + FeatSel.Phonation_Convergence_cols + FeatSel.Phonation_Syncrony_cols
 dynamicLOCDEP_cols=FeatSel.LOCDEP_Trend_D_cols + FeatSel.LOCDEP_Trend_K_cols + FeatSel.LOCDEP_Proximity_cols + FeatSel.LOCDEP_Convergence_cols + FeatSel.LOCDEP_Syncrony_cols
 
+
+
+
+
 Aaad_Correlation_staticLOCDEP=Eval_med.Calculate_correlation(label_correlation_choose_lst,\
-                                                    df_feature_staticLOCDEP,\
+                                                    df_feature_ASD,\
                                                     N=2,columns=staticLOCDEP_cols,constrain_sex=-1, constrain_module=-1,\
                                                     feature_type='Session_formant')
+#To swap to paper name
+for Label_choose in label_correlation_choose_lst:
+    Aaad_Correlation_staticLOCDEP[Label_choose].index=[Swap2PaperName(feature_rawname,PprNmeMp) for feature_rawname in Aaad_Correlation_staticLOCDEP[Label_choose].index]
+    
+    
 Aaad_Correlation_dynamicLOCDEP=Eval_med.Calculate_correlation(label_correlation_choose_lst,\
-                                                    df_feature_dynamicLOCDEP,\
+                                                    df_feature_ASD,\
                                                     N=0,columns=dynamicLOCDEP_cols,constrain_sex=-1, constrain_module=-1,\
                                                     feature_type='')
+for Label_choose in label_correlation_choose_lst:
+    Aaad_Correlation_dynamicLOCDEP[Label_choose].index=[Swap2PaperName(feature_rawname,PprNmeMp) for feature_rawname in Aaad_Correlation_dynamicLOCDEP[Label_choose].index]
 Aaad_Correlation_dynamicPhonation=Eval_med.Calculate_correlation(label_correlation_choose_lst,\
-                                                    df_feature_dynamicPhonation,\
+                                                    df_feature_ASD,\
                                                     N=0,columns=dynamicPhonation_cols,constrain_sex=-1, constrain_module=-1,\
                                                     feature_type='')
+for Label_choose in label_correlation_choose_lst:
+    Aaad_Correlation_dynamicPhonation[Label_choose].index=[Swap2PaperName(feature_rawname,PprNmeMp) for feature_rawname in Aaad_Correlation_dynamicPhonation[Label_choose].index]    
+    
 aaa=ccc
 #%%
 # =============================================================================
@@ -366,7 +435,7 @@ aaa=ccc
 
 '''
 # =============================================================================
-from sklearn import neighbors
+
 df_POI_person_segment_DKIndividual_feature_dict_TD=pickle.load(open(outpklpath+"df_POI_person_segment_DKIndividual_feature_dict_{0}_{1}.pkl".format('TD_DOCKID', 'phonation'),"rb"))
 df_POI_person_segment_DKIndividual_feature_dict_ASD=pickle.load(open(outpklpath+"df_POI_person_segment_DKIndividual_feature_dict_{0}_{1}.pkl".format('ASD_DOCKID', 'phonation'),"rb"))
 

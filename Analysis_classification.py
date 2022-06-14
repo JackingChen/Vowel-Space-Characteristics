@@ -48,6 +48,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from itertools import combinations
 import shap
+import articulation.HYPERPARAM.PaperNameMapping as PprNmeMp
+import inspect
 def Assert_labelfeature(feat_name,lab_name):
     # =============================================================================
     #     To check if the label match with feature
@@ -67,7 +69,13 @@ def Add_label(df_formant_statistic,Label,label_choose='ADOS_cate_C'):
         bool_ind=Label.label_raw['name']==people
         df_formant_statistic.loc[people,label_choose]=Label.label_raw.loc[bool_ind,label_choose].values
     return df_formant_statistic
-
+def Swap2PaperName(feature_rawname,PprNmeMp):
+    if feature_rawname in PprNmeMp.Paper_name_map.keys():
+        featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
+        feature_keys=featurename_paper
+    else: 
+        feature_keys=feature_rawname
+    return feature_keys
 def get_args():
     # we add compulsary arguments as named arguments for readability
     parser = argparse.ArgumentParser()
@@ -89,7 +97,7 @@ def get_args():
                         help='')
     parser.add_argument('--Plot', default=True,
                         help='')
-    parser.add_argument('--selectModelScoring', default='accuracy',
+    parser.add_argument('--selectModelScoring', default='recall_macro',
                         help='[recall_macro,accuracy]')
     parser.add_argument('--Mergefeatures', default=False,
                         help='')
@@ -262,7 +270,7 @@ class ADOSdataset():
         self.Top_ModuleColumn_mapping_dict['Add_UttLvl_feature']=FeatSel.Columns_comb2.copy()
         self.Top_ModuleColumn_mapping_dict['feat_comb']=FeatSel.Columns_comb.copy()
         self.Top_ModuleColumn_mapping_dict['feat_comb3']=FeatSel.Columns_comb3.copy()
-        self.Top_ModuleColumn_mapping_dict['feat_comb5']=FeatSel.Columns_comb6.copy()
+        self.Top_ModuleColumn_mapping_dict['feat_comb5']=FeatSel.Columns_comb5.copy()
         self.Top_ModuleColumn_mapping_dict['feat_comb6']=FeatSel.Columns_comb6.copy()
         self.Top_ModuleColumn_mapping_dict['feat_comb7']=FeatSel.Columns_comb7.copy()
         self.Top_ModuleColumn_mapping_dict['Comb_dynPhonation']=FeatSel.Comb_dynPhonation.copy()
@@ -401,18 +409,18 @@ class ADOSdataset():
             
             # df_feauture_ASDgrp_dict['df_feature_Notautism_TC']=df_feature_ASD[filter_Notautism_TC]
             # df_feauture_ASDgrp_dict['df_feature_ASD_TC']=df_feature_ASD[filter_ASD_TC]
-            df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TC']=df_feature_ASD[filter_Notautism_TC | filter_ASD_TC]
-            df_feauture_ASDgrp_dict['df_feature_Autism_TC']=df_feature_ASD[filter_Autism_TC]
+            # df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TC']=df_feature_ASD[filter_Notautism_TC | filter_ASD_TC]
+            # df_feauture_ASDgrp_dict['df_feature_Autism_TC']=df_feature_ASD[filter_Autism_TC]
             
             # df_feauture_ASDgrp_dict['df_feature_Notautism_TS']=df_feature_ASD[filter_Notautism_TS]
             # df_feauture_ASDgrp_dict['df_feature_ASD_TS']=df_feature_ASD[filter_ASD_TS]
-            df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TS']=df_feature_ASD[filter_Notautism_TS | filter_ASD_TS]
-            df_feauture_ASDgrp_dict['df_feature_Autism_TS']=df_feature_ASD[filter_Autism_TS]
+            # df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TS']=df_feature_ASD[filter_Notautism_TS | filter_ASD_TS]
+            # df_feauture_ASDgrp_dict['df_feature_Autism_TS']=df_feature_ASD[filter_Autism_TS]
             
             # df_feauture_ASDgrp_dict['df_feature_Notautism_TSC']=df_feature_ASD[filter_Notautism_TSC]
             # df_feauture_ASDgrp_dict['df_feature_ASD_TSC']=df_feature_ASD[filter_ASD_TSC]
-            df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TSC']=df_feature_ASD[filter_Notautism_TSC | filter_ASD_TSC]
-            df_feauture_ASDgrp_dict['df_feature_Autism_TSC']=df_feature_ASD[filter_Autism_TSC]
+            # df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TSC']=df_feature_ASD[filter_Notautism_TSC | filter_ASD_TSC]
+            # df_feauture_ASDgrp_dict['df_feature_Autism_TSC']=df_feature_ASD[filter_Autism_TSC]
             
             #Check the length of each paired comparison, should be stored on the top of for loop
             
@@ -473,28 +481,44 @@ FeatureLabelMatch_manual=[
     # ['TD vs df_feature_ASD >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
     # ['TD vs df_feature_ASD >> Phonation_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
     
-    
+    ['TD vs df_feature_lowMinimal_CSS >> LOC_columns+LOCDEP_Syncrony_cols+Phonation_Syncrony_cols', 'ASDTD'],
+    # ['TD vs df_feature_moderate_CSS >> LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_high_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
 
+    ['TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_D_cols+Phonation_Syncrony_cols', 'ASDTD'],
+    # ['TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_high_CSS >> Phonation_Proximity_cols', 'ASDTD'],
+    
+    
+    # ['TD vs df_feature_lowMinimal_CSS >> LOC_columns+Phonation_Syncrony_cols', 'ASDTD'],
+    # ['TD vs df_feature_moderate_CSS >> LOC_columns+Phonation_Syncrony_cols', 'ASDTD'],
+    # ['TD vs df_feature_high_CSS >> LOC_columns+Phonation_Syncrony_cols', 'ASDTD'],
+    
+    # ['TD vs df_feature_lowMinimal_CSS >> Phonation_Syncrony_cols', 'ASDTD'],
+    # ['TD vs df_feature_moderate_CSS >> Phonation_Syncrony_cols', 'ASDTD'],
+    # ['TD vs df_feature_high_CSS >> Phonation_Syncrony_cols', 'ASDTD'],
     
     # ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
     # ['TD vs df_feature_moderate_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
     # ['TD vs df_feature_high_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
     
-    ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_Trend_K_cols+LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
-    ['TD vs df_feature_moderate_CSS >> LOCDEP_Trend_K_cols+LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
-    ['TD vs df_feature_high_CSS >> LOCDEP_Trend_K_cols+LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_lowMinimal_CSS >> Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_high_CSS >> Phonation_Proximity_cols', 'ASDTD'],
     
-    ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
-    ['TD vs df_feature_moderate_CSS >> LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
-    ['TD vs df_feature_high_CSS >> LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_Trend_K_cols+LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_moderate_CSS >> LOCDEP_Trend_K_cols+LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_high_CSS >> LOCDEP_Trend_K_cols+LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
     
-    ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
-    ['TD vs df_feature_moderate_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
-    ['TD vs df_feature_high_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_moderate_CSS >> LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_high_CSS >> LOCDEP_Convergence_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
     
-    ['TD vs df_feature_lowMinimal_CSS >> Phonation_Proximity_cols', 'ASDTD'],
-    ['TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols', 'ASDTD'],
-    ['TD vs df_feature_high_CSS >> Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_moderate_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_high_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
+    
+    
     
     
  ]
@@ -671,8 +695,8 @@ Classifier['SVC']={'model':sklearn.svm.SVC(),\
 
 
 loo=LeaveOneOut()
-CV_settings=loo
-# CV_settings=10
+# CV_settings=loo
+CV_settings=10
 
 # =============================================================================
 # Outputs
@@ -892,15 +916,31 @@ print(df_best_result_allThreeClassifiers)
 
 '''
 
-# ['TD vs df_feature_lowMinimal_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
-# ['TD vs df_feature_moderate_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
+# ['TD vs df_feature_lowMinimal_CSS >> LOC_columns+DEP_columns+LOCDEP_Trend_K_cols+Phonation_Convergence_cols+Phonation_Syncrony_cols', 'ASDTD'],
+# ['TD vs df_feature_moderate_CSS >> LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
 # ['TD vs df_feature_high_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
 
-# ['TD vs df_feature_lowMinimal_CSS >> Phonation_Proximity_cols', 'ASDTD'],
+# ['TD vs df_feature_lowMinimal_CSS >> Phonation_Convergence_cols+Phonation_Syncrony_cols', 'ASDTD'],
 # ['TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols', 'ASDTD'],
 # ['TD vs df_feature_high_CSS >> Phonation_Proximity_cols', 'ASDTD'],
 
+
+proposed_expstr='TD vs df_feature_lowMinimal_CSS >> LOC_columns+DEP_columns+LOCDEP_Trend_K_cols+Phonation_Convergence_cols+Phonation_Syncrony_cols::ASDTD'
+baseline_expstr='TD vs df_feature_lowMinimal_CSS >> Phonation_Convergence_cols+Phonation_Syncrony_cols'
+
+# proposed_expstr='TD vs df_feature_moderate_CSS >> LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+Phonation_Proximity_cols'
+# baseline_expstr='TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols'
+
+# proposed_expstr='TD vs df_feature_high_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols'
+# baseline_expstr='TD vs df_feature_high_CSS >> Phonation_Proximity_cols'
+
+experiment_title=baseline_expstr[re.search("df_feature_",baseline_expstr).end():re.search("_CSS >> ",baseline_expstr).start()]
+
 # THis pair can be change to for loop form to loop over all comparison pairs
+# proposed_expstr='TD vs df_feature_lowMinimal_CSS >> LOC_columns+Phonation_Syncrony_cols::ASDTD'
+# baseline_expstr='TD vs df_feature_lowMinimal_CSS >> Phonation_Syncrony_cols::ASDTD'
+# experiment_title='lowMinimal_CSS'
+
 # proposed_expstr='TD vs df_feature_lowMinimal_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
 # baseline_expstr='TD vs df_feature_lowMinimal_CSS >> Phonation_Proximity_cols::ASDTD'
 # experiment_title='lowMinimal_CSS'
@@ -909,12 +949,12 @@ print(df_best_result_allThreeClassifiers)
 # proposed_expstr='TD vs df_feature_moderate_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
 # baseline_expstr='TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols::ASDTD'
 # experiment_title='moderate_CSS'
-[24, 28, 30, 31, 39, 41]
+# [24, 28, 30, 31, 39, 41]
 [12, 22, 23, 27, 47]
 
-proposed_expstr='TD vs df_feature_high_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
-baseline_expstr='TD vs df_feature_high_CSS >> Phonation_Proximity_cols::ASDTD'
-experiment_title='high_CSS'
+# proposed_expstr='TD vs df_feature_high_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
+# baseline_expstr='TD vs df_feature_high_CSS >> Ph|onation_Proximity_cols::ASDTD'
+# experiment_title='high_CSS'
 [6, 19, 25, 35, 47]
 [38, 40, 41, 51]
 
@@ -959,7 +999,10 @@ Twos2Ones_indexes=list(df_Y_pred[Twos2Ones].index)
 
 assert len(Ones2Twos_indexes+Twos2Ones_indexes) == len(Incorrect2Correct_indexes+Correct2Incorrect_indexes)
 
-
+ASDTD2Logit_map={
+    'TD': sellect_people_define.ASDTD_label['TD']-1,
+    'ASD': sellect_people_define.ASDTD_label['ASD']-1,
+    }
 
 
 
@@ -1045,7 +1088,7 @@ Proposed_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Sessio
 
 
 
-def Prepare_data_for_summaryPlot(SHAPval_info_dict, feature_columns=None):
+def Prepare_data_for_summaryPlot(SHAPval_info_dict, feature_columns=None, PprNmeMp=None):
     keys_bag=[]
     XTest_dict={}
     shap_values_0_bag=[]
@@ -1068,62 +1111,121 @@ def Prepare_data_for_summaryPlot(SHAPval_info_dict, feature_columns=None):
     shap_values_1_array=np.vstack(shap_values_1_bag)
     shap_values=[shap_values_0_array,shap_values_1_array]
     df_XTest=pd.DataFrame.from_dict(XTest_dict,orient='index')
+    if PprNmeMp!=None:
+        df_XTest.columns=[Swap2PaperName(k,PprNmeMp) for k in df_XTest.columns]
     return shap_values, df_XTest, keys_bag
+def Get_Top_10_abs_SHAP_columns(shap_values,df_XTest):
+    ''' Get Top 10 abs SHAP columns '''
+    df_XSumSHAPVals=pd.DataFrame(np.abs(shap_values).sum(axis=0).reshape(1,-1),columns=df_XTest.columns).T
+    return df_XSumSHAPVals.sort_values(by=0,ascending=False).head(10)
 
-shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_changed_info_dict,\
-                                                         feature_columns=getattr(FeatSel, 'LOCDEP_Trend_D_cols'),\
-                                                         )
-
-
-
-# shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_changed_info_dict)
-# shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns)
-# shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_totalPoeple_info_dict)
-# shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns)
 
 # shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_changed_info_dict,\
-#                                                          feature_columns=getattr(FeatSel, 'LOCDEP_Trend_D_cols'),\
-#                                                          )
-# shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,title=experiment_title)
+#                                                          feature_columns=(FeatSel.CategoricalName2cols)['LOC_columns'],\
+#                                                          PprNmeMp=PprNmeMp)
+# shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,show=False, max_display=10)
+# plt.title(experiment_title)
+# plt.show()
 # shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_totalPoeple_info_dict,\
-#                                                          feature_columns=getattr(FeatSel, 'LOCDEP_Trend_D_cols'),\
-#                                                          )
-# shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,title=experiment_title)
+#                                                          feature_columns=FeatSel.CategoricalName2cols['LOC_columns'],\
+#                                                          PprNmeMp=PprNmeMp)
+# shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,show=False, max_display=10)
+# plt.title(experiment_title)
+# plt.show()
 
-
-shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_changed_info_dict,\
-                                                         feature_columns=FeatSel.CategoricalName2cols['Inter-vowel-dispersion_vowel-dispersion'],\
-                                                         )
-shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,show=False)
-plt.title(experiment_title)
-plt.show()
-shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_totalPoeple_info_dict,\
-                                                         feature_columns=FeatSel.CategoricalName2cols['Inter-vowel-dispersion_vowel-dispersion'],\
-                                                         )
-shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,show=False)
-plt.title(experiment_title)
-plt.show()
-# shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Baseline_changed_info_dict)
-# shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns)
-# shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Baseline_totalPoeple_info_dict)
-# shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns)
-# shap.dependence_plot(1, shap_values[1], df_XTest, interaction_index=None)
-
-Baseline_info_dict=Organize_Needed_SHAP_info(Incorrect2Correct_indexes+Correct2Incorrect_indexes, Session_level_all, baseline_expstr)
-Proposed_info_dict=Organize_Needed_SHAP_info(Incorrect2Correct_indexes+Correct2Incorrect_indexes, Session_level_all, proposed_expstr)
-
-ASDTD2Logit_map={
-    'TD': sellect_people_define.ASDTD_label['TD']-1,
-    'ASD': sellect_people_define.ASDTD_label['ASD']-1,
-    }
-
+# shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_totalPoeple_info_dict,\
+#                                                           feature_columns=FeatSel.CategoricalName2cols['LOC_columns'],\
+#                                                           PprNmeMp=None)
 
 def Calculate_sum_of_SHAP_vals(df_values,FeatSel_module,FeatureSet_lst=['Phonation_Proximity_cols']):
     df_FeaSet_avg_Comparison=pd.DataFrame([],columns=FeatureSet_lst)
     for feat_set in FeatureSet_lst:
-        feature_cols = getattr(FeatSel_module, feat_set)
+        if inspect.ismodule(FeatSel_module): #FeatSel_module is a python module
+            feature_cols = getattr(FeatSel_module, feat_set)
+        elif type(FeatSel_module) == dict:
+            feature_cols = FeatSel_module[feat_set]
+        else:
+            raise TypeError()
         df_FeaSet_avg_Comparison[feat_set]=df_values.loc[feature_cols,:].sum()
     return df_FeaSet_avg_Comparison
+
+
+
+# inspect_featuresets='Trend[LOCDEP]_d'  #Trend[LOCDEP]d + Proximity[phonation]
+inspect_featuresets='LOC_columns'  #LOC_columns + Syncrony[phonation]
+shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_changed_info_dict,\
+                                                          feature_columns=(FeatSel.CategoricalName2cols)[inspect_featuresets],\
+                                                          PprNmeMp=PprNmeMp)
+
+
+# FeatureSet_lst=['Trend[Vowel_dispersion_inter__vowel_centralization]_d','Trend[Vowel_dispersion_inter__vowel_dispersion]_d',\
+#                 'Trend[Vowel_dispersion_intra]_d','Trend[formant_dependency]_d']     #Trend[LOCDEP]d + P roximity[phonation]
+FeatureSet_lst=['Vowel_dispersion_inter__vowel_centralization','Vowel_dispersion_inter__vowel_dispersion',\
+                ]     #LOC + P roximity[phonation]
+###########################################
+shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,show=False, max_display=10)
+plt.title(experiment_title)
+plt.show()
+
+
+
+
+
+shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_totalPoeple_info_dict,\
+                                                          feature_columns=FeatSel.CategoricalName2cols[inspect_featuresets],\
+                                                          PprNmeMp=PprNmeMp)
+
+
+def ReorganizeFeatures4SummaryPlot(shap_values_logit, df_XTest,FeatureSet_lst):
+    # step1 convert shapvalue to df_shapvalues
+    df_shap_values=pd.DataFrame(shap_values_logit,columns=df_XTest.columns)
+    # step2 Categorize according to FeatureSet_lst
+    df_Reorganized_shap_values=pd.DataFrame()
+    df_Reorganized_XTest=pd.DataFrame()
+    for FSL in FeatureSet_lst:
+        FSL_papercolumns=[Swap2PaperName(k,PprNmeMp) for k in FeatSel.CategoricalName2cols[FSL]]
+    
+        df_Reorganized_shap_values=pd.concat([df_Reorganized_shap_values,df_shap_values[FSL_papercolumns]],axis=1)
+        df_Reorganized_XTest=pd.concat([df_Reorganized_XTest,df_XTest[FSL_papercolumns]],axis=1)
+    assert df_Reorganized_shap_values.shape == df_Reorganized_XTest.shape
+    return df_Reorganized_shap_values.values, df_Reorganized_XTest
+Reorganized_shap_values, df_Reorganized_XTest=ReorganizeFeatures4SummaryPlot(shap_values[1], df_XTest, FeatureSet_lst)
+shap.summary_plot(Reorganized_shap_values, df_Reorganized_XTest,show=False, max_display=len(df_XTest.columns),sort=False)
+plt.title(experiment_title)
+plt.show()
+# ,feature_names=df_XTest.columns
+# //////
+# def SummaryPlot_Category(Proposed_totalPoeple_info_dict,proposed_expstr,FeatureSet_lst,experiment_title,module):
+#     ##################################### 統合feautre set values
+#     # df_Baseline_shap_values=Get_Inspected_SHAP_df(Baseline_totalPoeple_info_dict,logits=[ASDTD2Logit_map['TD']]) [ASDTD2Logit_map['TD']]
+#     df_Proposed_shap_values=Get_Inspected_SHAP_df(Proposed_totalPoeple_info_dict,logits=[ASDTD2Logit_map['TD']]) [ASDTD2Logit_map['TD']]
+    
+#     # baseline_featset_lst=baseline_expstr[re.search(" >> ",baseline_expstr).end():re.search("::",baseline_expstr).start()].split("+")
+#     proposed_featset_lst=proposed_expstr[re.search(" >> ",proposed_expstr).end():re.search("::",proposed_expstr).start()].split("+")
+#     # df_FeaSet_avg_Comparison_baseline=Calculate_sum_of_SHAP_vals(df_Baseline_shap_values,FeatSel_module=FeatSel,FeatureSet_lst=baseline_featset_lst)
+ 
+#     df_FeaSet_avg_Comparison_proposed=Calculate_sum_of_SHAP_vals(df_Proposed_shap_values,FeatSel_module=module,FeatureSet_lst=FeatureSet_lst)
+#     shap.summary_plot(df_FeaSet_avg_Comparison_proposed.drop(index=['Average','abs_Average']).values,\
+#                       feature_names=df_FeaSet_avg_Comparison_proposed.columns,show=False, max_display=10)
+#     plt.title(experiment_title)
+#     plt.show()
+# SummaryPlot_Category(Proposed_totalPoeple_info_dict,proposed_expstr,FeatureSet_lst,experiment_title,module=FeatSel.CategoricalName2cols)
+    
+
+
+
+# shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,show=False, max_display=10)
+# plt.title(experiment_title)
+# plt.show()
+
+# shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_totalPoeple_info_dict,\
+#                                                           feature_columns=FeatSel.CategoricalName2cols['Trend[LOCDEP]_d'],\
+#                                                           PprNmeMp=None)
+# print(Get_Top_10_abs_SHAP_columns(shap_values[1],df_XTest).index)
+
+
+Baseline_info_dict=Organize_Needed_SHAP_info(Incorrect2Correct_indexes+Correct2Incorrect_indexes, Session_level_all, baseline_expstr)
+Proposed_info_dict=Organize_Needed_SHAP_info(Incorrect2Correct_indexes+Correct2Incorrect_indexes, Session_level_all, proposed_expstr)
 
 
 Baseline_shap_values=Get_Inspected_SHAP_df(Baseline_info_dict,logits=[ASDTD2Logit_map['TD']]) [ASDTD2Logit_map['TD']]

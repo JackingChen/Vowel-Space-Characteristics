@@ -12,6 +12,24 @@ import numpy as np
 import re
 from addict import Dict
 import articulation.HYPERPARAM.FeatureSelect as FeatSel
+import articulation.HYPERPARAM.PaperNameMapping as PprNmeMp
+
+from itertools import combinations, product
+
+def Swap2PaperName(feature_rawname,PprNmeMp):
+    if feature_rawname in PprNmeMp.Paper_name_map.keys():
+        featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
+        feature_keys=featurename_paper
+    else: 
+        feature_keys=feature_rawname
+    return feature_keys
+def Inverse_Swap2PaperName(feature_rawname,PprNmeMp):
+    if feature_rawname in PprNmeMp.Inverse_Paper_name_map.keys():
+        featurename_paper=PprNmeMp.Inverse_Paper_name_map[feature_rawname]
+        feature_keys=featurename_paper
+    else: 
+        feature_keys=feature_rawname
+    return feature_keys
 # =============================================================================
 '''
 
@@ -20,6 +38,10 @@ import articulation.HYPERPARAM.FeatureSelect as FeatSel
 
 '''
 
+SecondLvl_strmapp={
+    # 'Vowel Dispersion+formant dependency':'vowel space characteristics(VSC)'
+    'Vowel Dispersion+formant dependency':'VSC'
+    }
 # =============================================================================
 # 
 '''
@@ -27,20 +49,6 @@ import articulation.HYPERPARAM.FeatureSelect as FeatSel
     Check results from Classification fusion results
 
 '''
-['df_feature_lowMinimal_CSS',
-  'df_feature_moderatehigh_CSS',
-  'df_feature_Notautism_TC',
-  'df_feature_ASD_TC',
-  'df_feature_NotautismandASD_TC',
-  'df_feature_Autism_TC',
-  'df_feature_Notautism_TS',
-  'df_feature_ASD_TS',
-  'df_feature_NotautismandASD_TS',
-  'df_feature_Autism_TS',
-  'df_feature_Notautism_TSC',
-  'df_feature_ASD_TSC',
-  'df_feature_NotautismandASD_TSC',
-  'df_feature_Autism_TSC']
 ['TD vs df_feature_lowMinimal_CSS', 'TD vs df_feature_moderatehigh_CSS',
        'TD vs df_feature_NotautismandASD_TC', 'TD vs df_feature_Autism_TC',
        'TD vs df_feature_NotautismandASD_TS', 'TD vs df_feature_Autism_TS',
@@ -62,7 +70,11 @@ With_staticphonation_analysis_cols_bool=False
     Reading from classification results
 
 '''
+''' Columns_comb3 = All possible feature combination + phonation_proximity_col :: Main analysis 1-2'''
+''' Columns_comb5 = All possible feature combination + Phonation_Syncrony_cols :: Main analysis 1-2'''
+''' Columns_comb5 = All possible feature combination + Phonation_Syncrony_cols :: Main analysis 2'''
 path="RESULTS/Fusion_result/Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation/"
+# path="RESULTS/Fusion_result/feat_comb3/"
 # =============================================================================
 manual_selected_settingXlsxFile= path+'Classification_distance_3_DKIndividual.xlsx'
 file = manual_selected_settingXlsxFile
@@ -71,6 +83,21 @@ file = manual_selected_settingXlsxFile
 
 nameOfFile=os.path.basename(file).replace(".xlsx","")
 df_result_file=pd.read_excel(file, index_col=0)
+
+def SomeFix():
+    reconstructed_idx_lst=[]
+    for idx in  df_result_file.index:
+        exp_str, feature=idx.split(" >> ")
+        OriginalName_feat=Inverse_Swap2PaperName(feature,PprNmeMp)
+        reconstructed_idx=exp_str+" >> "+OriginalName_feat
+        reconstructed_idx_lst.append(reconstructed_idx)
+    df_result_file.index=reconstructed_idx_lst
+    df_result_file.to_excel('RESULTS/Fusion_result/Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation/Classification_distance_3_DKIndividual.xlsx')
+    # df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Classification_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type))
+
+
+
+
 All_experiments=list(df_result_file.index)
 
 CriteriaSiftedResult=pd.DataFrame([])
@@ -86,8 +113,292 @@ for i,experiment in enumerate(All_experiments):
     if 'Phonation_columns' not in feature_module_str:
         CriteriaSifted_noPhonation_columns_dict.loc[exp_pair_str,feature_module_str]=df_result_file.loc[experiment].values[0]
 CriteriaSiftedResult.loc['Average']=CriteriaSiftedResult.mean(axis=0)
-Aaa=CriteriaSiftedResult.T.sort_values(by='Average',ascending=False)
+df_ManagedResult_classification=CriteriaSiftedResult.T.sort_values(by='Average',ascending=False)
+# ['TD vs df_feature_lowMinimal_CSS >> LOC_columns+DEP_columns+LOCDEP_Trend_K_cols+Phonation_Convergence_cols+Phonation_Syncrony_cols', 'ASDTD'],
+# ['TD vs df_feature_moderate_CSS >> LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
+# ['TD vs df_feature_high_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
 
+# ['TD vs df_feature_lowMinimal_CSS >> Phonation_Convergence_cols+Phonation_Syncrony_cols', 'ASDTD'],
+# ['TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols', 'ASDTD'],
+# ['TD vs df_feature_high_CSS >> Phonation_Proximity_cols', 'ASDTD'],
+
+exp_str='TD vs df_feature_lowMinimal_CSS >> LOC_columns+DEP_columns+LOCDEP_Trend_K_cols+Phonation_Convergence_cols+Phonation_Syncrony_cols'
+df_result_file.loc[exp_str]
+
+# Index_arrangement_lst=[
+#     'Vowel Dispersion',
+#     'LOC_columns_Intra',
+#     'formant dependency',
+#     'Proximity[phonation]',
+#     'Convergence[phonation]',
+#     'Syncrony[phonation]',
+#     'Trend[phonation]_d',
+#     'Trend[phonation]_k',
+#     'Proximity[LOCDEP]',
+#     'Convergence[LOCDEP]',
+#     'Syncrony[LOCDEP]',
+#     'Trend[LOCDEP]_d',
+#     'Trend[LOCDEP]_k',
+#     ]
+
+# df_ManagedResult_classification=df_ManagedResult_classification.loc[Index_arrangement_lst]
+
+
+
+
+# 疊加feature
+# 第一步：製造想要的combination
+CombFeatureCol_dict3=Dict()
+CombPhonationCol=Dict()
+# LOC_list = ['LOCDEP_Trend_D_cols', 'LOCDEP_Trend_K_cols', 'LOC_columns+DEP_columns']
+LOC_list = FeatSel.dynamic_feature_LOC+FeatSel.static_feautre_LOC
+# Phonation_list = ['Phonation_Trend_D_cols','Phonation_Trend_K_cols', 'Phonation_Syncrony_cols']
+Phonation_list = ['Phonation_Trend_D_cols', 'Phonation_Syncrony_cols']
+LOC_combs=[]
+for L in range(1, len(LOC_list)+1):
+    for subset in combinations(LOC_list, L):
+        tmp_lst=[]
+        for S in subset:
+            tmp_lst+=S.split('+')
+        LOC_combs.append(tmp_lst)
+Phonation_combs=[]
+for L in range(1, len(LOC_list)+1):
+    for subset in combinations(Phonation_list, L):
+        tmp_lst=[]
+        for S in subset:
+            tmp_lst+=S.split('+')
+        Phonation_combs.append(tmp_lst)
+
+for LOC_lst, Phonation_lst in list(product(Phonation_combs,LOC_combs)):
+    CombFeatureCol_dict3[   '+'.join(LOC_lst)+"&"+'+'.join(Phonation_lst)    ]=LOC_lst+Phonation_lst
+for Phonation_lst in Phonation_combs:
+    CombPhonationCol['+'.join(Phonation_lst)]=Phonation_lst
+
+CombFeatureCol=CombFeatureCol_dict3
+
+
+
+
+# 第二步：比對df_ManagedResult_regression裡面的index所含有的feautre和我們想要找的實驗組合，然後把他裝到新的dataframe
+Str2SortedLst=Dict()
+FeatCombStr_lst=list(df_ManagedResult_classification.index)
+df_layer1_fusion_results=pd.DataFrame([],columns=df_ManagedResult_classification.columns)
+df_layer1_fusion_results_originalName=pd.DataFrame([],columns=df_ManagedResult_classification.columns)
+df_layer1_fusion_results_FeatCombStr=pd.DataFrame([],columns=df_ManagedResult_classification.columns)
+df_phonation_fusion=pd.DataFrame([],columns=df_ManagedResult_classification.columns)
+df_phonation_originalName_fusion=pd.DataFrame([],columns=df_ManagedResult_classification.columns)
+for FSL in FeatCombStr_lst:
+    Str2SortedLst[FSL]=sorted(FSL.split("+"))
+    for keys, values in CombPhonationCol.items():     
+        PaperNamekeys='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+',keys)])
+        # if len (Str2SortedLst[FSL]) ==1 and len (values) ==1:
+            
+            # print(''.join(sorted(values)), ''.join(Str2SortedLst[FSL]))
+        if ''.join(Str2SortedLst[FSL]) == ''.join(sorted(values)):
+            print('columns match for ', FSL)
+            print(''.join(sorted(values)), ''.join(Str2SortedLst[FSL]))
+            for c in df_ManagedResult_classification.columns:
+                df_phonation_fusion.loc[PaperNamekeys,c]=df_ManagedResult_classification.loc[FSL,c]
+                df_phonation_fusion.loc[FSL,c]=df_ManagedResult_classification.loc[FSL,c]
+
+    
+    
+    for keys, values in CombFeatureCol.items():        
+        # PaperNamekeys='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+|\&',keys)])
+        PaperNamekeys='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+',keys)])
+        if ''.join(Str2SortedLst[FSL]) == ''.join(sorted(values)):
+            # print('columns match for ', FSL)
+            for c in df_ManagedResult_classification.columns:
+                df_layer1_fusion_results.loc[PaperNamekeys,c]=df_ManagedResult_classification.loc[FSL,c]
+                df_layer1_fusion_results_originalName.loc[keys,c]=df_ManagedResult_classification.loc[FSL,c]
+                df_layer1_fusion_results_FeatCombStr.loc[FSL,c]=df_ManagedResult_classification.loc[FSL,c]
+
+
+
+idx_order=[
+'Inter-VSC',
+'Syncrony[VSC]',
+'Mod[VSC]_{d}',
+'Mod[VSC]_{k}',
+'Mod[VSC]_{d}+Inter-VSC',
+'Mod[VSC]_{d}+Syncrony[VSC]',
+'Mod[VSC]_{d}+Mod[VSC]_{k}',
+'Mod[VSC]_{k}+Inter-VSC',
+'Mod[VSC]_{k}+Syncrony[VSC]',
+'Syncrony[VSC]+Inter-VSC',
+'Mod[VSC]_{d}+Mod[VSC]_{k}+Inter-VSC',
+'Mod[VSC]_{d}+Mod[VSC]_{k}+Syncrony[VSC]',
+'Mod[VSC]_{d}+Syncrony[VSC]+Inter-VSC',
+'Mod[VSC]_{k}+Syncrony[VSC]+Inter-VSC',
+'Mod[VSC]_{d}+Mod[VSC]_{k}+Syncrony[VSC]+Inter-VSC',
+]
+
+col_order=[
+'Convergence[P]',
+'Syncrony[P]',
+'Proximity[P]',
+'Convergence[P]+Syncrony[P]',
+'Proximity[P]+Convergence[P]',
+'Proximity[P]+Syncrony[P]',
+'Proximity[P]+Convergence[P]+Syncrony[P]',
+]
+
+Classification_fusion_result_dict=Dict()
+for c in df_ManagedResult_classification.columns:
+    Classification_fusion_result_dict[c]=pd.DataFrame()
+    for idx in sorted(df_layer1_fusion_results.index):
+        row,col=idx.split("&")
+        PaperNamerow='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+',row)])
+        PaperNamecol='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+',col)])
+        for keys,values in SecondLvl_strmapp.items():
+            PaperNamerow=PaperNamerow.replace(keys,values)
+        Classification_fusion_result_dict[c].loc[PaperNamerow,PaperNamecol]=df_layer1_fusion_results.loc[idx,c]
+        Classification_fusion_result_originalKey_dict[c].loc[PaperNamerow,PaperNamecol]=df_layer1_fusion_results.loc[idx,c]
+    
+    Classification_fusion_result_dict[c]=Classification_fusion_result_dict[c].loc[idx_order,col_order]
+
+#%%
+# 第一步：制定規則（什麼樣的feautre attribute包含哪些features）
+Feature_category_rule1=Dict()
+
+Feature_category_rule1['joint_feature_phonation']=['Phonation_Proximity_cols',
+                                                      'Phonation_Convergence_cols',
+                                                      'Phonation_Syncrony_cols']
+Feature_category_rule1['individual_feature_phonation']=['Phonation_Trend_D_cols',
+                                                        'Phonation_Trend_K_cols',]
+
+Feature_category_rule1['joint_feature_LOCDEP']=['LOCDEP_Proximity_cols',
+                                                  'LOCDEP_Convergence_cols',
+                                                  'LOCDEP_Syncrony_cols']
+
+Feature_category_rule1['individual_feature_LOCDEP']=[ 'LOCDEP_Trend_D_cols',
+                                                              'LOCDEP_Trend_K_cols',]
+
+Feature_category_rule2=Dict()
+Feature_category_rule2['vowel space characteristics(VSC)']=['LOC_columns','DEP_columns','LOC_columns_Intra']
+Feature_category_rule2['Conversation[P]']=FeatSel.dynamic_feature_phonation
+Feature_category_rule2['Conversation[VSC]']=FeatSel.dynamic_feature_LOC
+
+# 第二步：做出實驗字串到裡面含有什麼feature的mapping
+CombFeatureCol_dict=Dict()
+CombFeatureCol_dict['vowel space characteristics(VSC)+Phonation_Proximity_cols']=Feature_category_rule2['vowel space characteristics(VSC)']+['Phonation_Proximity_cols']
+CombFeatureCol_dict['Conversation[VSC]+Phonation_Proximity_cols']=Feature_category_rule2['Conversation[VSC]']+['Phonation_Proximity_cols']
+
+for feat in Feature_category_rule2['vowel space characteristics(VSC)']:
+    CombFeatureCol_dict[feat+'+Phonation_Proximity_cols']=[feat]+['Phonation_Proximity_cols']
+for feat in Feature_category_rule2['Conversation[VSC]']:
+    CombFeatureCol_dict[feat+'+Phonation_Proximity_cols']=[feat]+['Phonation_Proximity_cols']
+
+CombFeatureCol_dict2=Dict()
+CombFeatureCol_dict2['vowel space characteristics(VSC)+Phonation_Syncrony_cols']=Feature_category_rule2['vowel space characteristics(VSC)']+['Phonation_Syncrony_cols']
+CombFeatureCol_dict2['Conversation[VSC]+Phonation_Syncrony_cols']=Feature_category_rule2['Conversation[VSC]']+['Phonation_Syncrony_cols']
+
+for feat in Feature_category_rule2['vowel space characteristics(VSC)']:
+    CombFeatureCol_dict2[feat+'+Phonation_Syncrony_cols']=[feat]+['Phonation_Syncrony_cols']
+for feat in Feature_category_rule2['Conversation[VSC]']:
+    CombFeatureCol_dict2[feat+'+Phonation_Syncrony_cols']=[feat]+['Phonation_Syncrony_cols']
+
+if path=="RESULTS/Fusion_result/feat_comb3/":
+    CombFeatureCol=CombFeatureCol_dict
+elif path=="RESULTS/Fusion_result/feat_comb5/":
+    CombFeatureCol=CombFeatureCol_dict2
+else:
+    raise ValueError("Wrong variable: path", path)
+
+
+# 第一步：製造想要的combination
+CombFeatureCol_dict3=Dict()
+LOC_list = ['LOCDEP_Trend_D_cols', 'LOCDEP_Trend_K_cols', 'LOCDEP_Syncrony_cols','LOC_columns+DEP_columns']
+LOC_list = FeatSel.dynamic_feature_LOC+FeatSel.static_feature_LOC
+Phonation_list = ['Phonation_Convergence_cols', 'Phonation_Trend_K_cols']
+LOC_combs=[]
+for L in range(1, len(LOC_list)+1):
+    for subset in combinations(LOC_list, L):
+        tmp_lst=[]
+        for S in subset:
+            tmp_lst+=S.split('+')
+        LOC_combs.append(tmp_lst)
+Phonation_combs=[]
+for L in range(1, len(LOC_list)+1):
+    for subset in combinations(Phonation_list, L):
+        tmp_lst=[]
+        for S in subset:
+            tmp_lst+=S.split('+')
+        Phonation_combs.append(tmp_lst)
+for LOC_lst, Phonation_lst in list(product(LOC_combs,Phonation_combs)):
+    CombFeatureCol_dict3[   '+'.join(LOC_lst)+"&"+'+'.join(Phonation_lst)    ]=LOC_lst+Phonation_lst
+
+CombFeatureCol=CombFeatureCol_dict3
+
+# 第二步：比對df_ManagedResult_regression裡面的index所含有的feautre和我們想要找的實驗組合，然後把他裝到新的dataframe
+Str2SortedLst=Dict()
+FeatCombStr_lst=list(df_ManagedResult_regression.index)
+df_layer1_fusion_results=pd.DataFrame([],columns=df_ManagedResult_regression.columns)
+for FSL in FeatCombStr_lst:
+    Str2SortedLst[FSL]=sorted(FSL.split("+"))
+    for keys, values in CombFeatureCol.items():        
+        # PaperNamekeys='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+|\&',keys)])
+        PaperNamekeys='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+',keys)])
+        if ''.join(Str2SortedLst[FSL]) == ''.join(sorted(values)):
+            print('columns match for ', FSL)
+            for c in df_ManagedResult_regression.columns:
+                df_layer1_fusion_results.loc[PaperNamekeys,c]=df_ManagedResult_regression.loc[FSL,c]
+
+
+# 第三步：把他manage成LOC row跟phonation column的dataframe
+Regression_fusion_result_dict=Dict()
+for c in df_ManagedResult_regression.columns:
+    Regression_fusion_result_dict[c]=pd.DataFrame()
+    for idx in df_layer1_fusion_results.index:
+        row,col=idx.split("&")
+        PaperNamerow='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+',row)])
+        PaperNamecol='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+',col)])
+        for keys,values in SecondLvl_strmapp.items():
+            PaperNamerow=PaperNamerow.replace(keys,values)
+        Regression_fusion_result_dict[c].loc[PaperNamerow,PaperNamecol]=df_layer1_fusion_results.loc[idx,c]
+# 第三步：比對df_ManagedResult_classification裡面的index所含有的feautre和我們想要找的實驗組合，然後把他裝到新的dataframe
+Str2SortedLst=Dict()
+FeatCombStr_lst=list(df_ManagedResult_classification.index)
+df_layer1_fusion_results=pd.DataFrame([],columns=df_ManagedResult_classification.columns)
+for FSL in FeatCombStr_lst:
+    Str2SortedLst[FSL]=sorted(FSL.split("+"))
+    for keys, values in CombFeatureCol.items():        
+        PaperNamekeys='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+',keys)])
+        if ''.join(Str2SortedLst[FSL]) == ''.join(sorted(values)):
+            print('columns match for ', FSL)
+            for c in df_ManagedResult_classification.columns:
+                df_layer1_fusion_results.loc[PaperNamekeys,c]=df_ManagedResult_classification.loc[FSL,c]
+
+# Index_arrangement_fusion_lst=[ # articulation feature +Syncrony[P]
+#     'vowel space characteristics(VSC)+Syncrony[P]',
+#     'Conversation[VSC]+Syncrony[P]',
+#     'Inter-Vowel Dispersion+Syncrony[P]',
+#     'Intra-Vowel Dispersion+Syncrony[P]',
+#     'formant dependency+Syncrony[P]',
+#     'Proximity[VSC]+Syncrony[P]',
+#     'Convergence[VSC]+Syncrony[P]',
+#     'Syncrony[VSC]+Syncrony[P]',
+#     'Modulation[VSC]_{d}+Syncrony[P]',
+#     'Modulation[VSC]_{k}+Syncrony[P]',    
+# ]
+
+
+Index_arrangement_fusion_lst=[ # articulation feature +Syncrony[P]
+    'vowel space characteristics(VSC)+Proximity[P]',
+    'Conversation[VSC]+Proximity[P]',
+    'Inter-Vowel Dispersion+Proximity[P]',
+    'Intra-Vowel Dispersion+Proximity[P]',
+    'formant dependency+Proximity[P]',
+    'Proximity[VSC]+Proximity[P]',
+    'Convergence[VSC]+Proximity[P]',
+    'Syncrony[VSC]+Proximity[P]',
+    'Modulation[VSC]_{d}+Proximity[P]',
+    'Modulation[VSC]_{k}+Proximity[P]',
+    ]
+df_layer1_fusion_results.loc['formant dependency+Proximity[P]',]
+df_layer1_fusion_results=df_layer1_fusion_results.loc[Index_arrangement_fusion_lst]
+#%%
+# !!!!!
 '''
 
     Reading from regression results
@@ -107,26 +418,74 @@ columns_sel=['MSE','pear','spear']
 
 df_result_dicts=Dict()
 for cols in df_result_file.columns:
+    exp_str=cols.split(" ")[0]
     df_Managed_result=pd.DataFrame([],columns=columns_sel)
     for idx in df_result_file.index:
-        exp_str=cols.split(" ")[0]
+        
         # df_Managed_result.name=exp_str
         feature_module_str=idx.split("-")[-1]
         result_str=df_result_file.loc[idx,cols]
         result_lst= [float(r) for r in result_str.split("/")]
-        
         df_Managed_result.loc[feature_module_str]=result_lst
-        df_result_dicts[exp_str]=df_Managed_result
+    
+    df_result_dicts[exp_str]=df_Managed_result
+df_ManagedResult_regression=df_result_dicts['ADOS_C/SVR']
+
+
+# 第一步：製造想要的combination
+CombFeatureCol_dict3=Dict()
+LOC_list = ['LOCDEP_Trend_D_cols', 'LOCDEP_Trend_K_cols', 'LOCDEP_Syncrony_cols','LOC_columns+DEP_columns']
+Phonation_list = ['Phonation_Convergence_cols', 'Phonation_Trend_K_cols']
+LOC_combs=[]
+for L in range(1, len(LOC_list)+1):
+    for subset in combinations(LOC_list, L):
+        tmp_lst=[]
+        for S in subset:
+            tmp_lst+=S.split('+')
+        LOC_combs.append(tmp_lst)
+Phonation_combs=[]
+for L in range(1, len(LOC_list)+1):
+    for subset in combinations(Phonation_list, L):
+        tmp_lst=[]
+        for S in subset:
+            tmp_lst+=S.split('+')
+        Phonation_combs.append(tmp_lst)
+for LOC_lst, Phonation_lst in list(product(LOC_combs,Phonation_combs)):
+    CombFeatureCol_dict3[   '+'.join(LOC_lst)+"&"+'+'.join(Phonation_lst)    ]=LOC_lst+Phonation_lst
+
+CombFeatureCol=CombFeatureCol_dict3
+
+# 第二步：比對df_ManagedResult_regression裡面的index所含有的feautre和我們想要找的實驗組合，然後把他裝到新的dataframe
+Str2SortedLst=Dict()
+FeatCombStr_lst=list(df_ManagedResult_regression.index)
+df_layer1_fusion_results=pd.DataFrame([],columns=df_ManagedResult_regression.columns)
+for FSL in FeatCombStr_lst:
+    Str2SortedLst[FSL]=sorted(FSL.split("+"))
+    for keys, values in CombFeatureCol.items():        
+        # PaperNamekeys='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+|\&',keys)])
+        PaperNamekeys='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+',keys)])
+        if ''.join(Str2SortedLst[FSL]) == ''.join(sorted(values)):
+            print('columns match for ', FSL)
+            for c in df_ManagedResult_regression.columns:
+                df_layer1_fusion_results.loc[PaperNamekeys,c]=df_ManagedResult_regression.loc[FSL,c]
+
+
+# 第三步：把他manage成LOC row跟phonation column的dataframe
+Regression_fusion_result_dict=Dict()
+for c in df_ManagedResult_regression.columns:
+    Regression_fusion_result_dict[c]=pd.DataFrame()
+    for idx in df_layer1_fusion_results.index:
+        row,col=idx.split("&")
+        PaperNamerow='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+',row)])
+        PaperNamecol='+'.join([Swap2PaperName(k,PprNmeMp) for k in re.split('\+',col)])
+        for keys,values in SecondLvl_strmapp.items():
+            PaperNamerow=PaperNamerow.replace(keys,values)
+        Regression_fusion_result_dict[c].loc[PaperNamerow,PaperNamecol]=df_layer1_fusion_results.loc[idx,c]
 
 
 
-
-
-
-
-
-
-
+for keys in df_result_dicts.keys():
+    df_result_dicts[keys]=df_result_dicts[keys].loc[Index_arrangement_lst]
 
 
 
