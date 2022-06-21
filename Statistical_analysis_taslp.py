@@ -214,21 +214,35 @@ self_specify_cols=[
 # 'Trend[kendall_12]_d',
 # 'Trend[dcorr_12]_d'
 ]
-# self_specify_cols=FeatSel.Phonation_Syncrony_cols
+FeatureSet_lst=[
+ 'DEP_columns',
+ # 'Phonation_Trend_D_cols',
+  'LOCDEP_Trend_D_cols',
+  'LOCDEP_Syncrony_cols',
+  'LOC_columns',
+ # 'Phonation_Syncrony_cols',
+ # 'Phonation_Proximity_cols',
+ # 'Phonation_Trend_D_cols',
+ # 'Phonation_Trend_K_cols'
+ ]
+self_specify_cols=[]
+for FSL in FeatureSet_lst:
+    self_specify_cols+=getattr(FeatSel, FSL)
 
 # FeatureSet_lst=['Trend[Vowel_dispersion_inter__vowel_centralization]_d','Trend[Vowel_dispersion_inter__vowel_dispersion]_d',\
 #                 'Trend[Vowel_dispersion_intra]_d','Trend[formant_dependency]_d'] #Trend[LOCDEP]d + Proximity[phonation]
 # FeatureSet_lst=['Vowel_dispersion_inter__vowel_centralization','Vowel_dispersion_inter__vowel_dispersion',\
 #                 ]     #Inter vowel dispersion + Syncrony[phonation]
-FeatureSet_lst=['Trend[Vowel_dispersion_inter__vowel_centralization]_d','Trend[Vowel_dispersion_inter__vowel_dispersion]_d',\
-                'Trend[Vowel_dispersion_intra]_d','Trend[formant_dependency]_d',
-                'Trend[Vowel_dispersion_inter__vowel_centralization]_k','Trend[Vowel_dispersion_inter__vowel_dispersion]_k',\
-                'Trend[Vowel_dispersion_intra]_k','Trend[formant_dependency]_k',
-                'Vowel_dispersion_inter__vowel_centralization','Vowel_dispersion_inter__vowel_dispersion','formant_dependency'\
-                ]
-self_specify_cols=[]
-for col in FeatureSet_lst:
-    self_specify_cols+=FeatSel.CategoricalName2cols[col]
+# FeatureSet_lst=['Trend[Vowel_dispersion_inter__vowel_centralization]_d','Trend[Vowel_dispersion_inter__vowel_dispersion]_d',\
+#                 'Trend[Vowel_dispersion_intra]_d','Trend[formant_dependency]_d',
+#                 'Trend[Vowel_dispersion_inter__vowel_centralization]_k','Trend[Vowel_dispersion_inter__vowel_dispersion]_k',\
+#                 'Trend[Vowel_dispersion_intra]_k','Trend[formant_dependency]_k',
+#                 'Vowel_dispersion_inter__vowel_centralization','Vowel_dispersion_inter__vowel_dispersion','formant_dependency'\
+#                 ]
+
+# self_specify_cols=[]
+# for col in FeatureSet_lst:
+#     self_specify_cols+=FeatSel.CategoricalName2cols[col]
 
 if len(self_specify_cols) > 0:
     inspect_cols=self_specify_cols
@@ -425,8 +439,38 @@ Aaad_Correlation_dynamicPhonation=Eval_med.Calculate_correlation(label_correlati
                                                     feature_type='')
 for Label_choose in label_correlation_choose_lst:
     Aaad_Correlation_dynamicPhonation[Label_choose].index=[Swap2PaperName(feature_rawname,PprNmeMp) for feature_rawname in Aaad_Correlation_dynamicPhonation[Label_choose].index]    
+
+
+
+dynamic_cols_sel='' #This means do not specify any columns
+# Record_certainCol_dict={}
+df_Regression_T=pd.DataFrame()
+for label_corr_str in  label_correlation_choose_lst:
     
-aaa=ccc
+    Correlation_result_lst=[
+    Aaad_Correlation_staticLOCDEP[label_corr_str],
+    Aaad_Correlation_dynamicLOCDEP[label_corr_str],
+    Aaad_Correlation_dynamicPhonation[label_corr_str],
+    ]
+    InfoCorr_all=pd.concat(Correlation_result_lst,axis=0)
+    # for test_name, values in All_cmp_dict.items():
+    values=InfoCorr_all
+    # ASD_group_name=test_name.split(" vs ")[0].replace('df_feature_','')
+    # 先只看pearson的值
+    data_P=values.loc[values.index.str.startswith(dynamic_cols_sel),values.columns.str.startswith("pearson")]
+    for idx in data_P.index:
+        # for col in data_P.columns:
+        # Fill in direction: ASD < TD or ASD >= TD
+        df_Regression_T.loc[idx,data_P.columns[0]]=data_P.loc[idx,data_P.columns[0]]
+
+        if data_P.loc[idx,data_P.columns[1]]>0.05:
+            df_Regression_T.loc[idx,data_P.columns[1]]='n.s.'
+        else:
+            df_Regression_T.loc[idx,data_P.columns[1]]=data_P.loc[idx,data_P.columns[1]]
+# idx = df_Regression_T["pearson_p"].apply(lambda x: type(x) == np.float64)
+Significant_idxs = df_Regression_T["pearson_p"].apply(lambda x: type(x) != str)
+df_Regression_significant_T=df_Regression_T.loc[Significant_idxs]
+
 #%%
 # =============================================================================
 '''

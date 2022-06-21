@@ -89,14 +89,14 @@ def get_args():
                         help='')
     parser.add_argument('--Mergefeatures', default=False,
                         help='')
-    parser.add_argument('--knn_weights', default='distance',
+    parser.add_argument('--knn_weights', default='uniform',
                             help='path of the base directory')
-    parser.add_argument('--knn_neighbors', default=3,  type=int,
+    parser.add_argument('--knn_neighbors', default=2,  type=int,
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--FeatureComb_mode', default='Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation',
-                            help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
+    parser.add_argument('--FeatureComb_mode', default='baselineFeats',
+                            help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation, Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation_Add_UttLvl_feature]')
     args = parser.parse_args()
     return args
 
@@ -227,6 +227,7 @@ Top_ModuleColumn_mapping_dict['feat_comb7']=FeatSel.Columns_comb7.copy()
 Top_ModuleColumn_mapping_dict['feat_comb8']=FeatSel.Columns_comb8.copy()
 Top_ModuleColumn_mapping_dict['Comb_dynPhonation']=FeatSel.Comb_dynPhonation.copy()
 Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']=FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation.copy()
+Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation_Add_UttLvl_feature']=FeatSel.Comb_Utt_feature_staticLOCDEP_dynamicLOCDEP_dynamicphonation.copy()
 Top_ModuleColumn_mapping_dict['baselineFeats']=FeatSel.Baseline_comb.copy()
 
 featuresOfInterest=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
@@ -318,13 +319,15 @@ ErrorFeat_bookeep=Dict()
 Session_level_all=Dict()
 
 
-if args.FeatureComb_mode == 'Add_UttLvl_feature':
+if 'Add_UttLvl_feature' in args.FeatureComb_mode :
     Merge_feature_path='RegressionMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 else:
     Merge_feature_path='RegressionMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 
 # ChooseData_manual=['static_feautre_LOC','dynamic_feature_LOC','dynamic_feature_phonation']
-ChooseData_manual=['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']
+# ChooseData_manual=['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']
+# ChooseData_manual=['Utt_features+static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']
+ChooseData_manual=None
 
 # for feature_paths in [Merge_feature_path]:
 if ChooseData_manual==None:

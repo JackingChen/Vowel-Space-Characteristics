@@ -226,7 +226,17 @@ for knn_weights in ['uniform', 'distance']:
                     # Condition for : Columns_comb3 = All possible LOC feature combination + phonation_proximity_col
                     c = ('static_feautre_LOC', 'dynamic_feature_LOC', 'dynamic_feature_phonation')
                     e1, e2, e3=c
-                    Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
-                    Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],df_infos_dict[e3])
-                    OutPklpath=merge_out_path+'+'.join(c)+".pkl"
-                    pickle.dump(Merged_df_dict['Utt_feature'+'+'+'+'.join(c)],open(OutPklpath,"wb"))
+                    
+                    
+                    if args.ADDUtt_feature==True:
+                        Merged_df_dict['Utt_features'+'+'+'+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+                        Merged_df_dict['Utt_features'+'+'+'+'.join(c)]=Merge_dfs(Merged_df_dict['Utt_features'+'+'+'+'.join(c)],df_infos_dict[e3])
+                        Merged_df_dict['Utt_features'+'+'+'+'.join(c)]=Merge_dfs(Merged_df_dict['Utt_features'+'+'+'+'.join(c)],Utt_featuresCombinded_dict[role])
+                        OutPklpath=merge_out_path+'Utt_features+'+'+'.join(c)+".pkl"
+                        pickle.dump(Merged_df_dict['Utt_features'+'+'+'+'.join(c)],open(OutPklpath,"wb"))
+                    else:
+                        Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+                        Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],df_infos_dict[e3])
+                        Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],Utt_featuresCombinded_dict[role])
+                        OutPklpath=merge_out_path+'+'.join(c)+".pkl"
+                        pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))

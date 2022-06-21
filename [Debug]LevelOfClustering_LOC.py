@@ -1714,183 +1714,183 @@ Survey_nice_variable(Aaad_Correlation_toy)
 
 
 # Play code for KDE filtering
-# count=0
-# from sklearn.neighbors import KernelDensity
-# from sklearn import preprocessing
-# from matplotlib.offsetbox import AnchoredText
-# THRESHOLD=40
-# for THRESHOLD in [40]:
-#     scale_factor=100
-#     N=2
-#     RESULT_DICTIONARY=Dict()
-#     df_simulate=pd.DataFrame()
-#     # for people in list(Vowels_AUI.keys())[:3]:
-#     for people in Vowels_AUI.keys():
-#         # plt.figure(count)
-#         F12_raw_dict=Vowels_AUI[people]
-#         df_vowel = pd.DataFrame()
-#         for keys in F12_raw_dict.keys():
-#             if len(df_vowel) == 0:
-#                 df_vowel=F12_raw_dict[keys]
-#                 df_vowel['vowel']=keys
-#             else:
-#                 df_=F12_raw_dict[keys]
-#                 df_['vowel']=keys
-#                 df_vowel=df_vowel.append(df_)
+count=0
+from sklearn.neighbors import KernelDensity
+from sklearn import preprocessing
+from matplotlib.offsetbox import AnchoredText
+THRESHOLD=40
+for THRESHOLD in [40]:
+    scale_factor=100
+    N=2
+    RESULT_DICTIONARY=Dict()
+    df_simulate=pd.DataFrame()
+    # for people in list(Vowels_AUI.keys())[:3]:
+    for people in Vowels_AUI.keys():
+        # plt.figure(count)
+        F12_raw_dict=Vowels_AUI[people]
+        df_vowel = pd.DataFrame()
+        for keys in F12_raw_dict.keys():
+            if len(df_vowel) == 0:
+                df_vowel=F12_raw_dict[keys]
+                df_vowel['vowel']=keys
+            else:
+                df_=F12_raw_dict[keys]
+                df_['vowel']=keys
+                df_vowel=df_vowel.append(df_)
         
-#         len_a=len(np.where(df_vowel['vowel']=='A:')[0])
-#         len_u=len(np.where(df_vowel['vowel']=='u:')[0])
-#         len_i=len(np.where(df_vowel['vowel']=='i:')[0])
+        len_a=len(np.where(df_vowel['vowel']=='A:')[0])
+        len_u=len(np.where(df_vowel['vowel']=='u:')[0])
+        len_i=len(np.where(df_vowel['vowel']=='i:')[0])
         
         
-#         if len_a<=N or len_u<=N or len_i<=N:
-#             continue
+        if len_a<=N or len_u<=N or len_i<=N:
+            continue
         
-#         def KDE_Filtering(df_vowel,THRESHOLD=10,scale_factor=100):
-#             X=df_vowel[args.Inspect_features].values
-#             labels=df_vowel['vowel']
+        def KDE_Filtering(df_vowel,THRESHOLD=10,scale_factor=100):
+            X=df_vowel[args.Inspect_features].values
+            labels=df_vowel['vowel']
             
-#             df_vowel_calibrated=pd.DataFrame([])
-#             for phone in set(labels):
+            df_vowel_calibrated=pd.DataFrame([])
+            for phone in set(labels):
                 
-#                 df=df_vowel[df_vowel['vowel']==phone][args.Inspect_features]
-#                 data_array=df_vowel[df_vowel['vowel']==phone][args.Inspect_features].values
+                df=df_vowel[df_vowel['vowel']==phone][args.Inspect_features]
+                data_array=df_vowel[df_vowel['vowel']==phone][args.Inspect_features].values
     
-#                 x=data_array[:,0]
-#                 y=data_array[:,1]
-#                 xmin = x.min()
-#                 xmax = x.max()        
-#                 ymin = y.min()
-#                 ymax = y.max()
+                x=data_array[:,0]
+                y=data_array[:,1]
+                xmin = x.min()
+                xmax = x.max()        
+                ymin = y.min()
+                ymax = y.max()
                 
-#                 image_num=1j
-#                 X, Y = np.mgrid[xmin:xmax:image_num*scale_factor, ymin:ymax:image_num*scale_factor]
+                image_num=1j
+                X, Y = np.mgrid[xmin:xmax:image_num*scale_factor, ymin:ymax:image_num*scale_factor]
                 
-#                 positions = np.vstack([X.ravel(), Y.ravel()])
+                positions = np.vstack([X.ravel(), Y.ravel()])
                 
-#                 values = np.vstack([x, y])
+                values = np.vstack([x, y])
                 
-#                 kernel = stats.gaussian_kde(values)
+                kernel = stats.gaussian_kde(values)
                         
-#                 Z = np.reshape(kernel(positions).T, X.shape)
-#                 normalized_z = preprocessing.normalize(Z)
+                Z = np.reshape(kernel(positions).T, X.shape)
+                normalized_z = preprocessing.normalize(Z)
                 
-#                 df['x_to_scale'] = (100*(x - np.min(x))/np.ptp(x)).astype(int) 
-#                 df['y_to_scale'] = (100*(y - np.min(y))/np.ptp(y)).astype(int) 
+                df['x_to_scale'] = (100*(x - np.min(x))/np.ptp(x)).astype(int) 
+                df['y_to_scale'] = (100*(y - np.min(y))/np.ptp(y)).astype(int) 
                 
-#                 normalized_z=(100*(Z - np.min(Z.ravel()))/np.ptp(Z.ravel())).astype(int)
-#                 to_delete = zip(*np.where((normalized_z<THRESHOLD) == True))
+                normalized_z=(100*(Z - np.min(Z.ravel()))/np.ptp(Z.ravel())).astype(int)
+                to_delete = zip(*np.where((normalized_z<THRESHOLD) == True))
                 
-#                 # The indexes that are smaller than threshold
-#                 deletepoints_bool=df.apply(lambda x: (x['x_to_scale'], x['y_to_scale']), axis=1).isin(to_delete)
-#                 df_calibrated=df.loc[(deletepoints_bool==False).values]
-#                 df_deleted_after_calibrated=df.loc[(deletepoints_bool==True).values]
+                # The indexes that are smaller than threshold
+                deletepoints_bool=df.apply(lambda x: (x['x_to_scale'], x['y_to_scale']), axis=1).isin(to_delete)
+                df_calibrated=df.loc[(deletepoints_bool==False).values]
+                df_deleted_after_calibrated=df.loc[(deletepoints_bool==True).values]
                 
-#                 df_vowel_calibrated_tmp=df_calibrated.drop(columns=['x_to_scale','y_to_scale'])
-#                 df_vowel_calibrated_tmp['vowel']=phone
-#                 df_vowel_output=df_vowel_calibrated_tmp.copy()
-#                 df_vowel_calibrated=df_vowel_calibrated.append(df_vowel_output)
+                df_vowel_calibrated_tmp=df_calibrated.drop(columns=['x_to_scale','y_to_scale'])
+                df_vowel_calibrated_tmp['vowel']=phone
+                df_vowel_output=df_vowel_calibrated_tmp.copy()
+                df_vowel_calibrated=df_vowel_calibrated.append(df_vowel_output)
                 
                 
-#                 # Data prepare for plotting 
-#                 # import seaborn as sns
-#                 # df_calibrated_tocombine=df_calibrated.copy()
-#                 # df_calibrated_tocombine['cal']='calibrated'
-#                 # df_deleted_after_calibrated['cal']='deleted'
-#                 # df_calibratedcombined=df_calibrated_tocombine.append(df_deleted_after_calibrated)
+                # Data prepare for plotting 
+                # import seaborn as sns
+                # df_calibrated_tocombine=df_calibrated.copy()
+                # df_calibrated_tocombine['cal']='calibrated'
+                # df_deleted_after_calibrated['cal']='deleted'
+                # df_calibratedcombined=df_calibrated_tocombine.append(df_deleted_after_calibrated)
                 
-#                 # #Plotting code
-#                 # fig = plt.figure(figsize=(8,8))
-#                 # ax = fig.gca()
-#                 # ax.set_xlim(xmin, xmax)
-#                 # ax.set_ylim(ymin, ymax)
-#                 # # cfset = ax.contourf(X, Y, Z, cmap='coolwarm')
-#                 # # ax.imshow(Z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
-#                 # # cset = ax.contour(X, Y, Z, colors='k')
-#                 # cfset = ax.contourf(X, Y, normalized_z, cmap='coolwarm')
-#                 # ax.imshow(normalized_z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
-#                 # cset = ax.contour(X, Y, normalized_z, colors='k')
-#                 # ax.clabel(cset, inline=1, fontsize=10)
-#                 # ax.set_xlabel('X')
-#                 # ax.set_ylabel('Y')
-#                 # plt.title('2D Gaussian Kernel density estimation')
+                # #Plotting code
+                # fig = plt.figure(figsize=(8,8))
+                # ax = fig.gca()
+                # ax.set_xlim(xmin, xmax)
+                # ax.set_ylim(ymin, ymax)
+                # # cfset = ax.contourf(X, Y, Z, cmap='coolwarm')
+                # # ax.imshow(Z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
+                # # cset = ax.contour(X, Y, Z, colors='k')
+                # cfset = ax.contourf(X, Y, normalized_z, cmap='coolwarm')
+                # ax.imshow(normalized_z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
+                # cset = ax.contour(X, Y, normalized_z, colors='k')
+                # ax.clabel(cset, inline=1, fontsize=10)
+                # ax.set_xlabel('X')
+                # ax.set_ylabel('Y')
+                # plt.title('2D Gaussian Kernel density estimation')
                 
-#                 # sns.scatterplot(data=df_vowel[df_vowel['vowel']==phone], x="F1", y="F2")
-#                 # sns.scatterplot(data=df_calibratedcombined, x="F1", y="F2",hue='cal')
-#             return df_vowel_calibrated
+                # sns.scatterplot(data=df_vowel[df_vowel['vowel']==phone], x="F1", y="F2")
+                # sns.scatterplot(data=df_calibratedcombined, x="F1", y="F2",hue='cal')
+            return df_vowel_calibrated
         
         
-#         def Calculate_pointDistsTotal(df_vowel,dist_type='euclidean'):
-#             import scipy
-#             a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
-#             u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
-#             i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
+        def Calculate_pointDistsTotal(df_vowel,dist_type='euclidean'):
+            import scipy
+            a=df_vowel[df_vowel['vowel']=='A:'][args.Inspect_features]
+            u=df_vowel[df_vowel['vowel']=='u:'][args.Inspect_features]
+            i=df_vowel[df_vowel['vowel']=='i:'][args.Inspect_features]
             
             
             
-#             dist_au=scipy.spatial.distance.cdist(a,u,dist_type)
-#             dist_ai=scipy.spatial.distance.cdist(a,i,dist_type)
-#             dist_iu=scipy.spatial.distance.cdist(i,u,dist_type)
-#             mean_dist_au=np.mean(dist_au)
-#             mean_dist_ai=np.mean(dist_ai)
-#             mean_dist_iu=np.mean(dist_iu)
-#             dist_total=mean_dist_au*mean_dist_ai*mean_dist_iu
-#             # return dist_total, [mean_dist_au,mean_dist_ai,mean_dist_iu]
-#             return dist_total
+            dist_au=scipy.spatial.distance.cdist(a,u,dist_type)
+            dist_ai=scipy.spatial.distance.cdist(a,i,dist_type)
+            dist_iu=scipy.spatial.distance.cdist(i,u,dist_type)
+            mean_dist_au=np.mean(dist_au)
+            mean_dist_ai=np.mean(dist_ai)
+            mean_dist_iu=np.mean(dist_iu)
+            dist_total=mean_dist_au*mean_dist_ai*mean_dist_iu
+            # return dist_total, [mean_dist_au,mean_dist_ai,mean_dist_iu]
+            return dist_total
         
         
-#         df_vowel_calibrated=KDE_Filtering(df_vowel,THRESHOLD=THRESHOLD,scale_factor=100)
+        df_vowel_calibrated=KDE_Filtering(df_vowel,THRESHOLD=THRESHOLD,scale_factor=100)
+        
+        a=df_vowel_calibrated[df_vowel_calibrated['vowel']=='A:'][args.Inspect_features].mean()
+        u=df_vowel_calibrated[df_vowel_calibrated['vowel']=='u:'][args.Inspect_features].mean()
+        i=df_vowel_calibrated[df_vowel_calibrated['vowel']=='i:'][args.Inspect_features].mean()
     
-#         a=df_vowel_calibrated[df_vowel_calibrated['vowel']=='A:'][args.Inspect_features].mean()
-#         u=df_vowel_calibrated[df_vowel_calibrated['vowel']=='u:'][args.Inspect_features].mean()
-#         i=df_vowel_calibrated[df_vowel_calibrated['vowel']=='i:'][args.Inspect_features].mean()
-    
-#         numerator=u[1] + a[1] + i[0] + u[0]
-#         demominator=i[1] + a[0]
-#         RESULT_dict={}
-#         RESULT_dict['FCR2']=np.float(numerator/demominator)
-#         # RESULT_dict['FCR2_uF2']=np.float(u[1]/demominator)
-#         # RESULT_dict['FCR2_aF2']=np.float(a[1]/demominator)
-#         # RESULT_dict['FCR2_iF1']=np.float(i[0]/demominator)
-#         # RESULT_dict['FCR2_uF1']=np.float(u[0]/demominator)
+        numerator=u[1] + a[1] + i[0] + u[0]
+        demominator=i[1] + a[0]
+        RESULT_dict={}
+        RESULT_dict['FCR2']=np.float(numerator/demominator)
+        # RESULT_dict['FCR2_uF2']=np.float(u[1]/demominator)
+        # RESULT_dict['FCR2_aF2']=np.float(a[1]/demominator)
+        # RESULT_dict['FCR2_iF1']=np.float(i[0]/demominator)
+        # RESULT_dict['FCR2_uF1']=np.float(u[0]/demominator)
         
-#         #Get total between cluster distances
-#         # distance_types=['euclidean','minkowski','cityblock','seuclidean','sqeuclidean','cosine',\
-#         #      'correlation','jaccard','jensenshannon','chebyshev','canberra','braycurtis',\
-#         #      'mahalanobis','sokalsneath']
+        #Get total between cluster distances
+        # distance_types=['euclidean','minkowski','cityblock','seuclidean','sqeuclidean','cosine',\
+        #      'correlation','jaccard','jensenshannon','chebyshev','canberra','braycurtis',\
+        #      'mahalanobis','sokalsneath']
             
-#         # for dst_tpe in distance_types:
-#         #     # RESULT_dict[dst_tpe+" "+'pointDistsTotal'],\
-#         #     #     [RESULT_dict[dst_tpe+" "+'dist_au'],RESULT_dict[dst_tpe+" "+'dist_ai'],RESULT_dict[dst_tpe+" "+'dist_iu']]\
-#         #     #         =Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe)
-#         #     RESULT_dict[dst_tpe+" "+'pointDistsTotal']=Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe)
-#         #     RESULT_dict[dst_tpe+" "+'pointDistsTotal_norm']=Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe) / numerator
+        # for dst_tpe in distance_types:
+        #     # RESULT_dict[dst_tpe+" "+'pointDistsTotal'],\
+        #     #     [RESULT_dict[dst_tpe+" "+'dist_au'],RESULT_dict[dst_tpe+" "+'dist_ai'],RESULT_dict[dst_tpe+" "+'dist_iu']]\
+        #     #         =Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe)
+        #     RESULT_dict[dst_tpe+" "+'pointDistsTotal']=Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe)
+        #     RESULT_dict[dst_tpe+" "+'pointDistsTotal_norm']=Calculate_pointDistsTotal(df_vowel_calibrated,dist_type=dst_tpe) / numerator
         
         
-#         for label_choose in label_choose_lst:
-#             RESULT_dict[label_choose]=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
-#         RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=len_u,len_a,len_i
+        for label_choose in label_choose_lst:
+            RESULT_dict[label_choose]=Label.label_raw[label_choose][Label.label_raw['name']==people].values    
+        RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=len_u,len_a,len_i
         
-#         cluster_str=','.join(sorted(F12_raw_dict.keys()))
-#         RESULT_dict=Store_FeatVals(RESULT_dict,df_vowel_calibrated,args.Inspect_features, cluster_str=cluster_str)    
+        cluster_str=','.join(sorted(F12_raw_dict.keys()))
+        RESULT_dict=Store_FeatVals(RESULT_dict,df_vowel_calibrated,args.Inspect_features, cluster_str=cluster_str)    
         
-#         ''' End of feature calculation '''
-#         # =============================================================================
-#         df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
-#         df_RESULT_list.index=[people]
-#         df_simulate=df_simulate.append(df_RESULT_list)
-#         # sns.scatterplot(data=df_vowel_calibrated, x="F1", y="F2", hue="vowel")
+        ''' End of feature calculation '''
+        # =============================================================================
+        df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
+        df_RESULT_list.index=[people]
+        df_simulate=df_simulate.append(df_RESULT_list)
+        # sns.scatterplot(data=df_vowel_calibrated, x="F1", y="F2", hue="vowel")
         
-#         # at = AnchoredText(
-#         # "FCR2:{0}\nuF2{1}\naF2{2}\niF1{3}\nuF1{4}".format(\
-#         #     np.round(RESULT_dict['FCR2'],2),np.round(RESULT_dict['FCR2_uF2'],2),np.round(RESULT_dict['FCR2_aF2'],2),\
-#         #     np.round(RESULT_dict['FCR2_iF1'],2),np.round(RESULT_dict['FCR2_uF1'],2)),prop=dict(size=15), frameon=True, loc='lower right')
-#         # # at = AnchoredText(
-#         # # "angles\nai{0}\niu{1}\nua{2}".format(np.round(ang_ai,2),np.round(ang_iu,2),np.round(ang_ua,2)), prop=dict(size=15), frameon=True, loc='lower right')
-#         # plt.setp(at.patch, facecolor='white', alpha=0.5)
-#         # plt.gca().add_artist(at)
-#         # plt.show()
-#         count+=1
+        # at = AnchoredText(
+        # "FCR2:{0}\nuF2{1}\naF2{2}\niF1{3}\nuF1{4}".format(\
+        #     np.round(RESULT_dict['FCR2'],2),np.round(RESULT_dict['FCR2_uF2'],2),np.round(RESULT_dict['FCR2_aF2'],2),\
+        #     np.round(RESULT_dict['FCR2_iF1'],2),np.round(RESULT_dict['FCR2_uF1'],2)),prop=dict(size=15), frameon=True, loc='lower right')
+        # # at = AnchoredText(
+        # # "angles\nai{0}\niu{1}\nua{2}".format(np.round(ang_ai,2),np.round(ang_iu,2),np.round(ang_ua,2)), prop=dict(size=15), frameon=True, loc='lower right')
+        # plt.setp(at.patch, facecolor='white', alpha=0.5)
+        # plt.gca().add_artist(at)
+        # plt.show()
+        count+=1
         
 #     Eval_med=Evaluation_method()
     

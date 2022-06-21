@@ -51,6 +51,9 @@ from itertools import combinations
 import shap
 import articulation.HYPERPARAM.PaperNameMapping as PprNmeMp
 import seaborn as sns
+import shutil
+from collections import Counter
+import shutil
 def Assert_labelfeature(feat_name,lab_name):
     # =============================================================================
     #     To check if the label match with feature
@@ -71,6 +74,9 @@ def Swap2PaperName(feature_rawname,PprNmeMp):
     else: 
         feature_keys=feature_rawname
     return feature_keys
+def intersection(lst1, lst2):
+    lst3 = [value for value in lst1 if value in lst2]
+    return lst3
 def get_args():
     # we add compulsary arguments as named arguments for readability
     parser = argparse.ArgumentParser()
@@ -86,9 +92,9 @@ def get_args():
                         help='what kind of data you want to get')
     parser.add_argument('--suffix', default="",
                         help='what kind of data you want to get')
-    parser.add_argument('--FS_method_str', default=None,
-                        help='Feature selection')
-    parser.add_argument('--UseManualCtxFeat', default=True,
+    parser.add_argument('--logit_number', default=0,
+                        help='')
+    parser.add_argument('--Print_Analysis_grp_Manual_select', default=True,
                         help='')
     parser.add_argument('--Plot', default=False,
                         help='')
@@ -96,9 +102,9 @@ def get_args():
                         help='')
     parser.add_argument('--Mergefeatures', default=False,
                         help='')
-    parser.add_argument('--knn_weights', default='distance',
+    parser.add_argument('--knn_weights', default='uniform',
                             help='path of the base directory')
-    parser.add_argument('--knn_neighbors', default=3,  type=int,
+    parser.add_argument('--knn_neighbors', default=2,  type=int,
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
@@ -114,7 +120,7 @@ experiment=args.experiment
 knn_weights=args.knn_weights
 knn_neighbors=args.knn_neighbors
 Reorder_type=args.Reorder_type
-
+logit_number=args.logit_number
 
 
 # label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
@@ -127,6 +133,7 @@ label_choose=['ADOS_C']
 pearson_scorer = make_scorer(pearsonr, greater_is_better=False)
 
 df_formant_statistics_CtxPhone_collect_dict=Dict()
+#%%
 # =============================================================================
 
 class ADOSdataset():
@@ -231,8 +238,8 @@ featuresOfInterest=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
 # 2. 如果要手動設定實驗的話用這一區
 FeatureLabelMatch_manual=[
     # Rule: {layer1}-{layer2}
-    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+LOCDEP_Syncrony_cols+Phonation_Convergence_cols',
-    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Convergence_cols',
+    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols',
+    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Trend_K_cols',
     ]
 # =============================================================================
 
@@ -509,6 +516,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             SHAP_exam_lst=[i for i in test_index if i in SHAP_inspect_idxs]
             if len(SHAP_exam_lst) != 0:
                 explainer = shap.KernelExplainer(Gclf_manual.predict, X_train)
+                # explainer(X_test)
                 shap_values = explainer.shap_values(X_test)
                 Session_level_all[feature_lab_str]['SHAP_info']['_'.join(test_index.astype(str))].explainer_expected_value=explainer.expected_value
                 Session_level_all[feature_lab_str]['SHAP_info']['_'.join(test_index.astype(str))].shap_values=shap_values # shap_values= [logit, index, feature]
@@ -636,6 +644,7 @@ print()
 
 '''
 # =============================================================================
+# =============================================================================
 
 '''
 
@@ -643,13 +652,36 @@ print()
 
 '''
 
+if args.Print_Analysis_grp_Manual_select == True:
+    count=0
+    for exp_str in FeatureLabelMatch_manual:
+        for lab_str in label_choose:
+            exp_lst_str='::'.join([exp_str,lab_str])
+            if count < len(FeatureLabelMatch_manual)/2:
+                print("proposed_expstr='{}'".format(exp_lst_str))
+            else:
+                print("baseline_expstr='{}'".format(exp_lst_str))
+            count+=1
+'''
 
-proposed_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+LOCDEP_Syncrony_cols+Phonation_Convergence_cols::ADOS_C'
-baseline_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Convergence_cols::ADOS_C'
+    Part 1: Check incorrect to correct and correct to incorrect
+
+'''
+
+
+proposed_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols::ADOS_C'
+baseline_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Trend_K_cols::ADOS_C'
 experiment_title='Regression'
 
+
+proposed_featset_lst=proposed_expstr[re.search("-",proposed_expstr).end():re.search("::",proposed_expstr).start()].split("+")
+baseline_featset_lst=baseline_expstr[re.search("-",baseline_expstr).end():re.search("::",baseline_expstr).start()].split("+")
+Additional_featureSet=set(proposed_featset_lst) - set(baseline_featset_lst)
+print("For Task", experiment_title, " additional feature sets are", Additional_featureSet)
 if Session_level_all[proposed_expstr]['feattype'] == 'regression':
     SHAP_Inspect_logit=0
+logit_number=SHAP_Inspect_logit
+
 
 
 # =============================================================================
@@ -660,10 +692,12 @@ Y_pred_lst=[
 Session_level_all[proposed_expstr]['y_pred'],
 Session_level_all[baseline_expstr]['y_pred'],
 Session_level_all[proposed_expstr]['y_true'],
+Session_level_all[proposed_expstr]['y_true'].index,
 ]
 
-df_Y_pred=pd.DataFrame(Y_pred_lst,index=['proposed','baseline','y_true']).T
-
+df_Y_pred=pd.DataFrame(Y_pred_lst,index=['proposed','baseline','y_true','name']).T
+df_Y_pred_withName=pd.DataFrame(Y_pred_lst,index=['proposed','baseline','y_true','name']).T
+df_Index2Name_mapping=df_Y_pred_withName['name']
 
 # proposed的距離比baseline 的還要近
 Improved=(df_Y_pred['y_true'] - df_Y_pred['proposed']).abs() < (df_Y_pred['y_true'] - df_Y_pred['baseline']).abs()
@@ -699,8 +733,16 @@ for insp_instances_bool_str in ['LargerVal','LowerVal','ChangedPeople']:
 # 這邊秀出proposed和baseline的實際改變
 sns.scatterplot(data=df_Y_pred)
 
+quadrant1_indexes=intersection(Degraded_indexes, LargerVal_indexes)
+quadrant2_indexes=intersection(Improved_indexes, LargerVal_indexes)
+quadrant3_indexes=intersection(Degraded_indexes, LowerVal_indexes)
+quadrant4_indexes=intersection(Improved_indexes, LowerVal_indexes)
+
+
 
 assert len(Improved_indexes+Degraded_indexes) == len(LargerVal_indexes+LowerVal_indexes)
+
+
 '''
 
     Part 2: Check the SHAP values based on indexes in part 1
@@ -708,11 +750,7 @@ assert len(Improved_indexes+Degraded_indexes) == len(LargerVal_indexes+LowerVal_
     先紀錄，再執行分析和畫圖
 
 '''
-def column_index(df, query_cols):
-    # column_index(df, ['peach', 'banana', 'apple'])
-    cols = df.index.values
-    sidx = np.argsort(cols)
-    return sidx[np.searchsorted(cols,query_cols,sorter=sidx)]
+
 
 def Organize_Needed_SHAP_info(Selected_indexes, Session_level_all, proposed_expstr):
     Selected_info_dict=Dict()
@@ -733,30 +771,202 @@ def Organize_Needed_SHAP_info(Selected_indexes, Session_level_all, proposed_exps
                     # print("See if they match")
     return Selected_info_dict
 
-def Get_Inspected_SHAP_df(Info_dict,logits=[0,1]):
-    Top_shap_values_collect=Dict()
-    for logit_number in logits:
-        Top_shap_values_collect[logit_number]=pd.DataFrame()
-        
-        for Inspect_samp in Info_dict.keys():
-            shap_info=Info_dict[Inspect_samp]
-            df_shap_values=shap_info['shap_values'].loc[[logit_number]].T
-            df_shap_values.columns=[Inspect_samp]
-            Top_shap_values_collect[logit_number]=pd.concat([Top_shap_values_collect[logit_number],df_shap_values],axis=1)
 
-        Top_shap_values_collect[logit_number]['Average']=Top_shap_values_collect[logit_number].mean(axis=1)
-        Top_shap_values_collect[logit_number]['abs_Average']=Top_shap_values_collect[logit_number].abs().mean(axis=1)
-        Top_shap_values_collect[logit_number]=Top_shap_values_collect[logit_number].sort_values(by='Average')
-    return Top_shap_values_collect
 selected_idxs=LargerVal_indexes+LowerVal_indexes
 Baseline_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, baseline_expstr)
 Proposed_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, proposed_expstr)
 Baseline_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Session_level_all, baseline_expstr)
 Proposed_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Session_level_all, proposed_expstr)
 
+#%%
+# 個體分析： 會存到SAHP_figures/{quadrant}/的資料夾，再開Jupyter去看
+def Calculate_sum_of_SHAP_vals(df_values,FeatSel_module,FeatureSet_lst=['Phonation_Proximity_cols'],PprNmeMp=None):
+    df_FeaSet_avg_Comparison=pd.DataFrame([],columns=FeatureSet_lst)
+    for feat_set in FeatureSet_lst:
+        feature_cols = getattr(FeatSel_module, feat_set)
+        if PprNmeMp!=None:
+            feature_cols=[ Swap2PaperName(name,PprNmeMp) for name in feature_cols]
+        df_FeaSet_avg_Comparison[feat_set]=df_values.loc[feature_cols,:].sum()
+    return df_FeaSet_avg_Comparison
+
+SHAP_save_path_root="SAHP_figures/Regression/{quadrant}/"
+
+shutil.rmtree(SHAP_save_path_root.format(quadrant=""), ignore_errors = True)
+
+
+N=5
+import scipy
+# expected_value_lst=[]
+UsePaperName_bool=True
+Quadrant_FeatureImportance_dict={}
+Quadrant_feature_AddedTopFive_dict={}
+Quadrant_feature_AddedFeatureImportance_dict={}
+Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict={}
+# for Analysis_grp_str in ['Manual_inspect_idxs','quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
+for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
+    Analysis_grp_indexes=vars()[Analysis_grp_str]
+    df_shap_values_stacked=pd.DataFrame([])
+    Xtest_dict={}
+    expected_value_lst=[]
+    for Inspect_samp in Analysis_grp_indexes:
+        shap_info=Proposed_changed_info_dict[Inspect_samp]
+        
+        expected_value=shap_info['explainer_expected_value']
+        shap_values=shap_info['shap_values'].values
+        df_shap_values=shap_info['shap_values']
+        df_shap_values.index=[Inspect_samp]
+        
+        df_shap_values_T=df_shap_values.T
+        
+        Xtest=shap_info['XTest']
+        
+        Xtest_dict[Inspect_samp]=Xtest
+        df_shap_values_stacked=pd.concat([df_shap_values_stacked,df_shap_values],)
+        expected_value_lst.append(expected_value)
+        
+        
+        Xtest.index=[ Swap2PaperName(name,PprNmeMp) for name in Xtest.index]
+        # shap.force_plot(expected_value, df_shap_values.values, Xtest.T, matplotlib=True,show=False)
+        df_shap_avgvalues=Calculate_sum_of_SHAP_vals(df_shap_values.T,\
+                                                    FeatSel_module=FeatSel,\
+                                                    FeatureSet_lst=proposed_featset_lst,)
+        df_avg_Xtest=Calculate_sum_of_SHAP_vals(pd.DataFrame(Xtest.values, index=Xtest.index),\
+                                                FeatSel_module=FeatSel,\
+                                                FeatureSet_lst=proposed_featset_lst,\
+                                                PprNmeMp=PprNmeMp)
+        
+        p=shap.force_plot(expected_value, df_shap_avgvalues.values, df_avg_Xtest)
+        # p=shap.force_plot(expected_value, df_shap_values.values, Xtest.T)
+        
+        
+        
+        SHAP_save_path=SHAP_save_path_root.format(quadrant=Analysis_grp_str)
+        if not os.path.exists(SHAP_save_path):
+            os.makedirs(SHAP_save_path)
+            
+        shap.save_html(SHAP_save_path+'{sample}.html'.format(sample=Inspect_samp), p)
+        
+        Lists_of_addedFeatures=[getattr(FeatSel,k)  for k in Additional_featureSet]
+        Lists_of_addedFeatures_flatten=[e for ee in Lists_of_addedFeatures for e in ee]
+        df_FeatureImportance_AddedFeatures=df_shap_values[Lists_of_addedFeatures_flatten].T
+        df_FeatureImportance_AddedFeatures_absSorted=df_FeatureImportance_AddedFeatures.abs()[Inspect_samp].sort_values(ascending=False)
+        
+        
+        
+        df_addedFeatures_TopN=df_FeatureImportance_AddedFeatures.loc[df_FeatureImportance_AddedFeatures_absSorted.head(N).index]
+        # Quadrant_feature_AddedTopFive_dict[Inspect_samp]=df_addedFeatures_TopN
+        Quadrant_feature_AddedFeatureImportance_dict[Inspect_samp]=df_FeatureImportance_AddedFeatures[Inspect_samp].sort_values(ascending=False)
+    df_XTest_stacked=pd.DataFrame.from_dict(Xtest_dict).T
+    assert (df_XTest_stacked.index == df_shap_values_stacked.index).all()
+    
+    df_FeaSet_avg_Comparison_proposed=Calculate_sum_of_SHAP_vals(df_shap_values_stacked.T,\
+                                                                 FeatSel_module=FeatSel,\
+                                                                 FeatureSet_lst=proposed_featset_lst,)
+                                                                 # PprNmeMp=PprNmeMp)
+    df_FeaAvg=df_FeaSet_avg_Comparison_proposed.copy()
+    df_XTest_stacked_proposed=Calculate_sum_of_SHAP_vals(df_XTest_stacked.T,\
+                                                                 FeatSel_module=FeatSel,\
+                                                                 FeatureSet_lst=proposed_featset_lst,
+                                                                 PprNmeMp=PprNmeMp)
+    Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict[Analysis_grp_str]=df_FeaAvg.sort_values(list(df_FeaAvg.columns),\
+                                                                                                    ascending=[False]*len(df_FeaAvg.columns))
+    # clustering
+    df_tocluster=df_FeaAvg.copy()
+    # df_tocluster=df_shap_values_stacked.copy()
+    D = scipy.spatial.distance.pdist(df_tocluster.loc[:,:], 'sqeuclidean')
+    Z = scipy.cluster.hierarchy.complete(D)
+    plt.figure()
+    dn = scipy.cluster.hierarchy.dendrogram(Z)
+    plt.show()
+    clustOrder = scipy.cluster.hierarchy.leaves_list(Z)
+    df_tocluster.iloc[dn['leaves']].index
+    # df_tocluster.iloc[clustOrder].index
+    
+    # p=shap.force_plot(np.mean(expected_value_lst),df_shap_values_stacked.values, df_XTest_stacked)
+    p=shap.force_plot(np.mean(expected_value_lst),df_FeaSet_avg_Comparison_proposed.values, df_XTest_stacked_proposed)
+    # shap_explanation=shap.Explanation(df_shap_values_stacked)
+    
+    SHAP_save_path="SAHP_figures/Regression/Stacked/"
+    if not os.path.exists(SHAP_save_path):
+        os.makedirs(SHAP_save_path)
+    shap.save_html(SHAP_save_path+'{sample}.html'.format(sample=Analysis_grp_str), p)
+
+#%%
+# =============================================================================
+# 測試heatmap hierachycal clustering
+from scipy.spatial.distance import pdist
+def hclust_order(X, metric="sqeuclidean"):
+    """ A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar.
+    """
+    
+    # compute a hierarchical clustering
+    D = scipy.spatial.distance.pdist(X, metric)
+    cluster_matrix = scipy.cluster.hierarchy.complete(D)
+    
+    # merge clusters, rotating them to make the end points match as best we can
+    sets = [[i] for i in range(X.shape[0])]
+    for i in range(cluster_matrix.shape[0]):
+        s1 = sets[int(cluster_matrix[i,0])]
+        s2 = sets[int(cluster_matrix[i,1])]
+        
+        # compute distances between the end points of the lists
+        d_s1_s2 = pdist(np.vstack([X[s1[-1],:], X[s2[0],:]]), metric)[0]
+        d_s2_s1 = pdist(np.vstack([X[s1[0],:], X[s2[-1],:]]), metric)[0]
+        d_s1r_s2 = pdist(np.vstack([X[s1[0],:], X[s2[0],:]]), metric)[0]
+        d_s1_s2r = pdist(np.vstack([X[s1[-1],:], X[s2[-1],:]]), metric)[0]
+
+        # concatenete the lists in the way the minimizes the difference between
+        # the samples at the junction
+        best = min(d_s1_s2, d_s2_s1, d_s1r_s2, d_s1_s2r)
+        if best == d_s1_s2:
+            sets.append(s1 + s2)
+        elif best == d_s2_s1:
+            sets.append(s2 + s1)
+        elif best == d_s1r_s2:
+            sets.append(list(reversed(s1)) + s2)
+        else:
+            sets.append(s1 + list(reversed(s2)))
+    
+    return sets[-1]
+# =============================================================================
+import scipy
+import matplotlib.gridspec as gridspec
+xgb_shap=df_shap_values_stacked.values
+D = scipy.spatial.distance.pdist(xgb_shap, 'sqeuclidean')
+clustOrder = scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.complete(D))
+
+# col_inds = np.argsort(-np.abs(xgb_shap).mean(0))[:10]
+col_inds = np.argsort(-np.abs(xgb_shap).mean(0))[:10]
+xgb_shap_normed = xgb_shap.copy()
+for i in col_inds:
+    xgb_shap_normed[:,i] -= xgb_shap_normed[:,i].min()
+    xgb_shap_normed[:,i] /= xgb_shap_normed[:,i].max()
 
 
 
+gs = gridspec.GridSpec(2,1)
+fig = plt.figure(figsize=(15,7))
+
+ax = fig.add_subplot(gs[0])
+# ax.plot(xgb_shap[clustOrder,:].sum(1))
+ax.plot(xgb_shap[clustOrder,:].sum(1))
+ax.set_ylabel(r'Label One', size =16)
+ax.get_yaxis().set_label_coords(-0.1,0.5)
+ax.axis('off')
+
+
+ax = fig.add_subplot(gs[1])
+# ax.imshow(xgb_shap_normed[clustOrder,:][:,:].T, aspect=400, cmap=shap.plots.colors.red_blue_transparent)
+ax.imshow(xgb_shap_normed[clustOrder,:][:,col_inds].T, aspect=400, cmap=shap.plots.colors.red_blue_transparent)
+
+ax.set_yticks(np.arange(len(col_inds)))
+ax.set_yticklabels(df_XTest_stacked.columns[col_inds])
+ax.spines['right'].set_visible(False)
+ax.spines['left'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.spines['bottom'].set_visible(False)
+plt.show()
+#%%
 def Prepare_data_for_summaryPlot_regression(SHAPval_info_dict, feature_columns=None,PprNmeMp=None):
     keys_bag=[]
     XTest_dict={}
@@ -860,12 +1070,23 @@ plt.show()
 # plt.show()
 
 
-def Calculate_sum_of_SHAP_vals(df_values,FeatSel_module,FeatureSet_lst=['Phonation_Proximity_cols']):
-    df_FeaSet_avg_Comparison=pd.DataFrame([],columns=FeatureSet_lst)
-    for feat_set in FeatureSet_lst:
-        feature_cols = getattr(FeatSel_module, feat_set)
-        df_FeaSet_avg_Comparison[feat_set]=df_values.loc[feature_cols,:].sum()
-    return df_FeaSet_avg_Comparison
+
+
+def Get_Inspected_SHAP_df(Info_dict,logits=[0,1]):
+    Top_shap_values_collect=Dict()
+    for logit_number in logits:
+        Top_shap_values_collect[logit_number]=pd.DataFrame()
+        
+        for Inspect_samp in Info_dict.keys():
+            shap_info=Info_dict[Inspect_samp]
+            df_shap_values=shap_info['shap_values'].loc[[logit_number]].T
+            df_shap_values.columns=[Inspect_samp]
+            Top_shap_values_collect[logit_number]=pd.concat([Top_shap_values_collect[logit_number],df_shap_values],axis=1)
+
+        Top_shap_values_collect[logit_number]['Average']=Top_shap_values_collect[logit_number].mean(axis=1)
+        Top_shap_values_collect[logit_number]['abs_Average']=Top_shap_values_collect[logit_number].abs().mean(axis=1)
+        Top_shap_values_collect[logit_number]=Top_shap_values_collect[logit_number].sort_values(by='Average')
+    return Top_shap_values_collect
 
 
 Baseline_shap_values=Get_Inspected_SHAP_df(Baseline_totalPoeple_info_dict,logits=[SHAP_Inspect_logit])[SHAP_Inspect_logit]
@@ -890,6 +1111,7 @@ LowerVal_indexes=list(df_Y_pred[Degraded].index)
 '''
 # =============================================================================
 
+
 Proposed_changed_shap_values=Get_Inspected_SHAP_df(Proposed_changed_info_dict,logits=[SHAP_Inspect_logit]) [SHAP_Inspect_logit]
 Proposed_All_shap_values=Get_Inspected_SHAP_df(Proposed_totalPoeple_info_dict,logits=[SHAP_Inspect_logit]) [SHAP_Inspect_logit]
 
@@ -908,3 +1130,8 @@ for shap_valdfs in ['Proposed_changed_shap_values','Proposed_All_shap_values']:
         df_catagorical_featImportance.loc[key,shap_valdfs]=vars()[shap_valdfs].loc[FeatSel.CategoricalName2cols[key],'abs_Average'].round(2).sum()
 print(df_catagorical_featImportance)
 
+def column_index(df, query_cols):
+    # column_index(df, ['peach', 'banana', 'apple'])
+    cols = df.index.values
+    sidx = np.argsort(cols)
+    return sidx[np.searchsorted(cols,query_cols,sorter=sidx)]

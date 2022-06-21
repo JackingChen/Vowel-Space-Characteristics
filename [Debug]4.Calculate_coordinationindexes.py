@@ -54,7 +54,8 @@ from SlidingWindow import slidingwindow as SW
 import matplotlib.pyplot as plt
 import matplotlib
 from sklearn import neighbors
-
+import seaborn as sns
+from pylab import text
 # =============================================================================
 def get_args():
     # we add compulsary arguments as named arguments for readability
@@ -1028,12 +1029,12 @@ MinNumTimeSeries=knn_neighbors+1
 knn_weights="distance"
 
 if Reorder_type == 'DKIndividual':
-    df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
+    df_syncrony_measurement=fitcalculate_features_continuous_modulized(df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
                                                                     args.Inspect_roles, Label,\
                                                                     knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
                                                                     MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,Knn_aggressive_mode=True)
 
-    # Knn_aggressive_mode=False
+    
     # Inspect_roles=args.Inspect_roles
     # df_basic_additional_info=syncrony._Add_additional_info(df_person_segment_feature_DKIndividual_dict,Label,label_choose_lst,\
     #                                               Inspect_roles, MinNumTimeSeries=MinNumTimeSeries,PhoneOfInterest_str=PhoneOfInterest_str)
@@ -1097,10 +1098,10 @@ if Reorder_type == 'DKIndividual':
     #         functionDK['T']=T
     #         functionDK_people[people]=functionDK
     #     return functionDK_people
-    
+    # Knn_aggressive_mode=True
     # for col in features:
     #     Col_continuous_function_DK=syncrony.KNNFitting(df_person_segment_feature_DKIndividual_dict,\
-    #                 col, Inspect_roles,\
+    #                 col, args.Inspect_roles,\
     #                 knn_weights=knn_weights,knn_neighbors=knn_neighbors,MinNumTimeSeries=MinNumTimeSeries,\
     #                 st_col_str='IPU_st', ed_col_str='IPU_ed', aggressive_mode=Knn_aggressive_mode)
         
@@ -1108,7 +1109,7 @@ if Reorder_type == 'DKIndividual':
     #     if df_syncrony_measurement_col.isna().any().any():
     #         print("The columns with Nan is ", col)
             
-        
+    # aaa=ccc
         
     #     df_syncrony_measurement_merge=pd.concat([df_syncrony_measurement_merge,df_syncrony_measurement_col],axis=1)
     # df_syncrony_measurement=pd.concat([df_basic_additional_info,df_syncrony_measurement_merge],axis=1)
@@ -1219,8 +1220,6 @@ if Reorder_type == 'DKcriteria':
     Analysis area
 
 '''
-import seaborn as sns
-from pylab import text
 dfFormantStatisticpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
 feat='Syncrony_measure_of_variance_{Reorder_type}'.format(Reorder_type=Reorder_type)
 # =============================================================================
@@ -1800,6 +1799,10 @@ score_cols=[score_column]
     Plot function
 
 '''
+# Inputs: 
+# score_df
+# df_person_segment_feature_DKIndividual_dict
+# args.Inspect_roles
 # =============================================================================
 for people in list(score_df.sort_values(by=score_column).index):
     df_person_segment_feature_role_dict=df_person_segment_feature_DKIndividual_dict[people]
