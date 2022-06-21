@@ -708,9 +708,10 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
     for feature_lab_str, features in Session_level_all.items():
         feature_keys, label_keys= feature_lab_str.split("::")
         feature_rawname=feature_keys[re.search(' >> ',feature_keys).end():]
-        if feature_rawname in PprNmeMp.Paper_name_map.keys():
-            featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
-            feature_keys=feature_keys.replace(feature_rawname,featurename_paper)
+        # # change the feature name to paper name
+        # if feature_rawname in PprNmeMp.Paper_name_map.keys():
+        #     featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
+        #     feature_keys=feature_keys.replace(feature_rawname,featurename_paper)
         
         
         Labels = Session_level_all.X[feature_keys]

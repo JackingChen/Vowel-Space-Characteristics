@@ -86,7 +86,8 @@ Top_TManagedResult=Dict()
 Top_TManagedResult_bag=Dict()
 Top_CriteriaSiftedResult=Dict()
 Top_CriteriaSifted_noPhonation_columns_Result=Dict()
-path="RESULTS/Fusion_result/feat_comb7/"
+Top_CriteriaSifted_noPhonation_columns_Result_T=Dict()
+path="RESULTS/Fusion_result/Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation/"
 # path="RESULTS/Fusion_test/"
 xlsxfiles = [path+f for f in os.listdir(path) if re.search(r'Classification_(uniform|distance)_([0-9])_(DKIndividual|DKcriteria).xlsx', f)]
 for file in xlsxfiles:
@@ -121,6 +122,7 @@ for file in xlsxfiles:
         if 'Phonation_columns' not in feature_module_str:
             CriteriaSifted_noPhonation_columns_dict.loc[exp_pair_str,feature_module_str]=df_result_file.loc[experiment].values[0]
     Top_CriteriaSifted_noPhonation_columns_Result[nameOfFile]=CriteriaSifted_noPhonation_columns_dict
+    Top_CriteriaSifted_noPhonation_columns_Result_T[nameOfFile]=CriteriaSifted_noPhonation_columns_dict.T
     Top_CriteriaSiftedResult[nameOfFile]=CriteriaSiftedResult
             
     

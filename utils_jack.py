@@ -427,13 +427,13 @@ Get additional information
 import pandas as pd
 # =============================================================================
 
-Labelfile='/homes/ssd1/jackchen/gop_prediction/ADOS_label20220219.xlsx'
+Labelfile='/home/jack/Desktop/ADOS_label_workspace/ADOS_label20220219.xlsx'
 df_labels=pd.read_excel(Labelfile)
 Info_name_sex=df_labels[['name','sex','age_year']].copy()
 Info_name_sex.loc[Info_name_sex['sex']==1,'sex']='male'
 Info_name_sex.loc[Info_name_sex['sex']==2,'sex']='female'
 
-Labelfile='/homes/ssd1/jackchen/DisVoice/data/ADOS_TD_Label20220219.xlsx'
+Labelfile='/media/jack/workspace/DisVoice/data/ADOS_TD_Label20220219.xlsx'
 df_labels_TD=pd.read_excel(Labelfile)
 Info_name_sex_TD=df_labels_TD[['name','sex','age_year']].copy()
 # Info_name_sex_TD['sex'][Info_name_sex_TD['sex']==1]='male'

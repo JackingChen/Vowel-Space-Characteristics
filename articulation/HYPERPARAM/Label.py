@@ -14,13 +14,13 @@ import numpy as np
 
 
 '''
-base_dir='/homes/ssd1/jackchen/gop_prediction/'
+base_dir='/home/jack/Desktop/ADOS_label_workspace/'
 # =============================================================================
 label_Bin_all={}
 
 label_path=base_dir+'ADOS_label20220525.xlsx'
 label_raw=pd.read_excel(label_path)
-Labelfile_TD='/homes/ssd1/jackchen/DisVoice/data/ADOS_TD_Label20220219.xlsx'
+Labelfile_TD='/media/jack/workspace/DisVoice/data/ADOS_TD_Label20220219.xlsx'
 df_labels_TD=pd.read_excel(Labelfile_TD)
 label_raw=label_raw.append(df_labels_TD)
 #double check label and feature
