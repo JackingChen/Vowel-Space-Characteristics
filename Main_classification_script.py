@@ -92,13 +92,13 @@ def get_args():
                         help='[recall_macro,accuracy]')
     parser.add_argument('--Mergefeatures', default=False,
                         help='')
-    parser.add_argument('--knn_weights', default='distance',
-                            help='path of the base directory')
-    parser.add_argument('--knn_neighbors', default=3,  type=int,
+    parser.add_argument('--knn_weights', default='uniform',
+                            help='uniform distance')
+    parser.add_argument('--knn_neighbors', default=2,  type=int,
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--FeatureComb_mode', default='Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation',
+    parser.add_argument('--FeatureComb_mode', default='baselineFeats',
                             help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
     # parser.add_argument('--Add_UttLvl_feature', default=False,
     #                         help='[DKIndividual, DKcriteria]')

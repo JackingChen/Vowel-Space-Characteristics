@@ -13,7 +13,7 @@ import re
 from addict import Dict
 import articulation.HYPERPARAM.FeatureSelect as FeatSel
 import articulation.HYPERPARAM.PaperNameMapping as PprNmeMp
-
+import argparse
 from itertools import combinations, product
 
 def Swap2PaperName(feature_rawname,PprNmeMp):
@@ -30,6 +30,26 @@ def Inverse_Swap2PaperName(feature_rawname,PprNmeMp):
     else: 
         feature_keys=feature_rawname
     return feature_keys
+
+def get_args():
+    # we add compulsary arguments as named arguments for readability
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--knn_weights', default='uniform',
+                                help='path of the base directory')
+    parser.add_argument('--knn_neighbors', default=2,  type=int,
+                            help='path of the base directory')
+    parser.add_argument('--Reorder_type', default='DKIndividual',
+                            help='[DKIndividual, DKcriteria]')
+    parser.add_argument('--FeatureComb_mode', default='baselineFeats',
+                            help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation_Add_UttLvl_feature]')
+    args = parser.parse_args()
+    return args
+
+args = get_args()
+knn_weights=args.knn_weights
+knn_neighbors=args.knn_neighbors
+Reorder_type=args.Reorder_type
+FeatureComb_mode=args.FeatureComb_mode
 # =============================================================================
 '''
 
@@ -73,10 +93,10 @@ With_staticphonation_analysis_cols_bool=False
 ''' Columns_comb3 = All possible feature combination + phonation_proximity_col :: Main analysis 1-2'''
 ''' Columns_comb5 = All possible feature combination + Phonation_Syncrony_cols :: Main analysis 1-2'''
 ''' Columns_comb5 = All possible feature combination + Phonation_Syncrony_cols :: Main analysis 2'''
-path="RESULTS/Fusion_result/Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation/"
-# path="RESULTS/Fusion_result/feat_comb3/"
+path="RESULTS/Fusion_result/{FeatureComb_mode}/".format(FeatureComb_mode=args.FeatureComb_mode)
+
 # =============================================================================
-manual_selected_settingXlsxFile= path+'Classification_distance_3_DKIndividual.xlsx'
+manual_selected_settingXlsxFile= path+'Classification_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 file = manual_selected_settingXlsxFile
 
 
@@ -84,7 +104,7 @@ file = manual_selected_settingXlsxFile
 nameOfFile=os.path.basename(file).replace(".xlsx","")
 df_result_file=pd.read_excel(file, index_col=0)
 
-def SomeFix():
+def SomeFix_classification():
     reconstructed_idx_lst=[]
     for idx in  df_result_file.index:
         exp_str, feature=idx.split(" >> ")
@@ -114,34 +134,26 @@ for i,experiment in enumerate(All_experiments):
         CriteriaSifted_noPhonation_columns_dict.loc[exp_pair_str,feature_module_str]=df_result_file.loc[experiment].values[0]
 CriteriaSiftedResult.loc['Average']=CriteriaSiftedResult.mean(axis=0)
 df_ManagedResult_classification=CriteriaSiftedResult.T.sort_values(by='Average',ascending=False)
-# ['TD vs df_feature_lowMinimal_CSS >> LOC_columns+DEP_columns+LOCDEP_Trend_K_cols+Phonation_Convergence_cols+Phonation_Syncrony_cols', 'ASDTD'],
-# ['TD vs df_feature_moderate_CSS >> LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
-# ['TD vs df_feature_high_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
 
-# ['TD vs df_feature_lowMinimal_CSS >> Phonation_Convergence_cols+Phonation_Syncrony_cols', 'ASDTD'],
-# ['TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols', 'ASDTD'],
-# ['TD vs df_feature_high_CSS >> Phonation_Proximity_cols', 'ASDTD'],
 
-exp_str='TD vs df_feature_lowMinimal_CSS >> LOC_columns+DEP_columns+LOCDEP_Trend_K_cols+Phonation_Convergence_cols+Phonation_Syncrony_cols'
-df_result_file.loc[exp_str]
+Index_arrangement_lst=[
+    'Proximity[P]',
+    'Convergence[P]',
+    'Syncrony[P]',
+    'Mod[P]_{d}',
+    'Mod[P]_{k}',
+    'Proximity[VSC]',
+    'Convergence[VSC]',
+    'Syncrony[VSC]',
+    'Mod[VSC]_{d}',
+    'Mod[VSC]_{k}',
+    'Inter-Vowel Dispersion',
+    'Intra-Vowel Dispersion',
+    'formant dependency',
 
-# Index_arrangement_lst=[
-#     'Vowel Dispersion',
-#     'LOC_columns_Intra',
-#     'formant dependency',
-#     'Proximity[phonation]',
-#     'Convergence[phonation]',
-#     'Syncrony[phonation]',
-#     'Trend[phonation]_d',
-#     'Trend[phonation]_k',
-#     'Proximity[LOCDEP]',
-#     'Convergence[LOCDEP]',
-#     'Syncrony[LOCDEP]',
-#     'Trend[LOCDEP]_d',
-#     'Trend[LOCDEP]_k',
-#     ]
+    ]
 
-# df_ManagedResult_classification=df_ManagedResult_classification.loc[Index_arrangement_lst]
+df_ManagedResult_classification=df_ManagedResult_classification.loc[Index_arrangement_lst]
 
 
 
@@ -404,7 +416,7 @@ df_layer1_fusion_results=df_layer1_fusion_results.loc[Index_arrangement_fusion_l
     Reading from regression results
 
 '''
-manual_selected_settingXlsxFile= path+'Regression_distance_3_DKIndividual.xlsx'
+manual_selected_settingXlsxFile= path+'Regression_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
 file = manual_selected_settingXlsxFile
 
 nameOfFile=os.path.basename(file).replace(".xlsx","")
@@ -423,13 +435,43 @@ for cols in df_result_file.columns:
     for idx in df_result_file.index:
         
         # df_Managed_result.name=exp_str
-        feature_module_str=idx.split("-")[-1]
+        feature_module_str=idx.split("-",1)[-1]
         result_str=df_result_file.loc[idx,cols]
         result_lst= [float(r) for r in result_str.split("/")]
         df_Managed_result.loc[feature_module_str]=result_lst
     
     df_result_dicts[exp_str]=df_Managed_result
 df_ManagedResult_regression=df_result_dicts['ADOS_C/SVR']
+Index_arrangement_lst=[
+    'Proximity[P]',
+    'Convergence[P]',
+    'Syncrony[P]',
+    'Mod[P]_{d}',
+    'Mod[P]_{k}',
+    'Proximity[VSC]',
+    'Convergence[VSC]',
+    'Syncrony[VSC]',
+    'Mod[VSC]_{d}',
+    'Mod[VSC]_{k}',
+    'Inter-Vowel Dispersion',
+    'Intra-Vowel Dispersion',
+    'formant dependency',
+
+    ]
+df_ManagedResult_regression=df_ManagedResult_regression.loc[Index_arrangement_lst]
+
+
+def SomeFix_regression():
+    reconstructed_idx_lst=[]
+    for idx in  df_result_file.index:
+        Lvl1Feat,feature=idx.split('-',1)
+        OriginalName_feat=Inverse_Swap2PaperName(feature,PprNmeMp)
+        reconstructed_idx=OriginalName_feat
+        reconstructed_idx_lst.append(reconstructed_idx)
+    # reconstructed_idx_lst=[e.replace('Vowel Dispersion','LOC_columns') for e in reconstructed_idx_lst]
+    df_result_file.index=reconstructed_idx_lst
+    df_result_file.to_excel('RESULTS/Fusion_result/Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation/Regression_uniform_2_DKIndividual.xlsx')
+    # df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Classification_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type))
 
 
 # 第一步：製造想要的combination
