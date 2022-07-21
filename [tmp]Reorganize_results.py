@@ -121,19 +121,22 @@ def SomeFix_classification():
 All_experiments=list(df_result_file.index)
 
 CriteriaSiftedResult=pd.DataFrame([])
-CriteriaSifted_noPhonation_columns_dict=pd.DataFrame([])
+# CriteriaSifted_noPhonation_columns_dict=pd.DataFrame([])
 df_ManagedResult_noPhonation_columns=pd.DataFrame()
+Inspect_metric='f1'
 data_dict={}
-for i,experiment in enumerate(All_experiments):
-    exp_pair_str, feature_module_str=experiment.split(" >> ")
-    CriteriaSiftedResult.loc[exp_pair_str,feature_module_str]=df_result_file.loc[experiment].values[0]
-    
-    # Not including phonation columns
-    # if 'Phonation_columns' not in feature_module_str and 'Phonation_columns' not in load_data_type:
-    if 'Phonation_columns' not in feature_module_str:
-        CriteriaSifted_noPhonation_columns_dict.loc[exp_pair_str,feature_module_str]=df_result_file.loc[experiment].values[0]
-CriteriaSiftedResult.loc['Average']=CriteriaSiftedResult.mean(axis=0)
-df_ManagedResult_classification=CriteriaSiftedResult.T.sort_values(by='Average',ascending=False)
+for Inspect_metric in df_result_file.columns:
+    for i,experiment in enumerate(All_experiments):
+        exp_pair_str, feature_module_str=experiment.split(" >> ")
+        CriteriaSiftedResult.loc['{0}:{1}'.format(exp_pair_str,Inspect_metric),  feature_module_str]=df_result_file.loc[experiment,Inspect_metric]
+        
+        # Not including phonation columns
+        # if 'Phonation_columns' not in feature_module_str and 'Phonation_columns' not in load_data_type:
+        # if 'Phonation_columns' not in feature_module_str:
+        #     CriteriaSifted_noPhonation_columns_dict.loc[exp_pair_str,feature_module_str]=df_result_file.loc[experiment,Inspect_metric]
+    # CriteriaSiftedResult.loc['Average']=CriteriaSiftedResult.mean(axis=0)
+    # df_ManagedResult_classification=CriteriaSiftedResult.T.sort_values(by='Average',ascending=False)
+df_ManagedResult_classification=CriteriaSiftedResult.T
 
 
 Index_arrangement_lst=[
@@ -423,9 +426,9 @@ nameOfFile=os.path.basename(file).replace(".xlsx","")
 df_result_file=pd.read_excel(file, index_col=0)
 
 Regress_column_name='ADOS_C/SVR (MSE/pear/spear)'
-df_result_file[Regress_column_name]
+# df_result_file[Regress_column_name]
 
-columns_sel=['MSE','pear','spear']
+columns_sel=['MSE','pear','spear','CCC']
 
 
 df_result_dicts=Dict()

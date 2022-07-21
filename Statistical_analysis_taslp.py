@@ -34,9 +34,9 @@ def get_args():
                             help=['ADOS_C','dia_num'])
     parser.add_argument('--dataset_role', default='TD_DOCKID',
                             help='[TD_DOCKID_emotion | ASD_DOCKID_emotion | kid_TD | kid88]')
-    parser.add_argument('--knn_weights', default='distance',
+    parser.add_argument('--knn_weights', default='uniform',
                             help='path of the base directory')
-    parser.add_argument('--knn_neighbors', default=3,  type=int,
+    parser.add_argument('--knn_neighbors', default=2,  type=int,
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
@@ -64,7 +64,13 @@ import seaborn as sns
 from pylab import text
 # dfFormantStatisticpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
 dfFormantStatisticpath=os.getcwd()
-
+def Swap2PaperName(feature_rawname,PprNmeMp):
+    if feature_rawname in PprNmeMp.Paper_name_map.keys():
+        featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
+        feature_keys=featurename_paper
+    else: 
+        feature_keys=feature_rawname
+    return feature_keys
 # feat='Syncrony_measure_of_variance_phonation_DKIndividual' #Dynamic features phonation
 # feat='Syncrony_measure_of_variance_DKIndividual' #Dynamic features LOCDEP
 feat='Formant_AUI_tVSAFCRFvals'
@@ -87,9 +93,23 @@ df_feature_TD=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))
 
 
 # ADD label
+
+# TMP change back soon
+df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='C+S')
 df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_CSS')
 df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_C')
 df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_S')
+df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='VCI')
+df_feature_TD=Add_label(df_feature_TD,Label,label_choose='VCI')
+df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='VIQ')
+df_feature_TD=Add_label(df_feature_TD,Label,label_choose='VIQ')
+df_feature_TD=Add_label(df_feature_TD,Label,label_choose='ADOS_SC')
+
+# for l in Label.label_raw.columns:
+#     if Label.label_raw[l].dtype != 'O':
+#         df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose=l)
+#         df_feature_TD=Add_label(df_feature_TD,Label,label_choose=l)
+
 # create different ASD cohort
 filter_Minimal_TCSS=df_feature_ASD['ADOS_cate_CSS']==0
 filter_low_TCSS=df_feature_ASD['ADOS_cate_CSS']==1
@@ -122,6 +142,68 @@ df_feature_NotautismandASD_TS=df_feature_ASD[filter_Notautism_TS | filter_ASD_TS
 df_feature_Autism_TS=df_feature_ASD[filter_Autism_TS]
 
 
+# Identify quadrant1 and quadrant3 samples
+TaskQuadrant_dict=Dict()
+TaskQuadrant_dict['moderateTask']['quadrant1']=['2017_01_20_01_243_1','2017_02_08_02_023_1']
+TaskQuadrant_dict['moderateTask']['quadrant3']=['2017_07_20_TD_emotion','2021_01_23_5841_1(醫生鏡頭對焦到前面了)_emotion',\
+                                                '2021_03_15_5874_1(醫生鏡頭模糊，醫生聲音雜訊大)_emotion']
+TaskQuadrant_dict['highTask']['quadrant1']=[]
+TaskQuadrant_dict['highTask']['quadrant3']=['2017_08_29_TD_emotion','2018_05_19_5593_1_emotion',\
+                                                '2020_10_17_5633_1_emotion','2021_01_29_5843_1(醫生鏡頭模糊)_emotion']
+
+    
+# prepare for moderate Q1 Q3 instances
+Moderate_Q1Q3_idxs=TaskQuadrant_dict['moderateTask']['quadrant1']+TaskQuadrant_dict['moderateTask']['quadrant3']
+df_ModerateTask=pd.concat([df_feature_moderate_CSS,df_feature_TD],axis=0)
+df_ModerateTask_Q1Q3=df_ModerateTask.loc[Moderate_Q1Q3_idxs].copy()
+df_ModerateTask_exclude_Q1Q3=df_ModerateTask.drop(Moderate_Q1Q3_idxs).copy()
+df_ModerateTask_Q1Q3['Selected']='Mispredicted samples'
+df_ModerateTask_exclude_Q1Q3['Selected']='Other samples'
+df_ModerateTask_postprocess=pd.concat([df_ModerateTask_Q1Q3,df_ModerateTask_exclude_Q1Q3],axis=0)
+df_ModerateTask_postprocess_PprNme=df_ModerateTask_postprocess.copy()
+df_ModerateTask_postprocess_PprNme.columns=[Swap2PaperName(col,PprNmeMp).replace("[$","[").replace("$]","]") for col in df_ModerateTask_postprocess.columns]
+
+
+High_Q1Q3_idxs=TaskQuadrant_dict['highTask']['quadrant1']+TaskQuadrant_dict['highTask']['quadrant3']
+df_HighTask=pd.concat([df_feature_high_CSS,df_feature_TD],axis=0)
+df_HighTask_Q1Q3=df_HighTask.loc[High_Q1Q3_idxs].copy()
+df_HighTask_exclude_Q1Q3=df_HighTask.drop(High_Q1Q3_idxs).copy()
+df_HighTask_Q1Q3['Selected']=1
+df_HighTask_exclude_Q1Q3['Selected']=0
+df_HighTask_postprocess=pd.concat([df_HighTask_Q1Q3,df_HighTask_exclude_Q1Q3],axis=0)
+
+# Plot moderate special samples
+x_str='Trend[meanF0_var(A:,i:,u:)]_d'
+y_str='between_variance_norm(A:,i:,u:)'
+
+x_PprNme_str=Swap2PaperName(x_str,PprNmeMp).replace("[$","[").replace("$]","]")
+y_PprNme_str=Swap2PaperName(y_str,PprNmeMp).replace("[$","[").replace("$]","]")
+
+
+
+# g = sns.scatterplot(data=df_ModerateTask_postprocess,x=x_PprNme_str,y=y_PprNme_str,hue='Selected')
+g = sns.scatterplot(data=df_ModerateTask_postprocess_PprNme,x=x_PprNme_str,y=y_PprNme_str,hue='Selected')
+# for idx in df_ModerateTask_Q1Q3.index:
+#     plt.text(df_ModerateTask_Q1Q3.loc[idx,x_str],df_ModerateTask_Q1Q3.loc[idx,y_str],idx, fontdict=dict(color='black', alpha=0.5, size=16))
+g.axhline(0.027,color='g')
+g.axvline(-0.1,color='g')
+
+# Plot moderate special samples
+# x_str='Trend[dcorr_12]_d'
+# y_str='Trend[pear_12]_d'
+# g = sns.scatterplot(data=df_HighTask_postprocess,x=x_str,y=y_str,hue='Selected')
+# for idx in df_HighTask_Q1Q3.index:
+#     plt.text(df_HighTask_Q1Q3.loc[idx,x_str],df_HighTask_Q1Q3.loc[idx,y_str],idx, fontdict=dict(color='black', alpha=0.5, size=16))
+# g.axhline(-0.4,color='g')
+# g.axvline(-0.4,color='g')
+
+
+
+
+#%%
+# =============================================================================
+# Scatter plot the distribution
+# =============================================================================
 
 # sellect_people_define=SellectP_define()
 # SevereASD_age_sex_match=sellect_people_define.SevereASD_age_sex_match_ver2
@@ -142,14 +224,18 @@ TopTop_data_lst=[]
 # TopTop_data_lst.append(['df_feature_low_CSS','df_feature_TD'])
 TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
 TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
+# TopTop_data_lst.append(['df_ModerateTask_Q1Q3','df_ModerateTask_exclude_Q1Q3'])
+# TopTop_data_lst.append(['df_HighTask_Q1Q3','df_HighTask_exclude_Q1Q3'])
 TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
 # TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderatehigh_CSS'])
 # TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderatehigh_CSS','df_feature_TD'])
-
-
-
+Inspect_label='VIQ'
+print(df_feature_lowMinimal_CSS[Inspect_label].mean(), '+-', df_feature_lowMinimal_CSS[Inspect_label].std())
+print(df_feature_moderate_CSS[Inspect_label].mean(), '+-', df_feature_moderate_CSS[Inspect_label].std())
+print(df_feature_high_CSS[Inspect_label].mean(), '+-', df_feature_high_CSS[Inspect_label].std())
+print(df_feature_TD[Inspect_label].mean(), '+-', df_feature_TD[Inspect_label].std())
 # TopTop_data_lst.append(['df_feature_low_CSS','df_feature_moderate_CSS'])
 # TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_high_CSS'])
 # TopTop_data_lst.append(['df_feature_low_CSS','df_feature_high_CSS'])
@@ -214,17 +300,19 @@ self_specify_cols=[
 # 'Trend[kendall_12]_d',
 # 'Trend[dcorr_12]_d'
 ]
+
+
 FeatureSet_lst=[
- 'DEP_columns',
- # 'Phonation_Trend_D_cols',
-  'LOCDEP_Trend_D_cols',
-  'LOCDEP_Syncrony_cols',
-  'LOC_columns',
- # 'Phonation_Syncrony_cols',
- # 'Phonation_Proximity_cols',
- # 'Phonation_Trend_D_cols',
- # 'Phonation_Trend_K_cols'
- ]
+    'DEP_columns',
+    # 'Phonation_Trend_D_cols',
+    'LOCDEP_Trend_D_cols',
+    'LOCDEP_Syncrony_cols',
+    'LOC_columns',
+    # 'Phonation_Syncrony_cols',
+  # 'Phonation_Proximity_cols',
+    # 'Phonation_Trend_D_cols',
+    # 'Phonation_Trend_K_cols'
+  ]
 self_specify_cols=[]
 for FSL in FeatureSet_lst:
     self_specify_cols+=getattr(FeatSel, FSL)
@@ -244,20 +332,17 @@ for FSL in FeatureSet_lst:
 # for col in FeatureSet_lst:
 #     self_specify_cols+=FeatSel.CategoricalName2cols[col]
 
+
+Parameters=df_feature_ASD.columns
 if len(self_specify_cols) > 0:
     inspect_cols=self_specify_cols
 else:
     inspect_cols=Parameters
 
 
-def Swap2PaperName(feature_rawname,PprNmeMp):
-    if feature_rawname in PprNmeMp.Paper_name_map.keys():
-        featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
-        feature_keys=featurename_paper
-    else: 
-        feature_keys=feature_rawname
-    return feature_keys
+
 plot=False
+SWAPname_bool=True
 Record_dict=Dict()
 All_cmp_dict=Dict()
 for Top_data_lst in TopTop_data_lst:
@@ -267,7 +352,10 @@ for Top_data_lst in TopTop_data_lst:
     import warnings
     warnings.filterwarnings("ignore")
     for columns in inspect_cols:
-        columns_papername=Swap2PaperName(columns,PprNmeMp)
+        if SWAPname_bool==True:
+            columns_papername=Swap2PaperName(columns,PprNmeMp)
+        else:
+            columns_papername=columns
         # =============================================================================
         if plot:
             fig, ax = plt.subplots()
@@ -400,11 +488,11 @@ feat='Formant_AUI_tVSAFCRFvals'
 # =============================================================================
 
 # df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='ASD_DOCKID')
-df_feature_staticLOCDEP=pickle.load(open('/homes/ssd1/jackchen/DisVoice/articulation/Pickles/Session_formants_people_vowel_feat/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl','rb'))
-df_feature_dynamicLOCDEP=pickle.load(open('/homes/ssd1/jackchen/DisVoice/articulation/Pickles/Session_formants_people_vowel_feat/Syncrony_measure_of_variance_DKIndividual_ASD_DOCKID.pkl','rb'))
+df_feature_staticLOCDEP=pickle.load(open('articulation/Pickles/Session_formants_people_vowel_feat/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl','rb'))
+df_feature_dynamicLOCDEP=pickle.load(open('articulation/Pickles/Session_formants_people_vowel_feat/Syncrony_measure_of_variance_DKIndividual_ASD_DOCKID.pkl','rb'))
 df_feature_dynamicLOCDEP=Add_label(df_feature_ASD,Label,label_choose='ADOS_C')
 df_feature_dynamicLOCDEP=Add_label(df_feature_ASD,Label,label_choose='ADOS_S')
-df_feature_dynamicPhonation=pickle.load(open('/homes/ssd1/jackchen/DisVoice/articulation/Pickles/Session_formants_people_vowel_feat/Syncrony_measure_of_variance_phonation_DKIndividual_ASD_DOCKID.pkl','rb'))
+df_feature_dynamicPhonation=pickle.load(open('articulation/Pickles/Session_formants_people_vowel_feat/Syncrony_measure_of_variance_phonation_DKIndividual_ASD_DOCKID.pkl','rb'))
 
 N=0
 Eval_med=Evaluation_method()
@@ -470,6 +558,29 @@ for label_corr_str in  label_correlation_choose_lst:
 # idx = df_Regression_T["pearson_p"].apply(lambda x: type(x) == np.float64)
 Significant_idxs = df_Regression_T["pearson_p"].apply(lambda x: type(x) != str)
 df_Regression_significant_T=df_Regression_T.loc[Significant_idxs]
+
+
+# =============================================================================
+'''
+
+    Inspect values
+
+'''
+# =============================================================================
+filter_col = [col for col in df_feature_ASD.columns if col.startswith('Syncrony')]
+
+Syncrony_corr=[ 
+ 'Syncrony[hotelling_lin_norm(A:,i:,u:)]',
+ 'Syncrony[within_covariance_norm(A:,i:,u:)]',
+ 'Syncrony[within_variance_norm(A:,i:,u:)]',
+ 'Syncrony[Between_Within_Det_ratio_norm(A:,i:,u:)]',
+ 'Syncrony[pear_12]',
+ 'Syncrony[spear_12]',
+ 'Syncrony[kendall_12]',
+ 'Syncrony[dcorr_12]',]
+
+
+df_feature_ASD_syncorny=df_feature_ASD[Syncrony_corr]
 
 #%%
 # =============================================================================

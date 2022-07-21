@@ -63,7 +63,22 @@ def FilterFile_withinManualName(files,Manual_choosen_feature):
 
 def Merge_dfs(df_1, df_2):
     return pd.merge(df_1,df_2,left_index=True, right_index=True)
-
+def CCC_numpy(y_true, y_pred):
+    '''Reference numpy implementation of Lin's Concordance correlation coefficient'''
+    
+    # covariance between y_true and y_pred
+    s_xy = np.cov([y_true, y_pred])[0,1]
+    # means
+    x_m = np.mean(y_true)
+    y_m = np.mean(y_pred)
+    # variances
+    s_x_sq = np.var(y_true)
+    s_y_sq = np.var(y_pred)
+    
+    # condordance correlation coefficient
+    ccc = (2.0*s_xy) / (s_x_sq + s_y_sq + (x_m-y_m)**2)
+    
+    return ccc
 def get_args():
     # we add compulsary arguments as named arguments for readability
     parser = argparse.ArgumentParser()
@@ -563,12 +578,14 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             MSE=sklearn.metrics.mean_squared_error(features.y.values.ravel(),CVpredict)
             pearson_result, pearson_p=pearsonr(features.y,CVpredict )
             spear_result, spearman_p=spearmanr(features.y,CVpredict )
+            CCC = CCC_numpy(features.y, CVpredict)
             print('Feature {0}, label {1} ,spear_result {2}'.format(feature_keys, label_keys,spear_result))
         elif features.feattype == 'classification':
             n,p=features.X.shape
             UAR=recall_score(features.y, CVpredict, average='macro')
             AUC=roc_auc_score(features.y, CVpredict)
             f1Score=f1_score(features.y, CVpredict, average='macro')
+            
             print('Feature {0}, label {1} ,UAR {2}'.format(feature_keys, label_keys,UAR))
         
         if args.Plot and p <2:
@@ -615,8 +632,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             df_best_result_spear.loc[feature_keys,label_keys]='{0}/{1}'.format(np.round(spear_result,3),np.round(spearman_p,6))
             df_best_result_spear.loc[feature_keys,'de-zero_num']=len(features.X)
             # df_best_cross_score.loc[feature_keys,label_keys]=Score.mean()
-            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (MSE/pear/spear)'.format(label_keys,clf_keys)]\
-                        ='{0}/{1}/{2}'.format(np.round(MSE,3),np.round(pearson_result,3),np.round(spear_result,3))
+            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (MSE/pear/spear/CCC)'.format(label_keys,clf_keys)]\
+                        ='{0}/{1}/{2}/{3}'.format(np.round(MSE,3),np.round(pearson_result,3),np.round(spear_result,3),np.round(CCC,3))
 
         elif features.feattype == 'classification':
             df_best_result_UAR.loc[feature_keys,label_keys]='{0}'.format(UAR)

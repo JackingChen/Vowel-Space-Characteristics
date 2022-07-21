@@ -54,6 +54,8 @@ import seaborn as sns
 import shutil
 from collections import Counter
 import shutil
+import scipy
+
 def Assert_labelfeature(feat_name,lab_name):
     # =============================================================================
     #     To check if the label match with feature
@@ -77,6 +79,48 @@ def Swap2PaperName(feature_rawname,PprNmeMp):
 def intersection(lst1, lst2):
     lst3 = [value for value in lst1 if value in lst2]
     return lst3
+def Return_ALigned_dfXtestndfShapValues(Feature_SHAP_info_dict,logit_number=1):
+    #Inputs
+    # logit_numberit_number=1
+    # Feature_SHAP_info_dict=Proposed_changed_info_dict
+    ###################################
+    df_XTest_stacked=pd.DataFrame()
+    df_ShapValues_stacked=pd.DataFrame()
+    for people in Feature_SHAP_info_dict.keys():
+        df_XTest=Feature_SHAP_info_dict[people]['XTest']
+        df_ShapValues=Feature_SHAP_info_dict[people]['shap_values'].loc[logit_number]
+        df_ShapValues.name=df_XTest.name
+        df_XTest_stacked=pd.concat([df_XTest_stacked,df_XTest],axis=1)
+        df_ShapValues_stacked=pd.concat([df_ShapValues_stacked,df_ShapValues],axis=1)
+    return df_XTest_stacked,df_ShapValues_stacked
+def Calculate_XTestShape_correlation(Feature_SHAP_info_dict,logit_number=1):
+    df_XTest_stacked,df_ShapValues_stacked=Return_ALigned_dfXtestndfShapValues(Feature_SHAP_info_dict,logit_number=logit_number)
+    Correlation_XtestnShap={}
+    for features in df_XTest_stacked.index:
+        r,p=pearsonr(df_XTest_stacked.loc[features],df_ShapValues_stacked.loc[features])
+        Correlation_XtestnShap[features]=r
+    df_Correlation_XtestnShap=pd.DataFrame.from_dict(Correlation_XtestnShap,orient='index')
+    df_Correlation_XtestnShap.columns=['correlation w logit:{}'.format(logit_number)]
+    return df_Correlation_XtestnShap
+def CCC_numpy(y_true, y_pred):
+    '''Reference numpy implementation of Lin's Concordance correlation coefficient'''
+    
+    # covariance between y_true and y_pred
+    s_xy = np.cov([y_true, y_pred])[0,1]
+    # means
+    x_m = np.mean(y_true)
+    y_m = np.mean(y_pred)
+    # variances
+    s_x_sq = np.var(y_true)
+    s_y_sq = np.var(y_pred)
+    
+    # condordance correlation coefficient
+    ccc = (2.0*s_xy) / (s_x_sq + s_y_sq + (x_m-y_m)**2)
+    
+    return ccc
+
+
+
 def get_args():
     # we add compulsary arguments as named arguments for readability
     parser = argparse.ArgumentParser()
@@ -309,39 +353,6 @@ if args.Mergefeatures:
         
     
     
-    
-
-paper_name_map={}    
-paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]']='$Div(Norm(Pillai))$'
-paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(Pillai))_{inv}$'
-paper_name_map['Divergence[pillai_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(Pillai))_{part}$'
-paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]']='$Div(Norm(WCC))$'
-paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCC))_{inv}$'
-paper_name_map['Divergence[within_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCC))_{part}$'
-paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]']='$Div(Norm(WCV))$'
-paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(WCV))_{inv}$'
-paper_name_map['Divergence[within_variance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(WCV))_{part}$'
-paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]']='$Div(Norm(Wilks))$'
-paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(Wilks))_{inv}$'
-paper_name_map['Divergence[sam_wilks_lin_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(Wilks))_{part}$'
-paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]']='$Div(Norm(BCC))$'
-paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(BCC))_{inv}$'
-paper_name_map['Divergence[between_covariance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(BCC))_{part}$'
-paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]']='$Div(Norm(BCV))$'
-paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]_var_p1']='$Inc(Norm(BCV))_{inv}$'
-paper_name_map['Divergence[between_variance_norm(A:,i:,u:)]_var_p2']='$Inc(Norm(BCV))_{part}$'
-paper_name_map['between_covariance_norm(A:,i:,u:)']='$BCC$'
-paper_name_map['between_variance_norm(A:,i:,u:)']='$BCV$'
-paper_name_map['within_covariance_norm(A:,i:,u:)']='$WCC$'
-paper_name_map['within_variance_norm(A:,i:,u:)']='$WCV$'
-# paper_name_map['total_covariance_norm(A:,i:,u:)']='$TC$'
-# paper_name_map['total_variance_norm(A:,i:,u:)']='$TV$'
-paper_name_map['sam_wilks_lin_norm(A:,i:,u:)']='$Wilks$'
-paper_name_map['pillai_lin_norm(A:,i:,u:)']='$Pillai$'
-paper_name_map['hotelling_lin_norm(A:,i:,u:)']='$Hotel$'
-paper_name_map['roys_root_lin_norm(A:,i:,u:)']='$Roys$'
-paper_name_map['Between_Within_Det_ratio_norm(A:,i:,u:)']='$Det(B_W)$'
-paper_name_map['Between_Within_Tr_ratio_norm(A:,i:,u:)']='$Tr(B_W)$'
 
 
 # =============================================================================
@@ -474,8 +485,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         feature_keys, label_keys= feature_lab_str.split("::")
         feature_rawname=feature_keys[feature_keys.find('-')+1:]
         feature_filename=feature_keys[:feature_keys.find('-')]
-        if feature_rawname in paper_name_map.keys():
-            featurename_paper=paper_name_map[feature_rawname]
+        if feature_rawname in PprNmeMp.Paper_name_map.keys():
+            featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
             feature_keys=feature_keys.replace(feature_rawname,featurename_paper)
         
         if SHAP_inspect_idxs_manual != None:
@@ -556,6 +567,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             MSE=sklearn.metrics.mean_squared_error(features.y.values.ravel(),CVpredict)
             pearson_result, pearson_p=pearsonr(features.y,CVpredict )
             spear_result, spearman_p=spearmanr(features.y,CVpredict )
+            CCC = CCC_numpy(features.y, CVpredict)
             print('Feature {0}, label {1} ,spear_result {2}'.format(feature_keys, label_keys,spear_result))
         elif features.feattype == 'classification':
             n,p=features.X.shape
@@ -608,8 +620,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             df_best_result_spear.loc[feature_keys,label_keys]='{0}/{1}'.format(np.round(spear_result,3),np.round(spearman_p,6))
             df_best_result_spear.loc[feature_keys,'de-zero_num']=len(features.X)
             # df_best_cross_score.loc[feature_keys,label_keys]=Score.mean()
-            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (MSE/pear/spear)'.format(label_keys,clf_keys)]\
-                        ='{0}/{1}/{2}'.format(np.round(MSE,3),np.round(pearson_result,3),np.round(spear_result,3))
+            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (MSE/pear/spear/CCC)'.format(label_keys,clf_keys)]\
+                        ='{0}/{1}/{2}/{3}'.format(np.round(MSE,3),np.round(pearson_result,3),np.round(spear_result,3),np.round(CCC,3))
 
         elif features.feattype == 'classification':
             df_best_result_UAR.loc[feature_keys,label_keys]='{0}'.format(UAR)
@@ -695,7 +707,7 @@ Session_level_all[proposed_expstr]['y_true'],
 Session_level_all[proposed_expstr]['y_true'].index,
 ]
 
-df_Y_pred=pd.DataFrame(Y_pred_lst,index=['proposed','baseline','y_true','name']).T
+df_Y_pred=pd.DataFrame(Y_pred_lst[:-1],index=['proposed','baseline','y_true']).T
 df_Y_pred_withName=pd.DataFrame(Y_pred_lst,index=['proposed','baseline','y_true','name']).T
 df_Index2Name_mapping=df_Y_pred_withName['name']
 
@@ -708,12 +720,59 @@ LargerVal= (df_Y_pred['proposed'] - df_Y_pred['baseline'])>0
 LowerVal= (df_Y_pred['proposed'] - df_Y_pred['baseline'])<=0
 ChangedPeople= LargerVal | LowerVal
 
+quadrant1 = Degraded & LargerVal
+quadrant2 = Improved & LargerVal
+quadrant3 = Degraded & LowerVal
+quadrant4 = Improved & LowerVal
+
+
+baseline_ytrue_propose= ((df_Y_pred['baseline'] > df_Y_pred['y_true']) & (df_Y_pred['y_true'] > df_Y_pred['proposed'])) 
+propose_ytrue_baseline= ((df_Y_pred['proposed'] > df_Y_pred['y_true']) & (df_Y_pred['y_true'] > df_Y_pred['baseline'])) 
+inner = baseline_ytrue_propose | propose_ytrue_baseline
+
+ytrue_lowest= (df_Y_pred['y_true'] - df_Y_pred['baseline']).abs() > (df_Y_pred['proposed'] - df_Y_pred['baseline']).abs()
+ytrue_highest= (df_Y_pred['y_true'] - df_Y_pred['proposed']).abs() > (df_Y_pred['proposed'] - df_Y_pred['baseline']).abs()
+outer = ytrue_lowest | ytrue_highest
+
+assert (inner | outer).all()
+
 
 Improved_indexes=list(df_Y_pred[Improved].index)
 Degraded_indexes=list(df_Y_pred[Degraded].index)
 
 LargerVal_indexes=list(df_Y_pred[LargerVal].index)
 LowerVal_indexes=list(df_Y_pred[LowerVal].index)
+
+quadrant1_indexes=list(df_Y_pred[quadrant1].index)
+quadrant2_indexes=list(df_Y_pred[quadrant2].index)
+quadrant3_indexes=list(df_Y_pred[quadrant3].index)
+quadrant4_indexes=list(df_Y_pred[quadrant4].index)
+
+quadrant1_inner_indexes=list(df_Y_pred[quadrant1 & inner].index)
+quadrant1_outer_indexes=list(df_Y_pred[quadrant1 & outer].index)
+quadrant2_inner_indexes=list(df_Y_pred[quadrant2 & inner].index)
+quadrant2_outer_indexes=list(df_Y_pred[quadrant2 & outer].index)
+quadrant3_inner_indexes=list(df_Y_pred[quadrant3 & inner].index)
+quadrant3_outer_indexes=list(df_Y_pred[quadrant3 & outer].index)
+quadrant4_inner_indexes=list(df_Y_pred[quadrant4 & inner].index)
+quadrant4_outer_indexes=list(df_Y_pred[quadrant4 & outer].index)
+
+
+idxs_bag=[]
+_bag=[]
+for q in [1,2,3,4]:
+    for side in ['inner','outer']:
+        idxes_str='quadrant{q}_{side}_indexes'.format(q=q,side=side)
+        idxs_bag+=vars()[idxes_str]
+        _bag.append(idxes_str)
+assert len(idxs_bag) == len(Improved_indexes+Degraded_indexes)
+
+assert quadrant1_indexes == intersection(Degraded_indexes, LargerVal_indexes)
+assert quadrant2_indexes == intersection(Improved_indexes, LargerVal_indexes)
+assert quadrant3_indexes == intersection(Degraded_indexes, LowerVal_indexes)
+assert quadrant4_indexes == intersection(Improved_indexes, LowerVal_indexes)
+
+
 
 proposed_ypred_array=df_Y_pred['proposed'].values
 baseline_ypred_array=df_Y_pred['baseline'].values
@@ -739,8 +798,9 @@ quadrant3_indexes=intersection(Degraded_indexes, LowerVal_indexes)
 quadrant4_indexes=intersection(Improved_indexes, LowerVal_indexes)
 
 
+assert (sorted(quadrant1_indexes+quadrant2_indexes) == sorted(LargerVal_indexes))
 
-assert len(Improved_indexes+Degraded_indexes) == len(LargerVal_indexes+LowerVal_indexes)
+assert len(Improved_indexes+Degraded_indexes) == len(LargerVal_indexes+LowerVal_indexes) 
 
 
 '''
@@ -771,13 +831,132 @@ def Organize_Needed_SHAP_info(Selected_indexes, Session_level_all, proposed_exps
                     # print("See if they match")
     return Selected_info_dict
 
-
 selected_idxs=LargerVal_indexes+LowerVal_indexes
 Baseline_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, baseline_expstr)
 Proposed_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, proposed_expstr)
 Baseline_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Session_level_all, baseline_expstr)
 Proposed_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Session_level_all, proposed_expstr)
+#%%
+# sellect_people_define=SellectP_define()
+# 畫炫炮的錯誤型態分析 (Changed smaples的logit 1 decision function 的移動)
+def Organize_Needed_decisionProb(Incorrect2Correct_indexes, df_Y_pred_withName, baseline_proposed_str='proposed'):
+    decision_function_str='y_true'
+    Incorrect2Correct_indexes=selected_idxs
+    Incorrect2Correct_info_dict=Dict()
+    for tst_idx in Incorrect2Correct_indexes:
+        Incorrect2Correct_info_dict[tst_idx]['predictproba']=df_Y_pred_withName[baseline_proposed_str].loc[tst_idx]
+        Incorrect2Correct_info_dict[tst_idx]['estimateError']=(df_Y_pred_withName[baseline_proposed_str].loc[tst_idx] - df_Y_pred_withName[decision_function_str].loc[tst_idx])
 
+    return Incorrect2Correct_info_dict
+# step 1: prepare data
+selected_idxs=LargerVal_indexes+LowerVal_indexes
+
+Baseline_changed_decision_info_dict=Organize_Needed_decisionProb(selected_idxs, df_Y_pred_withName, baseline_proposed_str='baseline')
+Proposed_changed_decision_info_dict=Organize_Needed_decisionProb(selected_idxs, df_Y_pred_withName, baseline_proposed_str='proposed')
+Baseline_total_decision_info_dict=Organize_Needed_decisionProb(df_Y_pred.index, df_Y_pred_withName, baseline_proposed_str='baseline')
+Proposed_total_decision_info_dict=Organize_Needed_decisionProb(df_Y_pred.index, df_Y_pred_withName, baseline_proposed_str='proposed')
+
+
+df_Proposed_changed_decision_info_dict=pd.DataFrame.from_dict(Proposed_changed_decision_info_dict,orient='index')
+df_Baseline_changed_decision_info_dict=pd.DataFrame.from_dict(Baseline_changed_decision_info_dict,orient='index')
+df_Proposed_total_decision_info_dict=pd.DataFrame.from_dict(Proposed_total_decision_info_dict,orient='index')
+df_Baseline_total_decision_info_dict=pd.DataFrame.from_dict(Baseline_total_decision_info_dict,orient='index')
+Sample_idxs_array=df_Baseline_changed_decision_info_dict.index.values
+
+
+
+
+
+df_Y_true=df_Y_pred.loc[df_Baseline_changed_decision_info_dict.index]['y_true']
+
+Incorrect_baseline=df_Y_pred['baseline'] != df_Y_pred['y_true']
+Incorrect_proposed=df_Y_pred['proposed'] != df_Y_pred['y_true']
+Correct_baseline=df_Y_pred['baseline'] != df_Y_pred['y_true']
+Correct_proposed=df_Y_pred['proposed'] != df_Y_pred['y_true']
+
+fig, ax = plt.subplots()
+
+# decision function 負的表示predict logit 0, 正的表示logit 1
+Baseline_x= df_Baseline_changed_decision_info_dict['predictproba'].values.copy()
+# Baseline_y_decisionfunc= df_Baseline_changed_decision_info_dict['estimateError'].copy()
+Baseline_y= df_Baseline_changed_decision_info_dict['estimateError'].values.copy()
+
+Baseline_total_x= df_Baseline_total_decision_info_dict['predictproba'].values.copy()
+# Baseline_total_y_decisionfunc= df_Baseline_total_decision_info_dict['estimateError'].copy()
+Baseline_total_y= df_Baseline_total_decision_info_dict['estimateError'].values.copy()
+
+# estimateError是正的y軸就是正的，estimateError bar是負的y軸就是負的
+# Baseline_y[Improved_indexes.loc[df_Baseline_changed_decision_info_dict.index]]\
+#     =Baseline_y_decisionfunc[Improved_indexes.loc[df_Baseline_changed_decision_info_dict.index]]
+# Baseline_y[Degraded_indexes.loc[df_Baseline_changed_decision_info_dict.index]]\
+#     =Baseline_y_decisionfunc[Degraded_indexes.loc[df_Baseline_changed_decision_info_dict.index]]
+# Baseline_total_y[df_Baseline_total_decision_info_dict.loc[Incorrect_baseline]]\
+#     =-df_Baseline_total_decision_info_dict.loc[Incorrect_baseline]
+# Baseline_total_y[df_Baseline_total_decision_info_dict.loc[Incorrect_baseline]]\
+#     =df_Baseline_total_decision_info_dict.loc[Correct_baseline]
+
+
+
+
+Proposed_x= df_Proposed_changed_decision_info_dict['predictproba'].values.copy()
+Proposed_y_decisionfunc= df_Proposed_changed_decision_info_dict['estimateError'].values.copy()
+Proposed_y= df_Proposed_changed_decision_info_dict['estimateError'].values.copy()
+Proposed_total_x= df_Proposed_total_decision_info_dict['predictproba'].values.copy()
+Proposed_total_y_decisionfunc= df_Proposed_total_decision_info_dict['estimateError'].values.copy()
+Proposed_total_y= df_Proposed_total_decision_info_dict['estimateError'].values.copy()
+
+
+
+# Proposed_y[Improved_indexes.loc[df_Baseline_changed_decision_info_dict.index]]=\
+#     Proposed_y_decisionfunc[Improved_indexes.loc[df_Baseline_changed_decision_info_dict.index]]
+# Proposed_y[Degraded_indexes.loc[df_Baseline_changed_decision_info_dict.index]]=\
+#     -Proposed_y_decisionfunc[Degraded_indexes.loc[df_Baseline_changed_decision_info_dict.index]]
+# Proposed_total_y[df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]]\
+#     =-df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]
+# Proposed_total_y[df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]]\
+#     =df_Proposed_total_decision_info_dict.loc[Correct_proposed]
+
+Total_y=list(Baseline_y)+list(Proposed_y)
+Total_x=list(Baseline_x)+list(Proposed_x)
+
+y_max=np.max(Total_y)
+y_min=np.min(Total_y)
+x_max=np.max(Total_x)
+x_min=np.min(Total_x)
+x_middle=(x_max+x_min)/2
+y_middle=(y_max+y_min)/2
+
+# ax.annotate("", xy=(起點x, 起點y), xytext=(終點x, 終點y),arrowprops=dict(arrowstyle="->"))
+for B_x, B_y, P_x, P_y,idx in zip(Baseline_x,Baseline_y,Proposed_x,Proposed_y,Sample_idxs_array):
+    ax.annotate("", xy=(B_x, B_y), xytext=(P_x, P_y),arrowprops=dict(arrowstyle="<-",alpha=.4))
+    # ax.text((B_x+P_x)/2, (B_y+P_y)/2, str(idx), fontsize=12)
+    # ax.text(B_x, B_y, str(idx), fontsize=12)
+    # ax.text(P_x, P_y, str(idx), fontsize=12)
+
+plt.scatter(Baseline_x, Baseline_y, c='b', alpha=1)
+plt.scatter(Proposed_x, Proposed_y, c='r', alpha=1)
+
+
+# plt.scatter(df_Baseline_total_decision_info_dict.predictproba, df_Baseline_total_decision_info_dict.abs().decisionfunc, c='b', alpha=.05)
+# plt.scatter(df_Proposed_total_decision_info_dict.predictproba, df_Proposed_total_decision_info_dict.abs().decisionfunc, c='r', alpha=.05)
+xmin_global, xmax_global=0, 10
+xmiddle_global=(xmin_global+xmax_global)/2
+ax.annotate('',xy=(xmin_global, 0), xytext=(xmax_global, 0),arrowprops=dict(arrowstyle="<->",alpha=1,))                                                                     
+ax.annotate('',xy=(xmiddle_global, y_min), xytext=(xmiddle_global, y_max),arrowprops=dict(arrowstyle="<->",alpha=1,))
+margin_y=(y_max-y_min)/10
+margin_x=(xmax_global-xmin_global)/20
+
+ax.text(xmin_global, y_middle-margin_y, '10', fontsize=12)
+ax.text(xmax_global-margin_x, y_middle-margin_y, '0', fontsize=12)
+    
+ax.text(xmiddle_global, y_min, 'Overestimated', fontsize=12)
+ax.text(xmiddle_global, y_max-margin_y, 'Underestimated', fontsize=12)   
+fig.patch.set_visible(True)
+ax.axis('off')
+# plt.ylim(-1.5,1.5)
+plt.xlim(0,10)
+plt.title(experiment_title)
+plt.show()
 #%%
 # 個體分析： 會存到SAHP_figures/{quadrant}/的資料夾，再開Jupyter去看
 def Calculate_sum_of_SHAP_vals(df_values,FeatSel_module,FeatureSet_lst=['Phonation_Proximity_cols'],PprNmeMp=None):
@@ -790,26 +969,80 @@ def Calculate_sum_of_SHAP_vals(df_values,FeatSel_module,FeatureSet_lst=['Phonati
     return df_FeaSet_avg_Comparison
 
 SHAP_save_path_root="SAHP_figures/Regression/{quadrant}/"
-
 shutil.rmtree(SHAP_save_path_root.format(quadrant=""), ignore_errors = True)
 
-
 N=5
-import scipy
+def Plot_FeatImportance_heatmap(df_table_info,outpath,N,M):
+    df_table_info.index= [Swap2PaperName(idx, PprNmeMp) for idx in df_table_info.index]
+    df_sorted_shapVals=pd.DataFrame()
+    df_sorted_featIdxs=pd.DataFrame()
+    for col in df_table_info.columns:
+        df_vals=pd.DataFrame(df_table_info[col].sort_values().values,index=range(len(df_table_info[col])),columns=[col])
+        df_features=pd.DataFrame(df_table_info[col].sort_values().index,index=range(len(df_table_info[col])),columns=[col])
+        df_sorted_shapVals=pd.concat([df_sorted_shapVals,df_vals],axis=1)
+        df_sorted_featIdxs=pd.concat([df_sorted_featIdxs,df_features],axis=1)
+        
+    df=df_sorted_shapVals.copy()
+    
+    Idxes_array=df_sorted_featIdxs.values
+    vals = np.around(df.values,2)
+    
+    norm = plt.Normalize(vals.min()-1, vals.max()+1)
+    colours = plt.cm.hot(norm(vals))
+    
+    fig = plt.figure(figsize=(7*M,8))
+    ax = fig.add_subplot(111, frameon=True, xticks=[], yticks=[])
+    
+    colWidth=0.03 if M > 5 else 0.5
+    
+    # Lowest N samples !!!! 注意 這個排序是從小排到大
+    the_table=plt.table(cellText=Idxes_array[:N,:M], rowLabels=df.index[:N], colLabels=df.columns[:M], 
+                        colWidths = [colWidth]*vals[:N,:M].shape[1], loc='center', 
+                        cellColours=colours[:N,:M])
+    the_table.set_fontsize(12)
+    the_table.scale(1, 1)
+    # plt.show()    
+    # print(Idxes_array[:N,:M])
+    plt.savefig('{outpath}_Low5.png'.format(outpath=outpath))
+    
+    # Lowest N samples
+    the_table=plt.table(cellText=Idxes_array[-N:,:M], rowLabels=df.index[-N:], colLabels=df.columns[:M], 
+                        colWidths = [colWidth]*vals[-N:,:M].shape[1], loc='center', 
+                        cellColours=colours[-N:,:M])
+    the_table.set_fontsize(12)
+    the_table.scale(1, 1)
+    # plt.show()    
+    # print(Idxes_array[:N,:M])
+    plt.savefig('{outpath}_Top5.png'.format(outpath=outpath))
+    
+# =============================================================================
+Inspect_info_dict_str='Proposed_changed_info_dict'
+# Inspect_info_dict_str='Baseline_changed_info_dict'
+Inspect_info_dict=vars()[Inspect_info_dict_str]
+
+Top_featureSet_lst_dict={}
+Top_featureSet_lst_dict['Proposed_changed_info_dict']=proposed_featset_lst
+Top_featureSet_lst_dict['Baseline_changed_info_dict']=baseline_featset_lst
+# =============================================================================
 # expected_value_lst=[]
 UsePaperName_bool=True
+
 Quadrant_FeatureImportance_dict={}
 Quadrant_feature_AddedTopFive_dict={}
 Quadrant_feature_AddedFeatureImportance_dict={}
 Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict={}
+Quadrant_Singlefeature_AddedFeatureImportance_sorted_dict={}
 # for Analysis_grp_str in ['Manual_inspect_idxs','quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
 for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
+# for Analysis_grp_str in ['quadrant1_inner_indexes','quadrant1_outer_indexes','quadrant2_inner_indexes','quadrant2_outer_indexes','quadrant3_inner_indexes','quadrant3_outer_indexes','quadrant4_inner_indexes','quadrant4_outer_indexes']:    
+# for Analysis_grp_str in ['LargerVal_indexes','LowerVal_indexes']:
+# for Analysis_grp_str in ['Improved_indexes','Degraded_indexes']:
     Analysis_grp_indexes=vars()[Analysis_grp_str]
     df_shap_values_stacked=pd.DataFrame([])
     Xtest_dict={}
-    expected_value_lst=[]
+    expected_value_lst=[]    
     for Inspect_samp in Analysis_grp_indexes:
-        shap_info=Proposed_changed_info_dict[Inspect_samp]
+        shap_info=Inspect_info_dict[Inspect_samp]
         
         expected_value=shap_info['explainer_expected_value']
         shap_values=shap_info['shap_values'].values
@@ -829,24 +1062,28 @@ for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_inde
         # shap.force_plot(expected_value, df_shap_values.values, Xtest.T, matplotlib=True,show=False)
         df_shap_avgvalues=Calculate_sum_of_SHAP_vals(df_shap_values.T,\
                                                     FeatSel_module=FeatSel,\
-                                                    FeatureSet_lst=proposed_featset_lst,)
+                                                    FeatureSet_lst=Top_featureSet_lst_dict[Inspect_info_dict_str],)
         df_avg_Xtest=Calculate_sum_of_SHAP_vals(pd.DataFrame(Xtest.values, index=Xtest.index),\
                                                 FeatSel_module=FeatSel,\
-                                                FeatureSet_lst=proposed_featset_lst,\
+                                                FeatureSet_lst=Top_featureSet_lst_dict[Inspect_info_dict_str],\
                                                 PprNmeMp=PprNmeMp)
         
         p=shap.force_plot(expected_value, df_shap_avgvalues.values, df_avg_Xtest)
         # p=shap.force_plot(expected_value, df_shap_values.values, Xtest.T)
         
         
-        
-        SHAP_save_path=SHAP_save_path_root.format(quadrant=Analysis_grp_str)
+        SHAP_save_path=SHAP_save_path_root.format(quadrant='{0}_{1}'.format(Inspect_info_dict_str.split("_")[0],Analysis_grp_str))
+        # SHAP_save_path=SHAP_save_path_root.format(quadrant=Analysis_grp_str)
         if not os.path.exists(SHAP_save_path):
             os.makedirs(SHAP_save_path)
             
         shap.save_html(SHAP_save_path+'{sample}.html'.format(sample=Inspect_samp), p)
         
-        Lists_of_addedFeatures=[getattr(FeatSel,k)  for k in Additional_featureSet]
+        if Inspect_info_dict_str == 'Baseline_changed_info_dict':
+            Inspect_featureSet=set(Top_featureSet_lst_dict[Inspect_info_dict_str])
+        elif Inspect_info_dict_str == 'Proposed_changed_info_dict':
+            Inspect_featureSet=Additional_featureSet
+        Lists_of_addedFeatures=[getattr(FeatSel,k)  for k in Inspect_featureSet]
         Lists_of_addedFeatures_flatten=[e for ee in Lists_of_addedFeatures for e in ee]
         df_FeatureImportance_AddedFeatures=df_shap_values[Lists_of_addedFeatures_flatten].T
         df_FeatureImportance_AddedFeatures_absSorted=df_FeatureImportance_AddedFeatures.abs()[Inspect_samp].sort_values(ascending=False)
@@ -856,117 +1093,104 @@ for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_inde
         df_addedFeatures_TopN=df_FeatureImportance_AddedFeatures.loc[df_FeatureImportance_AddedFeatures_absSorted.head(N).index]
         # Quadrant_feature_AddedTopFive_dict[Inspect_samp]=df_addedFeatures_TopN
         Quadrant_feature_AddedFeatureImportance_dict[Inspect_samp]=df_FeatureImportance_AddedFeatures[Inspect_samp].sort_values(ascending=False)
-    df_XTest_stacked=pd.DataFrame.from_dict(Xtest_dict).T
-    assert (df_XTest_stacked.index == df_shap_values_stacked.index).all()
-    
-    df_FeaSet_avg_Comparison_proposed=Calculate_sum_of_SHAP_vals(df_shap_values_stacked.T,\
-                                                                 FeatSel_module=FeatSel,\
-                                                                 FeatureSet_lst=proposed_featset_lst,)
-                                                                 # PprNmeMp=PprNmeMp)
-    df_FeaAvg=df_FeaSet_avg_Comparison_proposed.copy()
-    df_XTest_stacked_proposed=Calculate_sum_of_SHAP_vals(df_XTest_stacked.T,\
-                                                                 FeatSel_module=FeatSel,\
-                                                                 FeatureSet_lst=proposed_featset_lst,
-                                                                 PprNmeMp=PprNmeMp)
-    Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict[Analysis_grp_str]=df_FeaAvg.sort_values(list(df_FeaAvg.columns),\
-                                                                                                    ascending=[False]*len(df_FeaAvg.columns))
-    # clustering
-    df_tocluster=df_FeaAvg.copy()
-    # df_tocluster=df_shap_values_stacked.copy()
-    D = scipy.spatial.distance.pdist(df_tocluster.loc[:,:], 'sqeuclidean')
-    Z = scipy.cluster.hierarchy.complete(D)
-    plt.figure()
-    dn = scipy.cluster.hierarchy.dendrogram(Z)
-    plt.show()
-    clustOrder = scipy.cluster.hierarchy.leaves_list(Z)
-    df_tocluster.iloc[dn['leaves']].index
-    # df_tocluster.iloc[clustOrder].index
-    
-    # p=shap.force_plot(np.mean(expected_value_lst),df_shap_values_stacked.values, df_XTest_stacked)
-    p=shap.force_plot(np.mean(expected_value_lst),df_FeaSet_avg_Comparison_proposed.values, df_XTest_stacked_proposed)
-    # shap_explanation=shap.Explanation(df_shap_values_stacked)
-    
-    SHAP_save_path="SAHP_figures/Regression/Stacked/"
-    if not os.path.exists(SHAP_save_path):
-        os.makedirs(SHAP_save_path)
-    shap.save_html(SHAP_save_path+'{sample}.html'.format(sample=Analysis_grp_str), p)
-
-#%%
-# =============================================================================
-# 測試heatmap hierachycal clustering
-from scipy.spatial.distance import pdist
-def hclust_order(X, metric="sqeuclidean"):
-    """ A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar.
-    """
-    
-    # compute a hierarchical clustering
-    D = scipy.spatial.distance.pdist(X, metric)
-    cluster_matrix = scipy.cluster.hierarchy.complete(D)
-    
-    # merge clusters, rotating them to make the end points match as best we can
-    sets = [[i] for i in range(X.shape[0])]
-    for i in range(cluster_matrix.shape[0]):
-        s1 = sets[int(cluster_matrix[i,0])]
-        s2 = sets[int(cluster_matrix[i,1])]
         
-        # compute distances between the end points of the lists
-        d_s1_s2 = pdist(np.vstack([X[s1[-1],:], X[s2[0],:]]), metric)[0]
-        d_s2_s1 = pdist(np.vstack([X[s1[0],:], X[s2[-1],:]]), metric)[0]
-        d_s1r_s2 = pdist(np.vstack([X[s1[0],:], X[s2[0],:]]), metric)[0]
-        d_s1_s2r = pdist(np.vstack([X[s1[-1],:], X[s2[-1],:]]), metric)[0]
+        
+        
+    if not (len(df_shap_values_stacked) == 0 and  len(Xtest_dict)==0):
+        df_XTest_stacked=pd.DataFrame.from_dict(Xtest_dict).T
+        assert (df_XTest_stacked.index == df_shap_values_stacked.index).all()
+        
+        df_FeaSet_avg_Comparison_proposed=Calculate_sum_of_SHAP_vals(df_shap_values_stacked.T,\
+                                                                     FeatSel_module=FeatSel,\
+                                                                     FeatureSet_lst=Top_featureSet_lst_dict[Inspect_info_dict_str],)
+                                                                     # PprNmeMp=PprNmeMp)
+        df_FeaAvg=df_FeaSet_avg_Comparison_proposed.copy()
+        df_XTest_stacked_proposed=Calculate_sum_of_SHAP_vals(df_XTest_stacked.T,\
+                                                                     FeatSel_module=FeatSel,\
+                                                                     FeatureSet_lst=Top_featureSet_lst_dict[Inspect_info_dict_str],
+                                                                     PprNmeMp=PprNmeMp)
+        Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict[Analysis_grp_str]=df_FeaAvg.sort_values(list(df_FeaAvg.columns),\
+                                                                                                        ascending=[False]*len(df_FeaAvg.columns))
+        Quadrant_Singlefeature_AddedFeatureImportance_sorted_dict[Analysis_grp_str]=df_shap_values_stacked.sort_values(list(df_shap_values_stacked.columns),\
+                                                                                                        ascending=[False]*len(df_shap_values_stacked.columns))
+            
+        df_table_info = Quadrant_Singlefeature_AddedFeatureImportance_sorted_dict[Analysis_grp_str].T
+        # [tmp] need remove soon
+        # Analysis_grp_str='quadrant4_outer_indexes'
+        # df_tmp_AAAbbb = Quadrant_Singlefeature_AddedFeatureImportance_sorted_dict[Analysis_grp_str].T
+        # df_tmp_AAAbbbC= df_tmp_AAAbbb[[78, 13, 71, 76]]
+        # 
+        # clustering
+        # //////////////////////////////////////////
+        # df_tocluster=df_FeaAvg.copy()
+        # # df_tocluster=df_shap_values_stacked.copy()
+        # D = scipy.spatial.distance.pdist(df_tocluster.loc[:,:], 'sqeuclidean')
+        # Z = scipy.cluster.hierarchy.complete(D)
+        # plt.figure()
+        # dn = scipy.cluster.hierarchy.dendrogram(Z)
+        # plt.show()
+        # clustOrder = scipy.cluster.hierarchy.leaves_list(Z)
+        # df_tocluster.iloc[dn['leaves']].index
+        # df_tocluster.iloc[clustOrder].index
+        # //////////////////////////////////////////
+        
+        # p=shap.force_plot(np.mean(expected_value_lst),df_shap_values_stacked.values, df_XTest_stacked)
+        p=shap.force_plot(np.mean(expected_value_lst),df_FeaSet_avg_Comparison_proposed.values, df_XTest_stacked_proposed)
+        # shap_explanation=shap.Explanation(df_shap_values_stacked)
+        
+        SHAP_save_path="SAHP_figures/Regression/Stacked/"
+        if not os.path.exists(SHAP_save_path):
+            os.makedirs(SHAP_save_path)
+        shap.save_html(SHAP_save_path+'{sample}.html'.format(sample=Analysis_grp_str), p)
+        Plot_FeatImportance_heatmap(df_table_info,outpath=SHAP_save_path+'{sample}'.format(sample=Analysis_grp_str),N=5,M=len(df_table_info.columns))
 
-        # concatenete the lists in the way the minimizes the difference between
-        # the samples at the junction
-        best = min(d_s1_s2, d_s2_s1, d_s1r_s2, d_s1_s2r)
-        if best == d_s1_s2:
-            sets.append(s1 + s2)
-        elif best == d_s2_s1:
-            sets.append(s2 + s1)
-        elif best == d_s1r_s2:
-            sets.append(list(reversed(s1)) + s2)
-        else:
-            sets.append(s1 + list(reversed(s2)))
-    
-    return sets[-1]
-# =============================================================================
-import scipy
-import matplotlib.gridspec as gridspec
-xgb_shap=df_shap_values_stacked.values
-D = scipy.spatial.distance.pdist(xgb_shap, 'sqeuclidean')
-clustOrder = scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.complete(D))
-
-# col_inds = np.argsort(-np.abs(xgb_shap).mean(0))[:10]
-col_inds = np.argsort(-np.abs(xgb_shap).mean(0))[:10]
-xgb_shap_normed = xgb_shap.copy()
-for i in col_inds:
-    xgb_shap_normed[:,i] -= xgb_shap_normed[:,i].min()
-    xgb_shap_normed[:,i] /= xgb_shap_normed[:,i].max()
-
-
-
-gs = gridspec.GridSpec(2,1)
-fig = plt.figure(figsize=(15,7))
-
-ax = fig.add_subplot(gs[0])
-# ax.plot(xgb_shap[clustOrder,:].sum(1))
-ax.plot(xgb_shap[clustOrder,:].sum(1))
-ax.set_ylabel(r'Label One', size =16)
-ax.get_yaxis().set_label_coords(-0.1,0.5)
-ax.axis('off')
-
-
-ax = fig.add_subplot(gs[1])
-# ax.imshow(xgb_shap_normed[clustOrder,:][:,:].T, aspect=400, cmap=shap.plots.colors.red_blue_transparent)
-ax.imshow(xgb_shap_normed[clustOrder,:][:,col_inds].T, aspect=400, cmap=shap.plots.colors.red_blue_transparent)
-
-ax.set_yticks(np.arange(len(col_inds)))
-ax.set_yticklabels(df_XTest_stacked.columns[col_inds])
-ax.spines['right'].set_visible(False)
-ax.spines['left'].set_visible(False)
-ax.spines['top'].set_visible(False)
-ax.spines['bottom'].set_visible(False)
-plt.show()
 #%%
+# =============================================================================
+'''
+
+    manual area
+
+'''
+# Top_featureSet_lst_dict['Proposed_changed_info_dict']
+
+# 調查Improved 的那個種類
+df_conclusion_record=pd.DataFrame()
+for FeatSet in Top_featureSet_lst_dict[Inspect_info_dict_str]:
+    quadrant2_shap=Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict['quadrant2_indexes'][FeatSet]
+    quadrant2_helped= quadrant2_shap [quadrant2_shap > 0]
+    print(FeatSet," :helped quadrant2 samples length:: ",len(quadrant2_helped))
+    
+    
+    quadrant4_shap=Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict['quadrant4_indexes'][FeatSet]
+    quadrant4_helped= quadrant4_shap [quadrant4_shap < 0]
+    print(FeatSet," :helped quadrant4 samples length:: ",len(quadrant4_helped))
+
+    # =========================================================================
+
+    quadrant1_shap=Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict['quadrant1_indexes'][FeatSet]
+    quadrant1_degraded= quadrant1_shap [quadrant1_shap > 0]
+    print(FeatSet," :degraded quadrant1 samples length:: ",len(quadrant1_degraded))
+    
+    
+    quadrant3_shap=Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict['quadrant3_indexes'][FeatSet]
+    quadrant3_degraded= quadrant3_shap [quadrant3_shap < 0]
+    print(FeatSet," :degraded quadrant1 samples length:: ",len(quadrant1_degraded))
+    
+    df_conclusion_record.loc[FeatSet, 'quadrant2_helpedSamples']=len(quadrant2_helped)
+    df_conclusion_record.loc[FeatSet, 'quadrant2_helpedlevel']=quadrant2_helped.sum()
+    df_conclusion_record.loc[FeatSet, 'quadrant4_helpedSamples']=len(quadrant4_helped)
+    df_conclusion_record.loc[FeatSet, 'quadrant4_helpedlevel']=quadrant4_helped.sum()
+    
+    df_conclusion_record.loc[FeatSet, 'quadrant1_degradedSamples']=len(quadrant1_degraded)
+    df_conclusion_record.loc[FeatSet, 'quadrant1_degradedlevel']=quadrant1_degraded.sum()
+    df_conclusion_record.loc[FeatSet, 'quadrant3_degradedSamples']=len(quadrant3_degraded)
+    df_conclusion_record.loc[FeatSet, 'quadrant3_degradedlevel']=quadrant3_degraded.sum()
+Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict['quadrant4_indexes']
+# =============================================================================
+
+
+#%%
+# 觀察每個個案的Feature值
 def Prepare_data_for_summaryPlot_regression(SHAPval_info_dict, feature_columns=None,PprNmeMp=None):
     keys_bag=[]
     XTest_dict={}
@@ -993,16 +1217,50 @@ def Prepare_data_for_summaryPlot_regression(SHAPval_info_dict, feature_columns=N
 
 # inspect_featuresets='Trend[LOCDEP]_d'  #Trend[LOCDEP]d + Proximity[phonation]
 # inspect_featuresets='LOC_columns'  #LOC_columns + Syncrony[phonation]
-inspect_featuresets_lst=['LOC_columns','DEP_columns','Trend[LOCDEP]_d','Trend[LOCDEP]_k','Syncrony[LOCDEP]']
-
+# inspect_featuresets_lst=['LOC_columns','DEP_columns','Trend[LOCDEP]_d','Trend[LOCDEP]_k','Syncrony[LOCDEP]']
+inspect_featuresets_lst=list(Additional_featureSet)
 featuresetsListTotal_lst=[]
 for inspect_featuresets in inspect_featuresets_lst:
-    featuresetsListTotal_lst+=FeatSel.CategoricalName2cols[inspect_featuresets]
+    # featuresetsListTotal_lst+=FeatSel.CategoricalName2cols[inspect_featuresets]
+    featuresetsListTotal_lst+=getattr(FeatSel,inspect_featuresets)
 shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_totalPoeple_info_dict,\
                                                           feature_columns=featuresetsListTotal_lst,\
                                                           PprNmeMp=PprNmeMp)
 
+# Col2Delete=""
+Col2Delete="$Mod(BCC)_{inv}$"
+if len(Col2Delete) > 0:
+    Colidx2Delete=[list(df_XTest.columns).index(Col2Delete)]
+else:
+    Colidx2Delete=[]
 
+max_display=14
+if len(Colidx2Delete)>0:
+    shap.summary_plot(np.delete(shap_values,obj=Colidx2Delete,axis=1), df_XTest.drop(columns=Col2Delete),feature_names=df_XTest.drop(columns=Col2Delete).columns,show=False, max_display=max_display)
+else:
+    shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False, max_display=max_display)
+plt.title(experiment_title)
+plt.show()
+
+# 製造 importance plot
+# shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False, plot_type='bar', max_display=17)
+# plt.title(experiment_title)
+# plt.show()
+
+# 觀察Feature值跟SHAP value的correlation
+df_Pcorrela_FeaturesnSHAPVal=Calculate_XTestShape_correlation(Proposed_totalPoeple_info_dict,logit_number=logit_number)
+
+df_X_featureRank=pd.DataFrame()
+for col in df_XTest.columns:
+    
+    df_rank_features=df_XTest[col].argsort()  #從小排到大
+    df_rank=pd.Series(df_rank_features.index.values, index=df_rank_features ,name=df_rank_features.name).sort_index()
+    
+    df_X_featureRank=pd.concat([df_X_featureRank,df_rank],axis=1)
+    df_X_featureRank_T=df_X_featureRank.T
+    # if col == '$BCC$':
+    #     aaa=ccc
+#%%
 def ReorganizeFeatures4SummaryPlot(shap_values_logit, df_XTest,FeatureSet_lst=None,Featurechoose_lst=None):
     # step1 convert shapvalue to df_shapvalues
     df_shap_values=pd.DataFrame(shap_values_logit,columns=df_XTest.columns)

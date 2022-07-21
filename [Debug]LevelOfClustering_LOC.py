@@ -159,9 +159,9 @@ def get_args():
         )
     parser.add_argument('--base_path', default='/homes/ssd1/jackchen/DisVoice/articulation',
                         help='path of the base directory', dest='base_path')
-    parser.add_argument('--inpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--inpklpath', default='articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--outpklpath', default='articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--Inspect', default=False,
                             help='path of the base directory')
@@ -1713,7 +1713,7 @@ Survey_nice_variable(Aaad_Correlation_toy)
 #     return RESULT_dict
 
 
-# Play code for KDE filtering
+Play code for KDE filtering
 count=0
 from sklearn.neighbors import KernelDensity
 from sklearn import preprocessing
@@ -1793,30 +1793,30 @@ for THRESHOLD in [40]:
                 
                 
                 # Data prepare for plotting 
-                # import seaborn as sns
-                # df_calibrated_tocombine=df_calibrated.copy()
-                # df_calibrated_tocombine['cal']='calibrated'
-                # df_deleted_after_calibrated['cal']='deleted'
-                # df_calibratedcombined=df_calibrated_tocombine.append(df_deleted_after_calibrated)
+                import seaborn as sns
+                df_calibrated_tocombine=df_calibrated.copy()
+                df_calibrated_tocombine['cal']='calibrated'
+                df_deleted_after_calibrated['cal']='deleted'
+                df_calibratedcombined=df_calibrated_tocombine.append(df_deleted_after_calibrated)
                 
-                # #Plotting code
-                # fig = plt.figure(figsize=(8,8))
-                # ax = fig.gca()
-                # ax.set_xlim(xmin, xmax)
-                # ax.set_ylim(ymin, ymax)
-                # # cfset = ax.contourf(X, Y, Z, cmap='coolwarm')
-                # # ax.imshow(Z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
-                # # cset = ax.contour(X, Y, Z, colors='k')
-                # cfset = ax.contourf(X, Y, normalized_z, cmap='coolwarm')
-                # ax.imshow(normalized_z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
-                # cset = ax.contour(X, Y, normalized_z, colors='k')
-                # ax.clabel(cset, inline=1, fontsize=10)
-                # ax.set_xlabel('X')
-                # ax.set_ylabel('Y')
-                # plt.title('2D Gaussian Kernel density estimation')
+                #Plotting code
+                fig = plt.figure(figsize=(8,8))
+                ax = fig.gca()
+                ax.set_xlim(xmin, xmax)
+                ax.set_ylim(ymin, ymax)
+                # cfset = ax.contourf(X, Y, Z, cmap='coolwarm')
+                # ax.imshow(Z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
+                # cset = ax.contour(X, Y, Z, colors='k')
+                cfset = ax.contourf(X, Y, normalized_z, cmap='coolwarm')
+                ax.imshow(normalized_z, cmap='coolwarm', extent=[xmin, xmax, ymin, ymax])
+                cset = ax.contour(X, Y, normalized_z, colors='k')
+                ax.clabel(cset, inline=1, fontsize=10)
+                ax.set_xlabel('X')
+                ax.set_ylabel('Y')
+                plt.title('2D Gaussian Kernel density estimation')
                 
-                # sns.scatterplot(data=df_vowel[df_vowel['vowel']==phone], x="F1", y="F2")
-                # sns.scatterplot(data=df_calibratedcombined, x="F1", y="F2",hue='cal')
+                sns.scatterplot(data=df_vowel[df_vowel['vowel']==phone], x="F1", y="F2")
+                sns.scatterplot(data=df_calibratedcombined, x="F1", y="F2",hue='cal')
             return df_vowel_calibrated
         
         
@@ -1892,18 +1892,18 @@ for THRESHOLD in [40]:
         # plt.show()
         count+=1
         
-#     Eval_med=Evaluation_method()
+    Eval_med=Evaluation_method()
     
-#     columns_sel=df_simulate.columns
-#     # columns_sel=list(set(columns_sel) - set([co for co in columns_sel if " pointDistsTotal" not in co]))
-#     columns_sel=list(set(columns_sel) - set(['u_num','a_num','i_num','ADOS_C']))
-#     # columns_sel= columns_sel + ['FCR2']
+    columns_sel=df_simulate.columns
+    # columns_sel=list(set(columns_sel) - set([co for co in columns_sel if " pointDistsTotal" not in co]))
+    columns_sel=list(set(columns_sel) - set(['u_num','a_num','i_num','ADOS_C']))
+    # columns_sel= columns_sel + ['FCR2']
     
     
-#     for N in [2]:
-#     # for N in [7,8,9,10]:
-#         Aaadf_results=Eval_med.Calculate_correlation(['ADOS_C'],df_simulate,N,columns_sel,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
-#         Survey_nice_variable(Aaadf_results)
+    for N in [2]:
+    # for N in [7,8,9,10]:
+        Aaadf_results=Eval_med.Calculate_correlation(['ADOS_C'],df_simulate,N,columns_sel,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
+        Survey_nice_variable(Aaadf_results)
 
     
 

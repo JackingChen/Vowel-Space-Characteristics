@@ -50,6 +50,7 @@ from itertools import combinations
 import shap
 import articulation.HYPERPARAM.PaperNameMapping as PprNmeMp
 import inspect
+import seaborn as sns
 def Find_Experiment_actualindex(Total_FeatComb_idxs,search_string):
     # usage:
     # e.x. :
@@ -109,7 +110,7 @@ def Return_ALigned_dfXtestndfShapValues(Feature_SHAP_info_dict,logit_number=1):
     return df_XTest_stacked,df_ShapValues_stacked
 
 def Calculate_XTestShape_correlation(Feature_SHAP_info_dict,logit_number=1):
-    df_XTest_stacked,df_ShapValues_stacked=Return_ALigned_dfXtestndfShapValues(Feature_SHAP_info_dict,logit_number=1)
+    df_XTest_stacked,df_ShapValues_stacked=Return_ALigned_dfXtestndfShapValues(Feature_SHAP_info_dict,logit_number=logit_number)
     Correlation_XtestnShap={}
     for features in df_XTest_stacked.index:
         r,p=pearsonr(df_XTest_stacked.loc[features],df_ShapValues_stacked.loc[features])
@@ -117,6 +118,33 @@ def Calculate_XTestShape_correlation(Feature_SHAP_info_dict,logit_number=1):
     df_Correlation_XtestnShap=pd.DataFrame.from_dict(Correlation_XtestnShap,orient='index')
     df_Correlation_XtestnShap.columns=['correlation w logit:{}'.format(logit_number)]
     return df_Correlation_XtestnShap
+
+def Prepare_data_for_summaryPlot(SHAPval_info_dict, feature_columns=None, PprNmeMp=None):
+    keys_bag=[]
+    XTest_dict={}
+    shap_values_0_bag=[]
+    shap_values_1_bag=[]
+    for people in sorted(SHAPval_info_dict.keys()):
+        keys_bag.append(people)
+        if not feature_columns == None:
+            df_=SHAPval_info_dict[people]['XTest'][feature_columns]
+            df_shape_value=SHAPval_info_dict[people]['shap_values'][feature_columns]
+        else:
+            df_=SHAPval_info_dict[people]['XTest']
+            df_shape_value=SHAPval_info_dict[people]['shap_values']
+        # if not SumCategorical_feats == None:
+        #     for k,values in SumCategorical_feats.items():
+        #         df_[k]=df_.loc[values].sum()
+        XTest_dict[people]=df_        
+        shap_values_0_bag.append(df_shape_value.loc[0].values)
+        shap_values_1_bag.append(df_shape_value.loc[1].values)
+    shap_values_0_array=np.vstack(shap_values_0_bag)
+    shap_values_1_array=np.vstack(shap_values_1_bag)
+    shap_values=[shap_values_0_array,shap_values_1_array]
+    df_XTest=pd.DataFrame.from_dict(XTest_dict,orient='index')
+    if PprNmeMp!=None:
+        df_XTest.columns=[Swap2PaperName(k,PprNmeMp) for k in df_XTest.columns]
+    return shap_values, df_XTest, keys_bag
 
 def get_args():
     # we add compulsary arguments as named arguments for readability
@@ -527,12 +555,13 @@ FeatureLabelMatch_manual=[
 
 
     ['TD vs df_feature_moderate_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
+    ['TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols', 'ASDTD'],
+    
+
+    ['TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_K_cols+Phonation_Syncrony_cols', 'ASDTD'],
     ['TD vs df_feature_high_CSS >> DEP_columns+Phonation_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
     ['TD vs df_feature_high_CSS >> Phonation_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
     ['TD vs df_feature_high_CSS >> DEP_columns+Phonation_Proximity_cols', 'ASDTD'],
-
-    # ['TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_K_cols+Phonation_Syncrony_cols', 'ASDTD'],
-    ['TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols', 'ASDTD'],
     ['TD vs df_feature_high_CSS >> Phonation_Proximity_cols', 'ASDTD'],
 
 
@@ -650,8 +679,8 @@ Best_param_dict=Dict()
 sellect_people_define=SellectP_define()
 
 # ''' 要手動執行一次從Incorrect2Correct_indexes和Correct2Incorrect_indexes決定哪些indexes 需要算shap value 再在這邊指定哪些fold需要停下來算SHAP value '''
-SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
-# SHAP_inspect_idxs_manual=[] # empty list means we do not execute shap function
+# SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
+SHAP_inspect_idxs_manual=[] # empty list means we do not execute shap function
 # SHAP_inspect_idxs_manual=sorted(list(set([14, 21]+[]+[24, 28, 30, 31, 39, 41, 45]+[22, 23, 27, 47, 58]+[6, 13, 19, 23, 24, 25]+[28, 35, 38, 45])))
 
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
@@ -814,6 +843,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
                         ='{0}'.format(num_ASD)
             df_best_result_allThreeClassifiers.loc[feature_keys,'num_TD']\
                         ='{0}'.format(num_TD)
+            df_best_result_allThreeClassifiers.loc[feature_keys,'f1']\
+                        ='{0}'.format(np.round(f1Score,3))
         count+=1
     if features.feattype == 'regression':
         df_best_result_r2.to_excel(writer_clf,sheet_name="R2_adj")
@@ -828,6 +859,15 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
 writer_clf.save()
 df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Classification_"+args.Feature_mode+"_3clsferRESULT.xlsx")
 print(df_best_result_allThreeClassifiers)
+
+# Change to paper name
+df_allThreeClassifiers_paperName=df_best_result_allThreeClassifiers.copy()
+index_bag=[]
+for exp_str in df_best_result_allThreeClassifiers.index:
+    experiment_name, feature_name=exp_str.split(" >> ")
+    paper_idx='+'.join([Swap2PaperName(n, PprNmeMp) for n in feature_name.split("+")])
+    index_bag.append(paper_idx)
+df_allThreeClassifiers_paperName.index=index_bag
 
 #%%
 # =============================================================================
@@ -901,9 +941,6 @@ baseline_expstr='TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_K_cols+Phona
 # [1, 15]
 ############################################################
 # Moderate
-# proposed_expstr='TD vs df_feature_moderate_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
-# baseline_expstr='TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols::ASDTD'
-
 # proposed_expstr='TD vs df_feature_moderate_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
 # baseline_expstr='TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols::ASDTD'
 [24, 28, 30, 31, 39, 41, 45]
@@ -1012,8 +1049,8 @@ Manual_inspect_idxs=[2, 3, 29, 36, 44]
 ##############################################
 
 selected_idxs=Ones2Twos_indexes+Twos2Ones_indexes
-Baseline_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs+Manual_inspect_idxs, Session_level_all, baseline_expstr)
-Proposed_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs+Manual_inspect_idxs, Session_level_all, proposed_expstr)
+Baseline_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, baseline_expstr)
+Proposed_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, proposed_expstr)
 
 Baseline_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Session_level_all, baseline_expstr)
 Proposed_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Session_level_all, proposed_expstr)
@@ -1031,6 +1068,10 @@ def Organize_Needed_decisionProb(Incorrect2Correct_indexes, Session_level_all, p
                     Incorrect2Correct_info_dict[tst_idx]['decisionfunc']=values['decisionfunc'][i]
 
     return Incorrect2Correct_info_dict
+# fig, axes = plt.subplots(2, 1, sharex=True, figsize=(10,5))
+
+
+
 # step 1: prepare data
 selected_idxs=Ones2Twos_indexes+Twos2Ones_indexes
 Baseline_changed_decision_info_dict=Organize_Needed_decisionProb(selected_idxs, Session_level_all, baseline_expstr)
@@ -1050,8 +1091,8 @@ df_Y_true_ASD_bool=df_Y_true==sellect_people_define.ASDTD_label['ASD']
 df_Y_true_TD_bool=df_Y_true==sellect_people_define.ASDTD_label['TD']
 Incorrect_baseline=df_Y_pred['baseline'] != df_Y_pred['y_true']
 Incorrect_proposed=df_Y_pred['proposed'] != df_Y_pred['y_true']
-Correct_baseline=df_Y_pred['baseline'] != df_Y_pred['y_true']
-Correct_proposed=df_Y_pred['proposed'] != df_Y_pred['y_true']
+Correct_baseline=df_Y_pred['baseline'] == df_Y_pred['y_true']
+Correct_proposed=df_Y_pred['proposed'] == df_Y_pred['y_true']
 
 fig, ax = plt.subplots()
 
@@ -1068,11 +1109,11 @@ Baseline_y[Incorrect2Correct.loc[df_Baseline_changed_decision_info_dict.index]]\
     =-Baseline_y_decisionfunc[Incorrect2Correct.loc[df_Baseline_changed_decision_info_dict.index]]
 Baseline_y[Correct2Incorrect.loc[df_Baseline_changed_decision_info_dict.index]]\
     =Baseline_y_decisionfunc[Correct2Incorrect.loc[df_Baseline_changed_decision_info_dict.index]]
-Baseline_total_y[df_Baseline_total_decision_info_dict.loc[Incorrect_baseline]]\
-    =-df_Baseline_total_decision_info_dict.loc[Incorrect_baseline]
-Baseline_total_y[df_Baseline_total_decision_info_dict.loc[Incorrect_baseline]]\
-    =df_Baseline_total_decision_info_dict.loc[Correct_baseline]
 
+df_Baseline_total_decision_info_dict.loc[Incorrect_baseline]
+
+Baseline_total_y[Incorrect_baseline.values]=-Baseline_total_y_decisionfunc[Incorrect_baseline.values]
+Baseline_total_y[Correct_baseline.values]=Baseline_total_y_decisionfunc[Correct_baseline.values]
 
 
 
@@ -1082,14 +1123,19 @@ Proposed_y= df_Proposed_changed_decision_info_dict['decisionfunc'].abs().values.
 Proposed_total_x= df_Proposed_total_decision_info_dict['predictproba'].values
 Proposed_total_y_decisionfunc= df_Proposed_total_decision_info_dict['decisionfunc'].abs().values.copy()
 Proposed_total_y= df_Proposed_total_decision_info_dict['decisionfunc'].abs().values.copy()
+
 Proposed_y[Incorrect2Correct.loc[df_Baseline_changed_decision_info_dict.index]]=\
     Proposed_y_decisionfunc[Incorrect2Correct.loc[df_Baseline_changed_decision_info_dict.index]]
 Proposed_y[Correct2Incorrect.loc[df_Baseline_changed_decision_info_dict.index]]=\
     -Proposed_y_decisionfunc[Correct2Incorrect.loc[df_Baseline_changed_decision_info_dict.index]]
-Proposed_total_y[df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]]\
-    =-df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]
-Proposed_total_y[df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]]\
-    =df_Proposed_total_decision_info_dict.loc[Correct_proposed]
+
+Proposed_total_y[Incorrect_proposed.values]=-Proposed_total_y_decisionfunc[Incorrect_proposed.values]
+Proposed_total_y[Correct_proposed.values]=Proposed_total_y_decisionfunc[Correct_proposed.values]
+
+# Proposed_total_y[df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]]\
+#     =-df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]
+# Proposed_total_y[df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]]\
+#     =df_Proposed_total_decision_info_dict.loc[Correct_proposed]
 
 Total_y=list(Baseline_y)+list(Proposed_y)
 Total_x=list(Baseline_x)+list(Proposed_x)
@@ -1111,9 +1157,11 @@ for B_x, B_y, P_x, P_y,idx in zip(Baseline_x,Baseline_y,Proposed_x,Proposed_y,Sa
 plt.scatter(Baseline_x, Baseline_y, c='b', alpha=1)
 plt.scatter(Proposed_x, Proposed_y, c='r', alpha=1)
 
+plt.scatter(df_Baseline_total_decision_info_dict.predictproba, Baseline_total_y, c='b', alpha=.05)
+plt.scatter(df_Proposed_total_decision_info_dict.predictproba, Proposed_total_y, c='r', alpha=.05)
 
-plt.scatter(df_Baseline_total_decision_info_dict.predictproba, df_Baseline_total_decision_info_dict.abs().decisionfunc, c='b', alpha=.05)
-plt.scatter(df_Proposed_total_decision_info_dict.predictproba, df_Proposed_total_decision_info_dict.abs().decisionfunc, c='r', alpha=.05)
+# plt.scatter(df_Baseline_total_decision_info_dict.predictproba, df_Baseline_total_decision_info_dict.abs().decisionfunc, c='b', alpha=.5)
+# plt.scatter(df_Proposed_total_decision_info_dict.predictproba, df_Proposed_total_decision_info_dict.abs().decisionfunc, c='r', alpha=.5)
 
 ax.annotate('',xy=(0, 0), xytext=(1, 0),arrowprops=dict(arrowstyle="<->",alpha=1,))                                                                     
 ax.annotate('',xy=(0.5, y_min), xytext=(0.5, y_max),arrowprops=dict(arrowstyle="<->",alpha=1,))
@@ -1128,13 +1176,26 @@ ax.text(0.5, y_max-margin_y, 'Correct', fontsize=12)
 fig.patch.set_visible(True)
 ax.axis('off')
 # plt.ylim(-1.5,1.5)
-plt.xlim(0,1)
+plt.xlim(-0,1.1)
 plt.title(experiment_title)
 plt.show()
 
+
+
+shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_changed_info_dict,\
+                                                          feature_columns=None,\
+                                                          PprNmeMp=PprNmeMp) 
+
+
+
+shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,show=False, max_display=8)
+plt.title(experiment_title)
+plt.show()
+
+
 #%%
 # 個體分析： 會存到SAHP_figures/{quadrant}/的資料夾，再開Jupyter去看
-SHAP_save_path_root="SAHP_figures/{quadrant}/"
+SHAP_save_path_root="SHAP_figures/{quadrant}/"
 
 
 import shutil
@@ -1149,9 +1210,10 @@ UsePaperName_bool=True
 Quadrant_FeatureImportance_dict={}
 Quadrant_feature_AddedTopFive_dict={}
 Quadrant_feature_AddedFeatureImportance_dict={}
-
-for Analysis_grp_str in ['Manual_inspect_idxs','quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
-# for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
+Manual_inspect_idxs=[28, 35, 38, 45]
+# for Analysis_grp_str in ['Manual_inspect_idxs','quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
+for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
+# for Analysis_grp_str in ['Manual_inspect_idxs']:
     Analysis_grp_indexes=vars()[Analysis_grp_str]
     df_shap_values_stacked=pd.DataFrame([])
     for Inspect_samp in Analysis_grp_indexes:
@@ -1170,15 +1232,17 @@ for Analysis_grp_str in ['Manual_inspect_idxs','quadrant1_indexes','quadrant2_in
         df_shap_values_stacked=pd.concat([df_shap_values_stacked,df_shap_values],)
         expected_value_lst.append(expected_value)
         
-        
         Xtest.index=[ Swap2PaperName(name,PprNmeMp) for name in Xtest.index]
-        # shap.force_plot(expected_value, df_shap_values.values, Xtest.T, matplotlib=True,show=False)
-        p=shap.force_plot(expected_value, df_shap_values.values, Xtest.T)
+        # Xtest.index=[ repr(Swap2PaperName(name,PprNmeMp)) for name in Xtest.index]
+        shap.force_plot(expected_value, df_shap_values.values, Xtest.round(2).T, matplotlib=True,show=True)
+        # p=shap.force_plot(expected_value, df_shap_values.values, Xtest.T)
         SHAP_save_path=SHAP_save_path_root.format(quadrant=Analysis_grp_str)
         if not os.path.exists(SHAP_save_path):
             os.makedirs(SHAP_save_path)
             
-        shap.save_html(SHAP_save_path+'{sample}.html'.format(sample=Inspect_samp), p)
+        # shap.save_html(SHAP_save_path+'{sample}.html'.format(sample=Inspect_samp), p)
+        plt.savefig(SHAP_save_path+"{sample}.png".format(sample=Inspect_samp),dpi=150, bbox_inches='tight')
+        # plt.savefig(SHAP_save_path+"{sample}.png".format(sample=Inspect_samp),dpi=150)
         
         Lists_of_addedFeatures=[getattr(FeatSel,k)  for k in Additional_featureSet]
         Lists_of_addedFeatures_flatten=[e for ee in Lists_of_addedFeatures for e in ee]
@@ -1249,44 +1313,64 @@ def ReorganizeFeatures4SummaryPlot(shap_values_logit, df_XTest,FeatureSet_lst):
         df_Reorganized_XTest=pd.concat([df_Reorganized_XTest,df_XTest[FSL_papercolumns]],axis=1)
     assert df_Reorganized_shap_values.shape == df_Reorganized_XTest.shape
     return df_Reorganized_shap_values.values, df_Reorganized_XTest
-def Prepare_data_for_summaryPlot(SHAPval_info_dict, feature_columns=None, PprNmeMp=None):
-    keys_bag=[]
-    XTest_dict={}
-    shap_values_0_bag=[]
-    shap_values_1_bag=[]
-    for people in sorted(SHAPval_info_dict.keys()):
-        keys_bag.append(people)
-        if not feature_columns == None:
-            df_=SHAPval_info_dict[people]['XTest'][feature_columns]
-            df_shape_value=SHAPval_info_dict[people]['shap_values'][feature_columns]
-        else:
-            df_=SHAPval_info_dict[people]['XTest']
-            df_shape_value=SHAPval_info_dict[people]['shap_values']
-        # if not SumCategorical_feats == None:
-        #     for k,values in SumCategorical_feats.items():
-        #         df_[k]=df_.loc[values].sum()
-        XTest_dict[people]=df_        
-        shap_values_0_bag.append(df_shape_value.loc[0].values)
-        shap_values_1_bag.append(df_shape_value.loc[1].values)
-    shap_values_0_array=np.vstack(shap_values_0_bag)
-    shap_values_1_array=np.vstack(shap_values_1_bag)
-    shap_values=[shap_values_0_array,shap_values_1_array]
-    df_XTest=pd.DataFrame.from_dict(XTest_dict,orient='index')
-    if PprNmeMp!=None:
-        df_XTest.columns=[Swap2PaperName(k,PprNmeMp) for k in df_XTest.columns]
-    return shap_values, df_XTest, keys_bag
 
-inspect_featuresets='Trend[LOCDEP]_d'  #Trend[LOCDEP]d + Proximity[phonation]
+
+# =============================================================================
+# 
+#%%
+# Show feature importance TopN
+shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_totalPoeple_info_dict,\
+                                                          feature_columns=None,\
+                                                          PprNmeMp=PprNmeMp)
+
+
+df_shapValues=pd.DataFrame(shap_values[logit_number],columns=df_XTest.columns)
+df_shapValues_sum=df_shapValues.abs().sum(axis=0)
+df_shapValues_sum_norm=df_shapValues_sum/df_shapValues_sum.sum() * 100
+# df_shapValues_sum_norm_percentage=\
+#     (df_shapValues_sum_norm-df_shapValues_sum_norm.min())/(df_shapValues_sum_norm.max()-df_shapValues_sum_norm.min())
+df_shapValues_sum_normTopN=df_shapValues_sum_norm.sort_values(ascending=False).iloc[:N]
+df_shapValues_sum_normSorted=df_shapValues_sum_norm.sort_values(ascending=False)
+df_shapValues_sum_normSortedForPlotting=pd.DataFrame(df_shapValues_sum_normSorted.T.values,columns=['shap_val'],index=df_shapValues_sum_normSorted.index)
+switch2paperName_bool=True
+if switch2paperName_bool==True:
+    df_shapValues_sum_normSortedForPlotting.index=[Swap2PaperName(n, PprNmeMp) for n in df_shapValues_sum_normSortedForPlotting.index]
+
+# sns.histplot(df_shapValues_sum_normSortedForPlotting, x="shap_val", element="poly")
+plt.figure(figsize=(16,8))
+x=[]
+count=1
+for n in df_shapValues_sum_normSortedForPlotting.index:
+    if count< 5:
+        x.append(Swap2PaperName(n, PprNmeMp))
+    else:
+        x.append('{}'.format(count))
+    count+=1
+
+y3 = df_shapValues_sum_normSortedForPlotting.values.reshape(-1)
+ax = sns.barplot(x=x, y=y3, palette="deep")#, ax=ax3)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=40, ha="right")
+plt.tight_layout()
+plt.show()
+#%%
+# =============================================================================
+
+# inspect_featuresets='Trend[LOCDEP]_d'  #Trend[LOCDEP]d + Proximity[phonation]
 # inspect_featuresets='LOCDEP_Trend_D_cols'  #LOC_columns + Syncrony[phonation]
+inspect_featuresets='Vowel_dispersion'
 shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_changed_info_dict,\
                                                           feature_columns=(FeatSel.CategoricalName2cols)[inspect_featuresets],\
                                                           PprNmeMp=PprNmeMp)
 
 
-FeatureSet_lst=['Trend[Vowel_dispersion_inter__vowel_centralization]_d','Trend[Vowel_dispersion_inter__vowel_dispersion]_d',\
-                'Trend[Vowel_dispersion_intra]_d','Trend[formant_dependency]_d']     #Trend[LOCDEP]d + P roximity[phonation]
+# FeatureSet_lst=['Trend[Vowel_dispersion_inter__vowel_centralization]_d','Trend[Vowel_dispersion_inter__vowel_dispersion]_d',\
+#                 'Trend[Vowel_dispersion_intra]_d','Trend[formant_dependency]_d']     #Trend[LOCDEP]d + P roximity[phonation]
 # FeatureSet_lst=['Vowel_dispersion_inter__vowel_centralization','Vowel_dispersion_inter__vowel_dispersion',\
 #                 ]     #LOC + P roximity[phonation]
+
+FeatureSet_lst=[
+'Vowel_dispersion_inter__vowel_centralization','Vowel_dispersion_inter__vowel_dispersion',
+]    # 'LOC_columns', 'Phonation_Trend_D_cols'
 ###########################################
 # 檢查feature值與model output的方向關係
 # 你可以看圖（summary plot）
@@ -1303,43 +1387,45 @@ plt.show()
 # 也可以看Correlation 值
 df_Pcorrela_FeaturesnSHAPVal=Calculate_XTestShape_correlation(Proposed_totalPoeple_info_dict,logit_number=logit_number)
 
-# Feature value Inspection
 
-df_XTest_stacked,df_ShapValues_stacked=Return_ALigned_dfXtestndfShapValues(Proposed_totalPoeple_info_dict,logit_number=logit_number)
-Inspect_idx_lst=[24, 28, 30, 31, 41]
-Inspect_name_lst=[df_Index2Name_mapping[idx] for idx in  Inspect_idx_lst]
-Inpsect_feature='Trend[FCR2]_d'
-df_XTest_stacked.loc[Inpsect_feature,Inspect_name_lst]
-df_XTest_stacked_all=df_XTest_stacked.loc[Inpsect_feature]
+# 看Feature 值 & SHAP值
+inspect_idxs=quadrant1_indexes + quadrant3_indexes
+Feature_SHAP_info_dict=Organize_Needed_SHAP_info(inspect_idxs, Session_level_all, proposed_expstr)
+df_XTest_stacked,df_ShapValues_stacked=Return_ALigned_dfXtestndfShapValues(Feature_SHAP_info_dict,logit_number=logit_number)
+
+# Scatter plot 
+
+df_X_featureRank=pd.DataFrame()
+for col in df_XTest.columns:
+    df_rank_features=df_XTest[col].argsort()  #從小排到大
+    df_rank=pd.Series(df_rank_features.index.values, index=df_rank_features ,name=df_rank_features.name).sort_index()
+    
+    df_X_featureRank=pd.concat([df_X_featureRank,df_rank],axis=1)
+    df_X_featureRank_T=df_X_featureRank.T
 
 #%%
 #////////////////////////////////////////////////////////////////////////
 
 
 # //////
-# def SummaryPlot_Category(Proposed_totalPoeple_info_dict,proposed_expstr,FeatureSet_lst,experiment_title,module):
+# def SummaryPlot_Category(Poeple_info_dict,proposed_expstr,FeatureSet_lst,experiment_title,module):
 #     ##################################### 統合feautre set values
 #     # df_Baseline_shap_values=Get_Inspected_SHAP_df(Baseline_totalPoeple_info_dict,logits=[ASDTD2Logit_map['TD']]) [ASDTD2Logit_map['TD']]
-#     df_Proposed_shap_values=Get_Inspected_SHAP_df(Proposed_totalPoeple_info_dict,logits=[ASDTD2Logit_map['TD']]) [ASDTD2Logit_map['TD']]
+#     # df_Proposed_shap_values=Get_Inspected_SHAP_df(Poeple_info_dict,logits=[ASDTD2Logit_map['TD']]) [ASDTD2Logit_map['TD']]
+#     shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Poeple_info_dict,\
+#                                                               feature_columns=None,\
+#                                                               PprNmeMp=None)
     
-#     # baseline_featset_lst=baseline_expstr[re.search(" >> ",baseline_expstr).end():re.search("::",baseline_expstr).start()].split("+")
-#     proposed_featset_lst=proposed_expstr[re.search(" >> ",proposed_expstr).end():re.search("::",proposed_expstr).start()].split("+")
-#     # df_FeaSet_avg_Comparison_baseline=Calculate_sum_of_SHAP_vals(df_Baseline_shap_values,FeatSel_module=FeatSel,FeatureSet_lst=baseline_featset_lst)
- 
-#     df_FeaSet_avg_Comparison_proposed=Calculate_sum_of_SHAP_vals(df_Proposed_shap_values,FeatSel_module=module,FeatureSet_lst=FeatureSet_lst)
+#     df_shap_values=pd.DataFrame(shap_values[ASDTD2Logit_map['TD']],columns=df_XTest.columns,index=df_XTest.index)
+    
+#     df_FeaSet_avg_Comparison_proposed=Calculate_sum_of_SHAP_vals(df_shap_values,FeatSel_module=module,FeatureSet_lst=FeatureSet_lst)
 #     shap.summary_plot(df_FeaSet_avg_Comparison_proposed.drop(index=['Average','abs_Average']).values,\
 #                       feature_names=df_FeaSet_avg_Comparison_proposed.columns,show=False, max_display=10)
 #     plt.title(experiment_title)
 #     plt.show()
-# SummaryPlot_Category(Proposed_totalPoeple_info_dict,proposed_expstr,FeatureSet_lst,experiment_title,module=FeatSel.CategoricalName2cols)
-    
+# SummaryPlot_Category(Proposed_changed_info_dict,proposed_expstr,FeatureSet_lst,experiment_title,module=FeatSel.CategoricalName2cols)
 
-
-
-# shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,show=False, max_display=10)
-# plt.title(experiment_title)
-# plt.show()
-
+#%%
 # shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_totalPoeple_info_dict,\
 #                                                           feature_columns=FeatSel.CategoricalName2cols['Trend[LOCDEP]_d'],\
 #                                                           PprNmeMp=None)
@@ -1486,3 +1572,20 @@ def column_index(df, query_cols):
     cols = df.index.values
     sidx = np.argsort(cols)
     return sidx[np.searchsorted(cols,query_cols,sorter=sidx)]
+
+
+
+OriginFSet2PperNmeFSet_dict={
+'A':'Phonation_Trend_K_cols+Phonation_Syncrony_cols',
+'B':'LOC_columns+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols',
+'C':'Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols',
+'D':'Phonation_Proximity_cols',
+'E':'LOCDEP_Trend_D_cols+Phonation_Proximity_cols',
+'F':'DEP_columns+Phonation_Trend_D_cols+Phonation_Proximity_cols',
+'G':'Phonation_Trend_D_cols+Phonation_Proximity_cols',
+}
+
+
+for k,v in OriginFSet2PperNmeFSet_dict.items():
+    Ppr_str='+'.join([Swap2PaperName(f, PprNmeMp) for f in v.split('+')])
+    print('Model {M}: {_str}'.format(M=k,_str=Ppr_str))

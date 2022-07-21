@@ -709,10 +709,10 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         feature_keys, label_keys= feature_lab_str.split("::")
         feature_rawname=feature_keys[re.search(' >> ',feature_keys).end():]
         # # change the feature name to paper name
-        # if feature_rawname in PprNmeMp.Paper_name_map.keys():
-        #     featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
-        #     feature_keys=feature_keys.replace(feature_rawname,featurename_paper)
-        
+        if feature_rawname in PprNmeMp.Paper_name_map.keys():
+            featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
+            feature_keys=feature_keys.replace(feature_rawname,featurename_paper)
+            
         
         Labels = Session_level_all.X[feature_keys]
         print("=====================Cross validation start==================")
@@ -804,6 +804,9 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             #             ='{0}/{1}/{2}'.format(np.round(UAR,3),np.round(AUC,3),np.round(f1Score,3))
             df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1}'.format(label_keys,clf_keys)]\
                         ='{0}'.format(np.round(UAR,3))
+            df_best_result_allThreeClassifiers.loc[feature_keys,'f1']\
+                        ='{0}'.format(np.round(f1Score,3))
+            
     
     if features.feattype == 'regression':
         df_best_result_r2.to_excel(writer_clf,sheet_name="R2_adj")
@@ -817,7 +820,6 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
 
 writer_clf.save()
 df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Classification_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type))
-
 df_best_result_allThreeClassifiers[df_best_result_allThreeClassifiers['ASDTD/SVC'].astype(float)>0.8]
 
 print("df_best_result_allThreeClassifiers")
