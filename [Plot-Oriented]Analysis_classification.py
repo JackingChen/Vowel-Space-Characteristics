@@ -52,6 +52,8 @@ import articulation.HYPERPARAM.PaperNameMapping as PprNmeMp
 import inspect
 import seaborn as sns
 from scipy.stats import gaussian_kde
+from shap.plots._labels import labels
+from shap.plots import colors
 def Find_Experiment_actualindex(Total_FeatComb_idxs,search_string):
     # usage:
     # e.x. :
@@ -153,292 +155,6 @@ def shorten_text(text, length_limit):
         return text
     
     
-def summary_legacy(df_shap_values, features=None, feature_names=None, max_display=None, plot_type=None,
-                 color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
-                 color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
-                 class_inds=None,
-                 color_bar_label=labels["FEATURE_VALUE"],
-                 cmap=colors.red_blue,
-                 font_size=13,\
-                 dot_size=10,\
-                 # depreciated
-                 auto_size_plot=None,
-                 use_log_scale=False):
-    """Create a SHAP beeswarm plot, colored by feature values when they are provided.
-
-    Parameters
-    ----------
-    shap_values : numpy.array
-        For single output explanations this is a matrix of SHAP values (# samples x # features).
-        For multi-output explanations this is a list of such matrices of SHAP values.
-
-    features : numpy.array or pandas.DataFrame or list
-        Matrix of feature values (# samples x # features) or a feature_names list as shorthand
-
-    feature_names : list
-        Names of the features (length # features)
-
-    max_display : int
-        How many top features to include in the plot (default is 20, or 7 for interaction plots)
-
-    plot_type : "dot" (default for single output), "bar" (default for multi-output), "violin",
-        or "compact_dot".
-        What type of summary plot to produce. Note that "compact_dot" is only used for
-        SHAP interaction values.
-
-    plot_size : "auto" (default), float, (float, float), or None
-        What size to make the plot. By default the size is auto-scaled based on the number of
-        features that are being displayed. Passing a single float will cause each row to be that 
-        many inches high. Passing a pair of floats will scale the plot by that
-        number of inches. If None is passed then the size of the current figure will be left
-        unchanged.
-    """
-    
-    
-    assert type(df_shap_values) == pd.core.frame.DataFrame
-    
-    # TODO: 把marker加進來
-    Marker_dict={
-        'O':'<',
-        'X':'X',
-        
-        
-        }
-    markers_bag=list(df_shap_values.index)
-    shap_values=df_shap_values.values
-
-    # support passing an explanation object
-    # if str(type(shap_values)).endswith("Explanation'>"):
-    #     shap_exp = shap_values
-    #     base_value = shap_exp.base_values
-    #     shap_values = shap_exp.values
-    #     if features is None:
-    #         features = shap_exp.data
-    #     if feature_names is None:
-    #         feature_names = shap_exp.feature_names
-
-
-    # deprecation warnings
-    # if auto_size_plot is not None:
-    #     warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead.")
-
-    multi_class = False
-    if isinstance(shap_values, list):
-        multi_class = True
-        if plot_type is None:
-            plot_type = "bar" # default for multi-output explanations
-        assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
-    else:
-        if plot_type is None:
-            plot_type = "dot" # default for single output explanations
-        assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
-
-    # default color:
-    if color is None:
-        if plot_type == 'layered_violin':
-            color = "coolwarm"
-        elif multi_class:
-            color = lambda i: colors.red_blue_circle(i/len(shap_values))
-        else:
-            color = colors.blue_rgb
-
-    idx2cat = None
-    # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
-        if feature_names is None:
-            feature_names = features.columns
-        # feature index to category flag
-        idx2cat = features.dtypes.astype(str).isin(["object", "category"]).tolist()
-        features = features.values
-    elif isinstance(features, list):
-        if feature_names is None:
-            feature_names = features
-        features = None
-    elif (features is not None) and len(features.shape) == 1 and feature_names is None:
-        feature_names = features
-        features = None
-
-    num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1])
-
-    if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape of the " \
-                    "provided data matrix."
-        if num_features - 1 == features.shape[1]:
-            assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
-                          "constant offset? Of so just pass shap_values[:,:-1]."
-        else:
-            assert num_features == features.shape[1], shape_msg
-
-    if feature_names is None:
-        feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
-
-    if use_log_scale:
-        plt.xscale('symlog')
-
-    
-
-    if max_display is None:
-        max_display = 20
-
-    if sort:
-        # order features by the sum of their effect magnitudes
-        if multi_class:
-            feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
-        else:
-            feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0))
-        feature_order = feature_order[-min(max_display, len(feature_order)):]
-    else:
-        feature_order = np.flip(np.arange(min(max_display, num_features)), 0)
-
-    row_height = 0.4
-    if plot_size == "auto":
-        plt.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
-    elif type(plot_size) in (list, tuple):
-        plt.gcf().set_size_inches(plot_size[0], plot_size[1])
-    elif plot_size is not None:
-        plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
-    plt.axvline(x=0, color="#999999", zorder=-1)
-
-    if plot_type == "dot":
-        for pos, i in enumerate(feature_order):
-            plt.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
-            shaps = shap_values[:, i]  # shap_values: (feature_num, people)
-            values = None if features is None else features[:, i]
-            inds = np.arange(len(shaps))
-            np.random.shuffle(inds)
-            if values is not None:
-                values = values[inds]
-            shaps = shaps[inds]
-            colored_feature = True
-            try:
-                if idx2cat is not None and idx2cat[i]: # check categorical feature
-                    colored_feature = False
-                else:
-                    values = np.array(values, dtype=np.float64)  # make sure this can be numeric
-            except:
-                colored_feature = False
-            N = len(shaps)
-            # hspacing = (np.max(shaps) - np.min(shaps)) / 200
-            # curr_bin = []
-            nbins = 100
-            quant = np.round(nbins * (shaps - np.min(shaps)) / (np.max(shaps) - np.min(shaps) + 1e-8))
-            inds = np.argsort(quant + np.random.randn(N) * 1e-6)
-            layer = 0
-            last_bin = -1
-            ys = np.zeros(N)
-            for ind in inds:
-                if quant[ind] != last_bin:
-                    layer = 0
-                ys[ind] = np.ceil(layer / 2) * ((layer % 2) * 2 - 1)
-                layer += 1
-                last_bin = quant[ind]
-            ys *= 0.9 * (row_height / np.max(ys + 1))
-
-            if features is not None and colored_feature:
-                # trim the color range, but prevent the color range from collapsing
-                vmin = np.nanpercentile(values, 5)
-                vmax = np.nanpercentile(values, 95)
-                if vmin == vmax:
-                    vmin = np.nanpercentile(values, 1)
-                    vmax = np.nanpercentile(values, 99)
-                    if vmin == vmax:
-                        vmin = np.min(values)
-                        vmax = np.max(values)
-                if vmin > vmax: # fixes rare numerical precision issues
-                    vmin = vmax
-
-                assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
-
-                # plot the nan values in the interaction feature as grey
-                nan_mask = np.isnan(values)
-                # 這個在把nan的值畫成灰色，不重要
-                plt.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
-                           vmax=vmax, s=16, alpha=alpha, linewidth=0,
-                           zorder=3, rasterized=len(shaps) > 500)
-
-                # plot the non-nan values colored by the trimmed feature value
-                cvals = values[np.invert(nan_mask)].astype(np.float64)
-                cvals_imp = cvals.copy()
-                cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
-                cvals[cvals_imp > vmax] = vmax
-                cvals[cvals_imp < vmin] = vmin
-                
-                
-                # 這個是主要話資料點的function
-                # 
-                # plt.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
-                #            cmap=cmap, vmin=vmin, vmax=vmax, s=16,
-                #            marker=Marker_dict[markers_bag[pos]],
-                #            c=cvals, alpha=alpha, linewidth=0,
-                #            zorder=3, rasterized=len(shaps) > 500)
-                position_correct_bool=np.array(markers_bag) == 'O'
-                position_Incorrect_bool=np.array(markers_bag) == 'X'
-                
-                shap_position_correct_x_array=shaps[np.invert(nan_mask)][position_correct_bool]
-                shap_position_correct_y_array=(pos + ys[np.invert(nan_mask)])[position_correct_bool]
-                
-                shap_position_Incorrect_x_array=shaps[np.invert(nan_mask)][position_Incorrect_bool]
-                shap_position_Incorrect_y_array=(pos + ys[np.invert(nan_mask)])[position_Incorrect_bool]
-                
-                cvals_correct=cvals[position_correct_bool]
-                cvals_Incorrect=cvals[position_Incorrect_bool]
-                
-                
-                if len(shap_position_correct_x_array)>0:
-                    plt.scatter(shap_position_correct_x_array, shap_position_correct_y_array,
-                               cmap=cmap, vmin=vmin, vmax=vmax, s=dot_size,
-                               marker=Marker_dict['O'],
-                               c=cvals_correct, alpha=alpha, linewidth=0,
-                               zorder=3, rasterized=len(shaps) > 500)
-                if len(shap_position_Incorrect_x_array)>0:
-                    plt.scatter(shap_position_Incorrect_x_array, shap_position_Incorrect_y_array,
-                               cmap=cmap, vmin=vmin, vmax=vmax, s=dot_size,
-                               marker=Marker_dict['X'],
-                               c=cvals_Incorrect, alpha=alpha, linewidth=0,
-                               zorder=3, rasterized=len(shaps) > 500)
-                
-            else:
-                plt.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
-                           color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
-    # draw the color bar
-    if color_bar and features is not None and plot_type != "bar" and \
-            (plot_type != "layered_violin" or color in plt.cm.datad):
-        import matplotlib.cm as cm
-        # from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
-        # aspect = 20
-        # pad_fraction = 0.5
-        m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else plt.get_cmap(color))
-        m.set_array([0, 50])
-        
-        cb = plt.colorbar(m, ticks=[0, 50], aspect=1000)
-        cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
-        cb.set_label(color_bar_label, size=12, labelpad=0)
-        cb.ax.tick_params(labelsize=11, length=0)
-        cb.set_alpha(1)
-        cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
-        cb.ax.set_aspect((bbox.height - 0.9) * 20)
-        # cb.draw_all()
-
-    plt.gca().xaxis.set_ticks_position('bottom')
-    plt.gca().yaxis.set_ticks_position('none')
-    plt.gca().spines['right'].set_visible(False)
-    plt.gca().spines['top'].set_visible(False)
-    plt.gca().spines['left'].set_visible(False)
-    plt.gca().tick_params(color=axis_color, labelcolor=axis_color)
-    # Get or set the current tick locations and labels of the y-axis.
-    # 這邊用來把feature 名稱放在y軸
-    plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=font_size)
-    if plot_type != "bar":
-        plt.gca().tick_params('y', length=20, width=0.5, which='major')
-    plt.gca().tick_params('x', labelsize=11)
-    plt.ylim(-1, len(feature_order))
-    if plot_type == "bar":
-        plt.xlabel(labels['GLOBAL_VALUE'], fontsize=font_size)
-    else:
-        plt.xlabel(labels['VALUE'], fontsize=font_size)
-    if show:
-        plt.show()    
     
 def get_args():
     # we add compulsary arguments as named arguments for readability
@@ -1210,8 +926,7 @@ Twos2Ones_indexes=list(df_Y_pred[Twos2Ones].index)
 
 '''
 
-from shap.plots._labels import labels
-from shap.plots import colors
+
 #%%
 ##############################################
 def Plot_CoolErrorAnal( 
@@ -1225,6 +940,9 @@ def Plot_CoolErrorAnal(
                        df_Y_pred,
                        show_dots_max=1.1,
                        font_size=12,
+                       y_scale=.9,
+                       margin_ratio_x=10,
+                       margin_ratio_y=20,
                        ):
 
     df_Proposed_changed_decision_info_dict=pd.DataFrame.from_dict(Proposed_changed_decision_info_dict,orient='index')
@@ -1283,7 +1001,7 @@ def Plot_CoolErrorAnal(
     
     # y_max=np.max(Total_y)
     # y_min=np.min(Total_y)
-    y_scale=.9
+    
     y_max=y_scale
     y_min=-y_scale
     
@@ -1308,8 +1026,8 @@ def Plot_CoolErrorAnal(
     
     plt.annotate('',xy=(0, 0), xytext=(1, 0),arrowprops=dict(arrowstyle="<->",alpha=1,))                                                                     
     plt.annotate('',xy=(0.5, y_min), xytext=(0.5, y_max),arrowprops=dict(arrowstyle="<->",alpha=1,))
-    margin_y=(y_max-y_min)/10
-    margin_x=(1-0)/20
+    margin_y=(y_max-y_min)/margin_ratio_x
+    margin_x=(1-0)/margin_ratio_y
     
     # plt.text(0, y_middle-margin_y, 'ASD', fontsize=font_size)
     # plt.text(1-margin_x, y_middle-margin_y, 'TD', fontsize=font_size)
@@ -1330,242 +1048,7 @@ def Plot_CoolErrorAnal(
     # plt.title(experiment_title)
     # plt.show()
 
-# TODO: remove unused title argument / use title argument
-# TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
-def summary_legacy_jack(df_shap_values, features=None, feature_names=None, max_display=None, plot_type=None,
-                  color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
-                  color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
-                  class_inds=None,
-                  color_bar_label=labels["FEATURE_VALUE"],
-                  cmap=colors.red_blue,
-                  font_size=13,\
-                  dot_size=10,\
-                  tick_sizes=20,\
-                  colorbar_aspect=100,\
-                  # depreciated
-                  auto_size_plot=None,
-                  use_log_scale=False):
-    assert type(df_shap_values) == pd.core.frame.DataFrame
-    Marker_dict={
-        'O':'<',
-        'X':'X',
-        }
-    markers_bag=list(df_shap_values.index)
-    shap_values=df_shap_values.values
 
-    multi_class = False
-    if isinstance(shap_values, list):
-        multi_class = True
-        if plot_type is None:
-            plot_type = "bar" # default for multi-output explanations
-        assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
-    else:
-        if plot_type is None:
-            plot_type = "dot" # default for single output explanations
-        assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
-
-    # default color:
-    if color is None:
-        if plot_type == 'layered_violin':
-            color = "coolwarm"
-        elif multi_class:
-            color = lambda i: colors.red_blue_circle(i/len(shap_values))
-        else:
-            color = colors.blue_rgb
-
-    idx2cat = None
-    # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
-        if feature_names is None:
-            feature_names = features.columns
-        # feature index to category flag
-        idx2cat = features.dtypes.astype(str).isin(["object", "category"]).tolist()
-        features = features.values
-    elif isinstance(features, list):
-        if feature_names is None:
-            feature_names = features
-        features = None
-    elif (features is not None) and len(features.shape) == 1 and feature_names is None:
-        feature_names = features
-        features = None
-
-    num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1])
-
-    if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape of the " \
-                    "provided data matrix."
-        if num_features - 1 == features.shape[1]:
-            assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
-                          "constant offset? Of so just pass shap_values[:,:-1]."
-        else:
-            assert num_features == features.shape[1], shape_msg
-
-    if feature_names is None:
-        feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
-
-    if use_log_scale:
-        plt.xscale('symlog')
-    if max_display is None:
-        max_display = 20
-    if sort:
-        # order features by the sum of their effect magnitudes
-        if multi_class:
-            feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
-        else:
-            feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0))
-        feature_order = feature_order[-min(max_display, len(feature_order)):]
-    else:
-        feature_order = np.flip(np.arange(min(max_display, num_features)), 0)
-
-    row_height = 0.4
-    if plot_size == "auto":
-        plt.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
-    elif type(plot_size) in (list, tuple):
-        plt.gcf().set_size_inches(plot_size[0], plot_size[1])
-    elif plot_size is not None:
-        plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
-    plt.axvline(x=0, color="#999999", zorder=-1)
-
-    for pos, i in enumerate(feature_order):
-        plt.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
-        shaps = shap_values[:, i]  # shap_values: (feature_num, people)
-        values = None if features is None else features[:, i]
-        inds = np.arange(len(shaps))
-        np.random.shuffle(inds)
-        if values is not None:
-            values = values[inds]
-        shaps = shaps[inds]
-        colored_feature = True
-        try:
-            if idx2cat is not None and idx2cat[i]: # check categorical feature
-                colored_feature = False
-            else:
-                values = np.array(values, dtype=np.float64)  # make sure this can be numeric
-        except:
-            colored_feature = False
-        N = len(shaps)
-        # hspacing = (np.max(shaps) - np.min(shaps)) / 200
-        # curr_bin = []
-        nbins = 100
-        quant = np.round(nbins * (shaps - np.min(shaps)) / (np.max(shaps) - np.min(shaps) + 1e-8))
-        inds = np.argsort(quant + np.random.randn(N) * 1e-6)
-        layer = 0
-        last_bin = -1
-        ys = np.zeros(N)
-        for ind in inds:
-            if quant[ind] != last_bin:
-                layer = 0
-            ys[ind] = np.ceil(layer / 2) * ((layer % 2) * 2 - 1)
-            layer += 1
-            last_bin = quant[ind]
-        ys *= 0.9 * (row_height / np.max(ys + 1))
-
-        if features is not None and colored_feature:
-            # trim the color range, but prevent the color range from collapsing
-            vmin = np.nanpercentile(values, 5)
-            vmax = np.nanpercentile(values, 95)
-            if vmin == vmax:
-                vmin = np.nanpercentile(values, 1)
-                vmax = np.nanpercentile(values, 99)
-                if vmin == vmax:
-                    vmin = np.min(values)
-                    vmax = np.max(values)
-            if vmin > vmax: # fixes rare numerical precision issues
-                vmin = vmax
-
-            assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
-
-            # plot the nan values in the interaction feature as grey
-            nan_mask = np.isnan(values)
-            # 這個在把nan的值畫成灰色，不重要
-            plt.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
-                       vmax=vmax, s=16, alpha=alpha, linewidth=0,
-                       zorder=3, rasterized=len(shaps) > 500)
-
-            # plot the non-nan values colored by the trimmed feature value
-            cvals = values[np.invert(nan_mask)].astype(np.float64)
-            cvals_imp = cvals.copy()
-            cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
-            cvals[cvals_imp > vmax] = vmax
-            cvals[cvals_imp < vmin] = vmin
-            
-            
-            # 這個是主要話資料點的function
-            # 
-            # plt.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
-            #            cmap=cmap, vmin=vmin, vmax=vmax, s=16,
-            #            marker=Marker_dict[markers_bag[pos]],
-            #            c=cvals, alpha=alpha, linewidth=0,
-            #            zorder=3, rasterized=len(shaps) > 500)
-            position_correct_bool=np.array(markers_bag) == 'O'
-            position_Incorrect_bool=np.array(markers_bag) == 'X'
-            
-            shap_position_correct_x_array=shaps[np.invert(nan_mask)][position_correct_bool]
-            shap_position_correct_y_array=(pos + ys[np.invert(nan_mask)])[position_correct_bool]
-            
-            shap_position_Incorrect_x_array=shaps[np.invert(nan_mask)][position_Incorrect_bool]
-            shap_position_Incorrect_y_array=(pos + ys[np.invert(nan_mask)])[position_Incorrect_bool]
-            
-            cvals_correct=cvals[position_correct_bool]
-            cvals_Incorrect=cvals[position_Incorrect_bool]
-            
-            
-            if len(shap_position_correct_x_array)>0:
-                plt.scatter(shap_position_correct_x_array, shap_position_correct_y_array,
-                           cmap=cmap, vmin=vmin, vmax=vmax, s=dot_size,
-                           marker=Marker_dict['O'],
-                           c=cvals_correct, alpha=alpha, linewidth=0,
-                           zorder=3, rasterized=len(shaps) > 500)
-            if len(shap_position_Incorrect_x_array)>0:
-                plt.scatter(shap_position_Incorrect_x_array, shap_position_Incorrect_y_array,
-                           cmap=cmap, vmin=vmin, vmax=vmax, s=dot_size,
-                           marker=Marker_dict['X'],
-                           c=cvals_Incorrect, alpha=alpha, linewidth=0,
-                           zorder=3, rasterized=len(shaps) > 500)
-            
-        else:
-            plt.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
-                       color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
-    # draw the color bar
-    if color_bar and features is not None and plot_type != "bar" and \
-            (plot_type != "layered_violin" or color in plt.cm.datad):
-
-        import matplotlib.cm as cm
-        # from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
-        # aspect = 20
-        # pad_fraction = 0.5
-        m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else plt.get_cmap(color))
-        m.set_array([0, tick_sizes])
-        
-        cb = plt.colorbar(m, ticks=[0, tick_sizes], aspect=colorbar_aspect)
-        cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
-        cb.set_label(color_bar_label, size=12, labelpad=0)
-        cb.ax.tick_params(labelsize=11, length=0)
-        cb.set_alpha(1)
-        cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
-        cb.ax.set_aspect((bbox.height - 0.9) * 20)
-        # cb.draw_all()
-
-    plt.gca().xaxis.set_ticks_position('bottom')
-    plt.gca().yaxis.set_ticks_position('none')
-    plt.gca().spines['right'].set_visible(False)
-    plt.gca().spines['top'].set_visible(False)
-    plt.gca().spines['left'].set_visible(False)
-    plt.gca().tick_params(color=axis_color, labelcolor=axis_color)
-    # Get or set the current tick locations and labels of the y-axis.
-    # 這邊用來把feature 名稱放在y軸
-    plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=font_size)
-    if plot_type != "bar":
-        plt.gca().tick_params('y', length=20, width=0.5, which='major')
-    plt.gca().tick_params('x', labelsize=11)
-    plt.ylim(-1, len(feature_order))
-    if plot_type == "bar":
-        plt.xlabel(labels['GLOBAL_VALUE'], fontsize=font_size)
-    else:
-        plt.xlabel(labels['VALUE'], fontsize=font_size)
-    if show:
-        plt.show()
 
 proposed_expstr_lst=[
     'TD vs df_feature_lowMinimal_CSS >> LOC_columns+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD',
@@ -1584,8 +1067,8 @@ Subplot_columns=3*plt_unit
 Subplot_rows=2
 ErrPlt_base_idx=2
 SummaryPlt_base_idx=8
-global_font_size=12
-plt.figure(figsize=(15,8))
+global_font_size=18
+plt.figure(figsize=(6,8))
 
 ExperimentTitleMap_dict={
     'lowMinimal':'low-symptom',
@@ -1594,8 +1077,12 @@ ExperimentTitleMap_dict={
     
     }
 
+if not os.path.exists('images/Err_anals'):
+    os.makedirs('images/Err_anals')
+
 # plt.suptitle(experiment_title, fontsize=16)
 # for iiii in [1]:
+Debug_dict=Dict()
 for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_lst):    
     # print(iiii)
     #Data prepare
@@ -1640,7 +1127,7 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
     
     
     
-    plt.subplot(Subplot_rows,Subplot_columns,count*plt_unit+ErrPlt_base_idx)
+    # plt.subplot(Subplot_rows,Subplot_columns,count*plt_unit+ErrPlt_base_idx)
     # print('Error_plt: ',Subplot_rows,Subplot_columns,count*plt_unit+ErrPlt_base_idx)
     
     # step 1: prepare data
@@ -1650,6 +1137,26 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
     Baseline_total_decision_info_dict=Organize_Needed_decisionProb(df_Y_pred.index, Session_level_all, baseline_expstr)
     Proposed_total_decision_info_dict=Organize_Needed_decisionProb(df_Y_pred.index, Session_level_all, proposed_expstr)
     
+    # =============================================================================
+    # Debuging here    
+    
+    df_Proposed_changed_decision_info_dict=pd.DataFrame.from_dict(Proposed_changed_decision_info_dict,orient='index')
+    df_Baseline_changed_decision_info_dict=pd.DataFrame.from_dict(Baseline_changed_decision_info_dict,orient='index')
+    df_Proposed_total_decision_info_dict=pd.DataFrame.from_dict(Proposed_total_decision_info_dict,orient='index')
+    df_Baseline_total_decision_info_dict=pd.DataFrame.from_dict(Baseline_total_decision_info_dict,orient='index')
+    
+    Debug_dict[proposed_expstr]=df_Proposed_total_decision_info_dict
+    print(experiment_title)
+    # print("Proposed_changed_decision: min: {}, max: {}".format(df_Proposed_changed_decision_info_dict.min(),\
+    #                                            df_Proposed_changed_decision_info_dict.max()) )
+    print("Proposed_total_decision: min: {}, max: {}".format(df_Proposed_total_decision_info_dict.min(),\
+                                                df_Proposed_total_decision_info_dict.max()) )
+    # =============================================================================
+    show_dots_max=2.0
+    y_scale=1.9
+    y_scale = 2.0 if experiment_title == 'lowMinimal' else y_scale
+    # show_dots_max=.5 if experiment_title == 'lowMinimal' else show_dots_max
+    y_scale = show_dots_max-.05 if show_dots_max < y_scale else y_scale
     
     
     Plot_CoolErrorAnal(selected_idxs,Baseline_changed_decision_info_dict,
@@ -1659,14 +1166,33 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
                        Incorrect2Correct_bool=Incorrect2Correct,
                        Correct2Incorrect_bool=Correct2Incorrect,
                        df_Y_pred=df_Y_pred,
-                       show_dots_max=1.1,
+                       show_dots_max=show_dots_max,
                        font_size=global_font_size,
+                       y_scale=y_scale,
+                       margin_ratio_x=8,
+                       margin_ratio_y=15
                        )
-    plt.gca().set_title(ExperimentTitleMap_dict[experiment_title], fontsize=global_font_size+10)
+    
+    ''' 第一步： 輸出error analysis圖 '''
+    plt.gca().set_title(ExperimentTitleMap_dict[experiment_title], fontsize=global_font_size)
+    fig=plt.gcf()
+    # equal_textwidth=4.7747/3 #the size of latex textwidth
+    equal_textwidth=4.7747 #the size of latex textwidth
+    size = fig.get_size_inches()
+    size_ratio= size[-1] / size[0]
+    setFigSizes=(equal_textwidth,equal_textwidth*size_ratio)
+    setFigSizes = (equal_textwidth, equal_textwidth*size_ratio/2.9) if experiment_title == 'lowMinimal' else setFigSizes
+    fig.set_size_inches(setFigSizes)
+    # fig.savefig(fname='images/Err_anals/{}.png'.format(ExperimentTitleMap_dict[experiment_title]),\
+    #             bbox_inches='tight',dpi=600)
+    fig.savefig(fname='images/Err_anals/{}.png'.format(ExperimentTitleMap_dict[experiment_title]),dpi=300)
+    plt.clf()
     
     SummaryPltPosition=count*plt_unit+SummaryPlt_base_idx
-    plt.subplot(Subplot_rows,Subplot_columns,SummaryPltPosition)
-    print('Summary_lt: ',Subplot_rows,Subplot_columns,SummaryPltPosition)
+    # print('Summary_lt: ',Subplot_rows,Subplot_columns,SummaryPltPosition)
+    
+    
+    ''' 這邊開始是summary plot的範圍 '''
     
     Proposed_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, proposed_expstr)
     shap_values_proposedchanged, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_changed_info_dict,\
@@ -1702,22 +1228,274 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
     # summary_legacy_jack(df_shap_values_proposedchanged_corrIncorrMarkers, df_XTest,feature_names=df_XTest.columns,\
     #                plot_size=None,show=False, max_display=max_display,title=None,\
     #                font_size=8,dot_size=15)
-    
     if SummaryPltPosition==12:
         color_bar=True
     else:
         color_bar=False
     
-    summary_legacy_jack(df_shap_values_proposedchanged_corrIncorrMarkers, df_XTest,feature_names=df_XTest.columns,\
-                    plot_size=None,show=False, max_display=max_display,title=None,\
-                    color_bar=color_bar,\
-                    tick_sizes=10,\
-                    font_size=global_font_size,\
-                    dot_size=30,\
-                    colorbar_aspect=100)
     
-    # plt.tight_layout()
-
+    
+    # TODO: remove unused title argument / use title argument
+    # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
+    def summary_legacy_jack(df_shap_values, features=None, feature_names=None, max_display=None, plot_type=None,
+                      color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
+                      color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
+                      class_inds=None,
+                      color_bar_label=labels["FEATURE_VALUE"],
+                      cmap=colors.red_blue,
+                      font_size=13,\
+                      dot_size=10,\
+                      tick_sizes=20,\
+                      colorbar_aspect=100,\
+                      row_height = 0.4,\
+                      # depreciated
+                      auto_size_plot=None,
+                      use_log_scale=False):
+        assert type(df_shap_values) == pd.core.frame.DataFrame
+        Marker_dict={
+            'O':'<',
+            'X':'X',
+            }
+        markers_bag=list(df_shap_values.index)
+        shap_values=df_shap_values.values
+    
+        multi_class = False
+        if isinstance(shap_values, list):
+            multi_class = True
+            if plot_type is None:
+                plot_type = "bar" # default for multi-output explanations
+            assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
+        else:
+            if plot_type is None:
+                plot_type = "dot" # default for single output explanations
+            assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
+    
+        # default color:
+        if color is None:
+            if plot_type == 'layered_violin':
+                color = "coolwarm"
+            elif multi_class:
+                color = lambda i: colors.red_blue_circle(i/len(shap_values))
+            else:
+                color = colors.blue_rgb
+    
+        idx2cat = None
+        # convert from a DataFrame or other types
+        if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+            if feature_names is None:
+                feature_names = features.columns
+            # feature index to category flag
+            idx2cat = features.dtypes.astype(str).isin(["object", "category"]).tolist()
+            features = features.values
+        elif isinstance(features, list):
+            if feature_names is None:
+                feature_names = features
+            features = None
+        elif (features is not None) and len(features.shape) == 1 and feature_names is None:
+            feature_names = features
+            features = None
+    
+        num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1])
+    
+        if features is not None:
+            shape_msg = "The shape of the shap_values matrix does not match the shape of the " \
+                        "provided data matrix."
+            if num_features - 1 == features.shape[1]:
+                assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
+                              "constant offset? Of so just pass shap_values[:,:-1]."
+            else:
+                assert num_features == features.shape[1], shape_msg
+    
+        if feature_names is None:
+            feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
+    
+        if use_log_scale:
+            plt.xscale('symlog')
+        if max_display is None:
+            max_display = 20
+        if sort:
+            # order features by the sum of their effect magnitudes
+            if multi_class:
+                feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
+            else:
+                feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0))
+            feature_order = feature_order[-min(max_display, len(feature_order)):]
+        else:
+            feature_order = np.flip(np.arange(min(max_display, num_features)), 0)
+    
+        
+        if plot_size == "auto":
+            plt.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
+        elif type(plot_size) in (list, tuple):
+            plt.gcf().set_size_inches(plot_size[0], plot_size[1])
+        elif plot_size is not None:
+            plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
+        plt.axvline(x=0, color="#999999", zorder=-1)
+    
+        for pos, i in enumerate(feature_order):
+            plt.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+            shaps = shap_values[:, i]  # shap_values: (feature_num, people)
+            values = None if features is None else features[:, i]
+            inds = np.arange(len(shaps))
+            np.random.shuffle(inds)
+            if values is not None:
+                values = values[inds]
+            shaps = shaps[inds]
+            colored_feature = True
+            try:
+                if idx2cat is not None and idx2cat[i]: # check categorical feature
+                    colored_feature = False
+                else:
+                    values = np.array(values, dtype=np.float64)  # make sure this can be numeric
+            except:
+                colored_feature = False
+            N = len(shaps)
+            # hspacing = (np.max(shaps) - np.min(shaps)) / 200
+            # curr_bin = []
+            nbins = 100
+            quant = np.round(nbins * (shaps - np.min(shaps)) / (np.max(shaps) - np.min(shaps) + 1e-8))
+            inds = np.argsort(quant + np.random.randn(N) * 1e-6)
+            layer = 0
+            last_bin = -1
+            ys = np.zeros(N)
+            for ind in inds:
+                if quant[ind] != last_bin:
+                    layer = 0
+                ys[ind] = np.ceil(layer / 2) * ((layer % 2) * 2 - 1)
+                layer += 1
+                last_bin = quant[ind]
+            ys *= 0.9 * (row_height / np.max(ys + 1))
+    
+            if features is not None and colored_feature:
+                # trim the color range, but prevent the color range from collapsing
+                vmin = np.nanpercentile(values, 5)
+                vmax = np.nanpercentile(values, 95)
+                if vmin == vmax:
+                    vmin = np.nanpercentile(values, 1)
+                    vmax = np.nanpercentile(values, 99)
+                    if vmin == vmax:
+                        vmin = np.min(values)
+                        vmax = np.max(values)
+                if vmin > vmax: # fixes rare numerical precision issues
+                    vmin = vmax
+    
+                assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
+    
+                # plot the nan values in the interaction feature as grey
+                nan_mask = np.isnan(values)
+                # 這個在把nan的值畫成灰色，不重要
+                plt.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
+                           vmax=vmax, s=16, alpha=alpha, linewidth=0,
+                           zorder=3, rasterized=len(shaps) > 500)
+    
+                # plot the non-nan values colored by the trimmed feature value
+                cvals = values[np.invert(nan_mask)].astype(np.float64)
+                cvals_imp = cvals.copy()
+                cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
+                cvals[cvals_imp > vmax] = vmax
+                cvals[cvals_imp < vmin] = vmin
+                
+                
+                # 這個是主要話資料點的function
+                # 
+                # plt.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
+                #            cmap=cmap, vmin=vmin, vmax=vmax, s=16,
+                #            marker=Marker_dict[markers_bag[pos]],
+                #            c=cvals, alpha=alpha, linewidth=0,
+                #            zorder=3, rasterized=len(shaps) > 500)
+                position_correct_bool=np.array(markers_bag) == 'O'
+                position_Incorrect_bool=np.array(markers_bag) == 'X'
+                
+                shap_position_correct_x_array=shaps[np.invert(nan_mask)][position_correct_bool]
+                shap_position_correct_y_array=(pos + ys[np.invert(nan_mask)])[position_correct_bool]
+                
+                shap_position_Incorrect_x_array=shaps[np.invert(nan_mask)][position_Incorrect_bool]
+                shap_position_Incorrect_y_array=(pos + ys[np.invert(nan_mask)])[position_Incorrect_bool]
+                
+                cvals_correct=cvals[position_correct_bool]
+                cvals_Incorrect=cvals[position_Incorrect_bool]
+                
+                
+                if len(shap_position_correct_x_array)>0:
+                    plt.scatter(shap_position_correct_x_array, shap_position_correct_y_array,
+                               cmap=cmap, vmin=vmin, vmax=vmax, s=dot_size,
+                               marker=Marker_dict['O'],
+                               c=cvals_correct, alpha=alpha, linewidth=0,
+                               zorder=3, rasterized=len(shaps) > 500)
+                if len(shap_position_Incorrect_x_array)>0:
+                    plt.scatter(shap_position_Incorrect_x_array, shap_position_Incorrect_y_array,
+                               cmap=cmap, vmin=vmin, vmax=vmax, s=dot_size,
+                               marker=Marker_dict['X'],
+                               c=cvals_Incorrect, alpha=alpha, linewidth=0,
+                               zorder=3, rasterized=len(shaps) > 500)
+                
+            else:
+                plt.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
+                           color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
+        # draw the color bar
+        if color_bar and features is not None and plot_type != "bar" and \
+                (plot_type != "layered_violin" or color in plt.cm.datad):
+    
+            import matplotlib.cm as cm
+            # from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+            # aspect = 20
+            # pad_fraction = 0.5
+            m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else plt.get_cmap(color))
+            m.set_array([0, tick_sizes])
+            
+            cb = plt.colorbar(m, ticks=[0, tick_sizes], aspect=colorbar_aspect)
+            cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
+            cb.set_label(color_bar_label, size=font_size, labelpad=0)
+            cb.ax.tick_params(labelsize=font_size, length=0)
+            cb.set_alpha(1)
+            cb.outline.set_visible(False)
+            bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
+            cb.ax.set_aspect((bbox.height - 0.9) * 20)
+            # cb.draw_all()
+    
+        plt.gca().xaxis.set_ticks_position('bottom')
+        plt.gca().yaxis.set_ticks_position('none')
+        plt.gca().spines['right'].set_visible(False)
+        plt.gca().spines['top'].set_visible(False)
+        plt.gca().spines['left'].set_visible(False)
+        plt.gca().tick_params(color=axis_color, labelcolor=axis_color)
+        # Get or set the current tick locations and labels of the y-axis.
+        # 這邊用來把feature 名稱放在y軸
+        plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=font_size)
+        if plot_type != "bar":
+            plt.gca().tick_params('y', length=20, width=0.5, which='major')
+        plt.gca().tick_params('x', labelsize=font_size)
+        plt.ylim(-1, len(feature_order))
+        if plot_type == "bar":
+            plt.xlabel(labels['GLOBAL_VALUE'], fontsize=font_size)
+        else:
+            plt.xlabel(labels['VALUE'], fontsize=font_size)
+        if show:
+            plt.show()  
+    
+    
+    summary_legacy_jack(df_shap_values_proposedchanged_corrIncorrMarkers, df_XTest,feature_names=df_XTest.columns,\
+                    plot_size='auto',show=False, max_display=max_display,title=None,\
+                    color_bar=color_bar,\
+                    tick_sizes=2,\
+                    font_size=36,\
+                    dot_size=230,\
+                    colorbar_aspect=60,
+                    row_height = 2.0)
+    
+    ''' 第二步： 輸出shap plot 圖 '''
+    # fig=plt.gca().set_title(ExperimentTitleMap_dict[experiment_title], fontsize=global_font_size)
+    fig=plt.gcf()
+    # size = fig.get_size_inches()
+    # fig.savefig(fname='images/Err_anals/{}_shap.png'.format(ExperimentTitleMap_dict[experiment_title]),\
+    #             bbox_inches='tight',dpi=600)
+    size_shap=(6,12)
+    fig.set_size_inches(size_shap)
+    fig.savefig(fname='images/Err_anals/{}_shap.png'.format(ExperimentTitleMap_dict[experiment_title]),\
+                bbox_inches='tight',dpi=300)
+    
+    
+    fig.clf()
     count+=1
 # plt.tight_layout()
 # plt.subplots_adjust(wspace=1.0)

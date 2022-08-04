@@ -679,8 +679,8 @@ Best_param_dict=Dict()
 sellect_people_define=SellectP_define()
 
 # ''' 要手動執行一次從Incorrect2Correct_indexes和Correct2Incorrect_indexes決定哪些indexes 需要算shap value 再在這邊指定哪些fold需要停下來算SHAP value '''
-# SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
-SHAP_inspect_idxs_manual=[] # empty list means we do not execute shap function
+SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
+# SHAP_inspect_idxs_manual=[] # empty list means we do not execute shap function
 # SHAP_inspect_idxs_manual=sorted(list(set([14, 21]+[]+[24, 28, 30, 31, 39, 41, 45]+[22, 23, 27, 47, 58]+[6, 13, 19, 23, 24, 25]+[28, 35, 38, 45])))
 
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
@@ -1202,7 +1202,7 @@ import shutil
 from collections import Counter
 shutil.rmtree(SHAP_save_path_root.format(quadrant=""), ignore_errors = True)
 
-
+Analysis_grp_bool=False
 N=5
 Xtest_dict={}
 expected_value_lst=[]
@@ -1213,6 +1213,7 @@ Quadrant_feature_AddedFeatureImportance_dict={}
 Manual_inspect_idxs=[28, 35, 38, 45]
 # for Analysis_grp_str in ['Manual_inspect_idxs','quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
 for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
+    # TODO
 # for Analysis_grp_str in ['Manual_inspect_idxs']:
     Analysis_grp_indexes=vars()[Analysis_grp_str]
     df_shap_values_stacked=pd.DataFrame([])
@@ -1234,13 +1235,17 @@ for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_inde
         
         Xtest.index=[ Swap2PaperName(name,PprNmeMp) for name in Xtest.index]
         # Xtest.index=[ repr(Swap2PaperName(name,PprNmeMp)) for name in Xtest.index]
-        shap.force_plot(expected_value, df_shap_values.values, Xtest.round(2).T, matplotlib=True,show=True)
-        # p=shap.force_plot(expected_value, df_shap_values.values, Xtest.T)
+        
+        
+        # 這個部份跑TASLP的Fig.7 也就是說明有些不顯著的feature卻shap value很高
         SHAP_save_path=SHAP_save_path_root.format(quadrant=Analysis_grp_str)
         if not os.path.exists(SHAP_save_path):
             os.makedirs(SHAP_save_path)
-            
+        shap.force_plot(expected_value, df_shap_values.values, Xtest.round(2).T, figsize=(8, 3) ,matplotlib=True,show=False)
+        # p=shap.force_plot(expected_value, df_shap_values.values, Xtest.T)
         # shap.save_html(SHAP_save_path+'{sample}.html'.format(sample=Inspect_samp), p)
+        
+        plt.savefig("images/SHAP_discussion_{sample}.png".format(sample=Inspect_samp),dpi=400, bbox_inches='tight')
         plt.savefig(SHAP_save_path+"{sample}.png".format(sample=Inspect_samp),dpi=150, bbox_inches='tight')
         # plt.savefig(SHAP_save_path+"{sample}.png".format(sample=Inspect_samp),dpi=150)
         
@@ -1261,7 +1266,7 @@ for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_inde
     
     
     ''' Analyses of per quadrants '''
-    if len(Analysis_grp_indexes)>0:
+    if len(Analysis_grp_indexes)>0 and Analysis_grp_bool == True:
         # =============================================================================
         # Feature importance
         # =============================================================================

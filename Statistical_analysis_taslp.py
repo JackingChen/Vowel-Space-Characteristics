@@ -180,13 +180,27 @@ x_PprNme_str=Swap2PaperName(x_str,PprNmeMp).replace("[$","[").replace("$]","]")
 y_PprNme_str=Swap2PaperName(y_str,PprNmeMp).replace("[$","[").replace("$]","]")
 
 
+# =============================================================================
+'''
+    這是TASLP Fig.6 discussion 在講  prevent classification error的圖
 
+'''
+# =============================================================================
 # g = sns.scatterplot(data=df_ModerateTask_postprocess,x=x_PprNme_str,y=y_PprNme_str,hue='Selected')
 g = sns.scatterplot(data=df_ModerateTask_postprocess_PprNme,x=x_PprNme_str,y=y_PprNme_str,hue='Selected')
-# for idx in df_ModerateTask_Q1Q3.index:
-#     plt.text(df_ModerateTask_Q1Q3.loc[idx,x_str],df_ModerateTask_Q1Q3.loc[idx,y_str],idx, fontdict=dict(color='black', alpha=0.5, size=16))
 g.axhline(0.027,color='g')
 g.axvline(-0.1,color='g')
+# sns.set(rc={'figure.figsize':(8,6)})
+# from matplotlib import rcParams
+# # figure size in inches
+# rcParams['figure.figsize'] = 11.7,8.27
+# g.figure.set_size_inches(11.7,8.27)
+g.figure.set_size_inches(5,3)
+
+
+# for idx in df_ModerateTask_Q1Q3.index:
+#     plt.text(df_ModerateTask_Q1Q3.loc[idx,x_str],df_ModerateTask_Q1Q3.loc[idx,y_str],idx, fontdict=dict(color='black', alpha=0.5, size=16))
+plt.savefig("images/Prevent_risk.png",dpi=300, bbox_inches='tight')
 
 # Plot moderate special samples
 # x_str='Trend[dcorr_12]_d'

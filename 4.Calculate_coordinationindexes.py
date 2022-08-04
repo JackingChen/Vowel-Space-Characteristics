@@ -56,11 +56,11 @@ def get_args():
     parser = argparse.ArgumentParser(
         description="Select utterances with entropy values that are close to disribution of target domain data",
         )
-    parser.add_argument('--inpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--inpklpath', default='articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--outpklpath', default='articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--dfFormantStatisticpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--dfFormantStatisticpath', default='articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--reFilter', default=False, type=bool,
                             help='')
@@ -76,7 +76,7 @@ def get_args():
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='TD_DOCKID',
+    parser.add_argument('--dataset_role', default='ASD_DOCKID',
                             help='[TD_DOCKID_emotion | ASD_DOCKID_emotion | kid_TD | kid88]')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
@@ -278,6 +278,7 @@ if not os.path.exists(outpklpath):
 
 
 Formants_utt_symb=pickle.load(open(pklpath+"/Formants_utt_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,windowsize,dataset_role),'rb'))
+print("Loading Formants_utt_symb from ", pklpath+"/Formants_utt_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,windowsize,dataset_role))
 
 PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
 PhoneOfInterest=sorted(list(PhoneMapp_dict.keys()))
@@ -327,6 +328,23 @@ AUI_info=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,Pho
 
 Formants_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
 AUI_info_total=Gather_info_certainphones(Formants_people_information,PhoneMapp_dict,PhoneOfInterest)
+
+# 這個部份要統計TASLP database部份要秀的phone數量
+Phone_num_dict={}
+for people in AUI_info_total.keys():
+    corner_phone_num=0
+    for phone in AUI_info_total[people].keys():
+        corner_phone_num+=len(AUI_info_total[people][phone][AUI_info_total[people][phone]['cmps'] == 'ori'])
+    Phone_num_dict[people]=corner_phone_num
+
+df_Phone_num_dict=pd.DataFrame.from_dict(Phone_num_dict, orient='index')
+df_Phone_num_dict[0].mean()
+
+# =============================================================================
+''' TD mean phone num: 591.55  '''
+''' ASD mean phone num: 665.579  '''
+# =============================================================================
+
 
 # =============================================================================
 '''

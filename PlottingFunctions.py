@@ -208,11 +208,15 @@ def KDE_Filtering(df_vowel,THRESHOLD=10,scale_factor=100):
     return df_vowel_calibrated
 def PlotSyncronyFeatures(score_df,df_person_segment_feature_DKIndividual_dict,\
                          knn_weights,knn_neighbors,col,\
+                         linewidth=8, figsize=(11.5,2.25),\
                          Inspect_people_lst=[],\
                          Inspect_role_lst=['D', 'K'],\
                          score_column='timeSeries_len[]',\
+                         show_title=True,\
                          show_text=True,\
                          Ylim_parameter=None,\
+                         Plot_process=False,\
+                         Plot_experiExamp=False,\
                          st_col_str='IPU_st',ed_col_str='IPU_ed'):
     # Inputs: 
     # score_df=df_syncrony_measurement
@@ -223,6 +227,22 @@ def PlotSyncronyFeatures(score_df,df_person_segment_feature_DKIndividual_dict,\
     # # col = 'between_variance_norm(A:,i:,u:)'
     # st_col_str='IPU_st'  #It is related to global info
     # ed_col_str='IPU_ed'  #It is related to global info
+    
+    # TASLP 跑Experiment1_example 圖片的code
+    # Title_dict={
+    #     '2016_12_24_01_233':'High GC[FCR]\textsubscript{inv}',\
+    #     '2017_03_05_01_365_1':'Low GC[FCR]\textsubscript{inv}',
+    #     }
+    Title_dict={
+        '2016_12_24_01_233':'High GC[FCR]$_\mathrm{inv}$',\
+        '2017_03_05_01_365_1':'Low GC[FCR]$_\mathrm{inv}$',
+        }    
+    
+    FileName_dict={
+        '2016_12_24_01_233':'Experiment1_example-high.png',\
+        '2017_03_05_01_365_1':'Experiment1_example-low.png',
+        }
+    
     if Ylim_parameter != None:
         [ylim_min,ylim_max]=Ylim_parameter
     
@@ -237,17 +257,22 @@ def PlotSyncronyFeatures(score_df,df_person_segment_feature_DKIndividual_dict,\
                     knn_weights=knn_weights,knn_neighbors=knn_neighbors,MinNumTimeSeries=MinNumTimeSeries,\
                     st_col_str='IPU_st', ed_col_str='IPU_ed', aggressive_mode=Knn_aggressive_mode)
         
-        # df_syncrony_measurement_col=syncrony._calculate_features_col(Col_continuous_function_DK,col)
-        # if df_syncrony_measurement_col.isna().any().any():
-        #     print("The columns with Nan is ", col)
+
     functionDK_people=Col_continuous_function_DK
     Colormap_role_dict=Dict()
-    Colormap_role_dict['D']='orange'
-    Colormap_role_dict['K']='blue'
+    Colormap_role_dict['D']='black'
+    Colormap_role_dict['K']='magenta'
 
     PprNme_role_dict=Dict()
     PprNme_role_dict['D']='investigator'
     PprNme_role_dict['K']='participant'
+    
+    linestyle_dict=Dict()
+    # linestyle_dict['D']='dashed'
+    # linestyle_dict['K']='dashdot'
+    linestyle_dict['D']='solid'
+    linestyle_dict['K']='solid'
+    
     if len(Inspect_people_lst)>0:
         Inspect_people=Inspect_people_lst
     else:
@@ -275,11 +300,18 @@ def PlotSyncronyFeatures(score_df,df_person_segment_feature_DKIndividual_dict,\
             ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],label=PprNme_role_dict[role_choose],alpha=0.5))
             
             
-            plt.plot(functionDK_people[people][role_choose],color=Colormap_role_dict[role_choose])
+            plt.plot(functionDK_people[people][role_choose],color=Colormap_role_dict[role_choose],\
+                     linewidth=linewidth,linestyle=linestyle_dict[role_choose])
+            # 為了有更清晰的legend
+            # plt.legend(fontsize=90, framealpha=1.0)
+            plt.legend(framealpha=1.0)
         ax.autoscale()
-        if show_text==True:
-            plt.title(col)
-        plt.legend()
+        if show_title==True:
+            if Title_dict !=None:
+                plt.title(Title_dict[people])
+            else:
+                plt.title(col)
+        
         
         score=score_df.loc[people,score_cols]
         info_arr=["{}: {}".format(idx,v) for idx, v in zip(score.index.values,np.round(score.values,3))]
@@ -294,6 +326,33 @@ def PlotSyncronyFeatures(score_df,df_person_segment_feature_DKIndividual_dict,\
         
         if Ylim_parameter != None:
             plt.ylim(ylim_min,ylim_max)
+        
+        if Plot_process:
+            # 這邊為了畫流程圖而刻意去壓縮
+            fig = plt.gcf()
+            def cm2inch(*tupl):
+                cm = 1/2.54
+                if isinstance(tupl[0], tuple):
+                    return tuple(i/cm for i in tupl[0])
+                else:
+                    return tuple(i/cm for i in tupl)
+    
+            inches=cm2inch(figsize)
+            fig.set_size_inches(inches)
+        
+        if Plot_experiExamp:
+            # 壓縮 TASLP experiment1 example
+            fig = plt.gcf()
+            fig.set_size_inches((2.5,3))
+        
+        # TASLP 跑Experiment1_example 圖片的時候會用到
+        plt.legend(fontsize="xx-large")
+        if FileName_dict != None:
+            outputName='images/{}'.format(FileName_dict[people])
+        else:
+            outputName='images/Method{}.png'.format(people)
+        
+        fig.savefig(fname=outputName,bbox_inches='tight',dpi=300)
         plt.show()
         fig.clf()
 
@@ -315,8 +374,15 @@ def PlotSyncronyFeatures_axes(ax,score_df,df_person_segment_feature_DKIndividual
     # # col = 'between_variance_norm(A:,i:,u:)'
     # st_col_str='IPU_st'  #It is related to global info
     # ed_col_str='IPU_ed'  #It is related to global info
+    Inspect_people=[
+        '2016_12_24_01_233',
+        '2017_03_05_01_365_1',
+        ]
+
     if Ylim_parameter != None:
         [ylim_min,ylim_max]=Ylim_parameter
+    
+    
     
     MinNumTimeSeries=knn_neighbors+1
     # score_column=score_df.columns[0]
@@ -334,8 +400,8 @@ def PlotSyncronyFeatures_axes(ax,score_df,df_person_segment_feature_DKIndividual
         #     print("The columns with Nan is ", col)
     functionDK_people=Col_continuous_function_DK
     Colormap_role_dict=Dict()
-    Colormap_role_dict['D']='orange'
-    Colormap_role_dict['K']='blue'
+    Colormap_role_dict['D']='black'
+    Colormap_role_dict['K']='magenta'
 
     PprNme_role_dict=Dict()
     PprNme_role_dict['D']='investigator'
@@ -381,65 +447,63 @@ def PlotSyncronyFeatures_axes(ax,score_df,df_person_segment_feature_DKIndividual
     
     if Ylim_parameter != None:
         ax.axis(ymin=ylim_min,ymax=ylim_max)
+    
     # plt.show()
     # fig.clf()
     return ax
 
 
-''' 這邊實際 Call function '''
+
+# =============================================================================
+''' 
+
+這邊實際 Call function 
+update: 20220728:
+
+畫TASLP figure. 1 (Method) 中的 2) Estimating speaker's GC series圖
+備註： 
+
+
+
+    
+    
+'''
+
+Demonstration_people=Dict()
+Demonstration_dict={}
+# 這是TASLP Fig.1 在method show conversation-level feature 製造出來示意圖 使用的人的紀錄
+Demonstration_people['Syncrony[Between_Within_Det_ratio_norm(A:,i:,u:)]'].methodFigure='2015_12_05_01_063_1'
+
+# 這是TASLP Fig.2 在show conversation-level feature 使用的人的紀錄
+Demonstration_dict['col']='Between_Within_Det_ratio_norm(A:,i:,u:)'
+Demonstration_people['Syncrony[Between_Within_Det_ratio_norm(A:,i:,u:)]'].high='2017_12_20_01_510_1'
+Demonstration_people['Convergence[Between_Within_Det_ratio_norm(A:,i:,u:)]'].high='2017_01_25_01_225'
+Demonstration_people['Proximity[Between_Within_Det_ratio_norm(A:,i:,u:)]'].high='2017_01_20_243_1'
+Demonstration_people['Trend[Between_Within_Det_ratio_norm(A:,i:,u:)]_d'].high='2016_01_26_02_108_1'
+
+Demonstration_people['Syncrony[Between_Within_Det_ratio_norm(A:,i:,u:)]'].low='2017_04_08_01_256_1'
+Demonstration_people['Convergence[Between_Within_Det_ratio_norm(A:,i:,u:)]'].low='2016_01_26_02_108_1'
+Demonstration_people['Proximity[Between_Within_Det_ratio_norm(A:,i:,u:)]'].low='2017_08_11_01_300_1'
+Demonstration_people['Trend[Between_Within_Det_ratio_norm(A:,i:,u:)]_d'].low='2016_09_21_01_131_1'
+
+# 這是TASLP Fig.4 在分析的時候 用Trend[FCR]_d 使用的人的紀錄。 注意這邊只畫investigator的圖
+Demonstration_people['FCR'].low='2016_12_24_01_233'
+Demonstration_people['FCR'].high='2017_03_05_01_365_1'
+# =============================================================================
+
 col = 'FCR2'
 # col = 'between_variance_norm(A:,i:,u:)'
 # col = 'between_covariance_norm(A:,i:,u:)'
 # col = 'within_covariance_norm(A:,i:,u:)'
 # col = 'within_variance_norm(A:,i:,u:)'
 # col = 'spear_12'
-# col = 'Between_Within_Det_ratio_norm(A:,i:,u:)'
 # col = 'intensity_mean_mean(A:,i:,u:)'
 
-# Moderate ASD 因為Trend[FCR2]_d 被判斷成ASD的個案
-# Inspect_people=[
-#     '2017_03_05_01_365_1',
-#     '2017_07_24_01_217_1',
-#     '2017_08_09_01_013',
-#     '2017_08_15_01_413',
-#     ]
-Inspect_people=[
-    # '2017_08_15_01_413',
-    # '2016_12_04_01_234_1',
-    # '2017_12_16_01_416',
-    # '2017_10_18_01_309_4',
-    '2017_12_02_01_380_1',
-    '2017_12_20_01_510_1'
-    ]
 
-
-
-# Moderate ASD vs TD 時因為Trend[FCR2]_d 被判斷成TD的個案
-# Inspect_people=[
-#     '2018_05_19_5593_1_emotion',
-#     ]
-
-Demonstration_dict={}
-Demonstration_dict['col']='Between_Within_Det_ratio_norm(A:,i:,u:)'
-
-Demonstration_people=Dict()
-Demonstration_people['Syncrony'].high='2017_12_20_01_510_1'
-Demonstration_people['Convergence'].high='2017_01_25_01_225'
-Demonstration_people['Proximity'].high='2017_01_20_243_1'
-Demonstration_people['Trend_d'].high='2016_01_26_02_108_1'
-
-Demonstration_people['Syncrony'].low='2017_04_08_01_256_1'
-Demonstration_people['Convergence'].low='2016_01_26_02_108_1'
-Demonstration_people['Proximity'].low='2017_08_11_01_300_1'
-Demonstration_people['Trend_d'].low='2016_09_21_01_131_1'
-
-
-
-
-# score_cols='Syncrony[{}]'.format(col)
+score_cols='Syncrony[{}]'.format(col)
 # score_cols='Convergence[{}]'.format(col)
 # score_cols='Proximity[{}]'.format(col)
-score_cols='Trend[{}]_d'.format(col)
+# score_cols='Trend[{}]_d'.format(col)
 # feature_name='between_covariance_norm(A:,i:,u:)'
 feature_name='FCR2'
 # People_VowelSpace_inspect=Vowels_AUI.keys()
@@ -450,35 +514,34 @@ ASD_samples_bool=~Label.label_raw['ADOS_cate_CSS'].isna().values
 # score_df=Label.label_raw.loc[ASD_samples_bool].sort_values(by=score_cols)[[score_cols,'name']]
 # score_df=score_df.set_index('name')
 
-
-
 feature_df=df_syncrony_measurement.copy()
-Inspect_people=list(feature_df.sort_values(by=score_cols).index)
+# Inspect_people=list(feature_df.sort_values(by=score_cols).index)
 Inspect_people=[
     '2016_12_24_01_233',
     '2017_03_05_01_365_1',
     ]
 
-
-Demonstration_people['FCR'].low='2016_12_24_01_233'
-Demonstration_people['FCR'].high='2017_03_05_01_365_1'
 # 直接畫圖
 # PlotSyncronyFeatures(feature_df,df_person_segment_feature_DKIndividual_dict,\
 #                           knn_weights,knn_neighbors,col,\
 #                           Inspect_people_lst=Inspect_people,\
 #                           Inspect_role_lst=args.Inspect_roles,\
 #                           score_column=score_cols,\
-#                           show_text=True,\
+#                           show_text=False,\
 #                           Ylim_parameter=None,\
 #                           st_col_str='IPU_st',ed_col_str='IPU_ed')
 PlotSyncronyFeatures(feature_df,df_person_segment_feature_DKIndividual_dict,\
                           knn_weights,knn_neighbors,col,\
+                          linewidth=4,\
                           Inspect_people_lst=Inspect_people,\
                           Inspect_role_lst=['D'],\
                           score_column=score_cols,\
-                          show_text=True,\
-                          Ylim_parameter=None,\
+                          show_title=True,\
+                          show_text=False,\
+                          Ylim_parameter=[1.0,1.5],\
+                          Plot_experiExamp=True,\
                           st_col_str='IPU_st',ed_col_str='IPU_ed')
+
 # PlotSyncronyFeatures(feature_df,df_person_segment_feature_DKIndividual_dict,\
 #                           knn_weights,knn_neighbors,col,\
 #                           Inspect_people_lst=Inspect_people,\
@@ -486,7 +549,8 @@ PlotSyncronyFeatures(feature_df,df_person_segment_feature_DKIndividual_dict,\
 #                           show_text=False,\
 #                           Ylim_parameter=None,\
 #                           st_col_str='IPU_st',ed_col_str='IPU_ed')
-aaa=ccc
+#%%
+col = 'Between_Within_Det_ratio_norm(A:,i:,u:)'
 
 Inspect_people=[
     '2017_12_20_01_510_1',
@@ -499,14 +563,14 @@ Inspect_people=[
     '2016_09_21_01_191_1'
     ]
 Titles=[
- 'high Syncrony',
- 'high Convergence',
- 'high Proximity',
- 'high GC',
- 'low Syncrony',
- 'low Convergence',
- 'low Proximity',
- 'low GC',
+ 'High Syncrony',
+ 'High Convergence',
+ 'High Proximity',
+ 'High GC',
+ 'Low Syncrony',
+ 'Low Convergence',
+ 'Low Proximity',
+ 'Low GC',
  ]
 Ylim_parameters=[
     None,
@@ -552,6 +616,8 @@ for ax, titls, people, ylim_p, roles, LB in zip(axs.flat, Titles,Inspect_people,
                               Ylim_parameter=ylim_p,\
                               legend_bool=LB,\
                               st_col_str='IPU_st',ed_col_str='IPU_ed')
+    ax.figure.set_size_inches(10, 3)
+fig.savefig(fname='images/converse_illus.png',bbox_inches='tight',dpi=300)
     # ax.plot(x, y, 'o', ls='-', ms=4, markevery=markevery)
 
 # =============================================================================
@@ -667,7 +733,7 @@ for people in Vowels_AUI.keys():
     df_vowel_calibrated_dict[people]=df_vowel_calibrated
 
 
-    
+#%%
 # Moderate ASD vs TD 時因為DEP feature 被判斷成ASD的個案
 
 
@@ -679,10 +745,17 @@ ASD_samples_bool=~Label.label_raw['ADOS_cate_CSS'].isna().values
 
 People_VowelSpace_inspect=list(Label.label_raw.loc[ASD_samples_bool].sort_values(by=score_cols)['name'])
 People_VowelSpace_inspect=[
-    # '2016_07_30_01_164',
-    # '2017_07_05_01_310_1',
-    '2017_12_23_01_407'
+    '2016_07_30_01_164',
+    '2017_07_05_01_310_1',
+    # '2017_12_23_01_407'
     ]
+Demonstration_people=Dict()
+
+# 這是TASLP Fig.2 在show conversation-level feature 使用的人的紀錄
+Demonstration_people['Demonstrate'].high='2017_12_23_01_407'
+Demonstration_people['ADOS_{comm}'].high='2016_07_30_01_164'
+Demonstration_people['ADOS_{comm}'].high='2017_07_05_01_310_1'
+
 
 
 score_df=Label.label_raw.loc[ASD_samples_bool].sort_values(by=score_cols)[[score_cols,'name']]
@@ -696,6 +769,11 @@ feature_df=df_feature_ASD.copy()
 # ]
 
 
+# 這是TASLP Fig.6 Experiment2 舉的例子在舉例不同嚴重程度的ASD Vowel space 不一樣
+FileName_dict={
+    '2016_07_30_01_164':'images/VowelSpace_example-high.png',\
+    '2017_07_05_01_310_1':'images/VowelSpace_example-low.png',
+    } 
 
 count=0
 for Pple in People_VowelSpace_inspect:
@@ -719,10 +797,13 @@ for Pple in People_VowelSpace_inspect:
     data_width = xmax - x0
     data_height = ymax - y0
     # text(x0/0.1 + data_width * 0.004, -data_height * 0.002, addtext, ha='center', va='center')
-    text(0, -0.1,addtext, ha='center', va='center', transform=ax.transAxes)
+    # text(0, -0.1,addtext, ha='center', va='center', transform=ax.transAxes)
     
     plt.show()
+    fig.set_size_inches((2.5,2.5))
+    fig.savefig(fname=FileName_dict[Pple],bbox_inches='tight',dpi=300)
     fig.clf()
+    
     
     count+=1
     # except: 
@@ -733,7 +814,10 @@ for Pple in People_VowelSpace_inspect:
 '''
 
     Plot KDE filtering
-
+    
+    update: 20220728:
+    畫TASLP figure. 1 (Method) 中的KDE filtering圖
+    
 '''
 def PlotWithKDEFiltering(df_vowel,THRESHOLD=10,scale_factor=100,people='2017_12_23_01_465'):
     df_vowel_calibrated=pd.DataFrame([])
@@ -813,7 +897,11 @@ def PlotWithKDEFiltering(df_vowel,THRESHOLD=10,scale_factor=100,people='2017_12_
     sns.scatterplot(data=df_calibrated_tocombine, x="F1", y="F2",hue='vowel')
     handles, lables = ax.get_legend_handles_labels()
     handles[0].set_sizes([4.0])
-    plt.legend(handles, lables)
+    
+    # 調這個來專門截圖他的legend, 不然解析度都不夠
+    plt.legend(handles, lables, fontsize=30, framealpha=1.0)
+    # plt.legend(handles, lables)
+    fig.savefig(fname='images/KDE_filtering.png',bbox_inches='tight',dpi=500)
     plt.show()
     # for h in handles:
     #     h.set_sizes([10])

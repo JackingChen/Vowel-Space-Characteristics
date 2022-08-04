@@ -1228,15 +1228,25 @@ shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_tot
                                                           PprNmeMp=PprNmeMp)
 
 # Col2Delete=""
-Col2Delete="$Mod(BCC)_{inv}$"
+Col2Delete="GC[BCC]$_\mathrm{inv}$"
 if len(Col2Delete) > 0:
     Colidx2Delete=[list(df_XTest.columns).index(Col2Delete)]
 else:
     Colidx2Delete=[]
 
+# TASLP 跑Fig.5 圖片的時候會用到
 max_display=14
 if len(Colidx2Delete)>0:
-    shap.summary_plot(np.delete(shap_values,obj=Colidx2Delete,axis=1), df_XTest.drop(columns=Col2Delete),feature_names=df_XTest.drop(columns=Col2Delete).columns,show=False, max_display=max_display)
+    shap.summary_plot(np.delete(shap_values,obj=Colidx2Delete,axis=1), df_XTest.drop(columns=Col2Delete),feature_names=df_XTest.drop(columns=Col2Delete).columns, max_display=max_display,\
+                      show=False)
+    plt.gcf().axes[-1].set_aspect(100)
+    plt.gcf().axes[-1].set_box_aspect(100)
+    # plt.gcf().axes[-1].set_aspect('auto')
+    # plt.colorbar()
+    fig = plt.gcf()
+    fig.set_size_inches((4,5))
+    plt.title("Task: prediction of ADOS$_\mathrm{comm}$",fontsize=15)
+    fig.savefig('images/SHAP_RegressionTask.png',format = "png",dpi = 300,bbox_inches = 'tight')
 else:
     shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False, max_display=max_display)
 plt.title(experiment_title)
