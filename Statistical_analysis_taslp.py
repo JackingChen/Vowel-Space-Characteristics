@@ -22,6 +22,9 @@ from scipy.stats import spearmanr,pearsonr
 from sklearn import neighbors
 from metric import Evaluation_method 
 import scipy.stats as stats
+
+from articulation.HYPERPARAM.PlotFigureVars import *
+
 # =============================================================================
 def get_args():
     # we add compulsary arguments as named arguments for readability
@@ -188,20 +191,44 @@ y_PprNme_str=Swap2PaperName(y_str,PprNmeMp).replace("[$","[").replace("$]","]")
 # =============================================================================
 # g = sns.scatterplot(data=df_ModerateTask_postprocess,x=x_PprNme_str,y=y_PprNme_str,hue='Selected')
 g = sns.scatterplot(data=df_ModerateTask_postprocess_PprNme,x=x_PprNme_str,y=y_PprNme_str,hue='Selected')
-g.axhline(0.027,color='g')
-g.axvline(-0.1,color='g')
+g.axhline(0.027,color='g', linestyle='--')
+g.axvline(-0.1,color='g', linestyle='--')
+
+import matplotlib.patches as patches
+# Create a Rectangle patch
+
+
+
+# Add the patch to the Axes
+rect = patches.Rectangle((-0.81, 0.027), 0.71, 0.0175, linewidth=3, edgecolor='r', facecolor='none', zorder=30)
+ax=plt.gca()
+ax.add_patch(rect)
+
+x_ticks=list(np.arange(-0.8,0.8,0.4))
+
+
+y_ticks=list(np.arange(0,0.05,0.01))
+
+extraxticks=[-0.1]
+# plt.xticks(list(plt.xticks()[0]) + extraxticks)
+plt.xticks(x_ticks+extraxticks)
+extrayticks=[0.027]
+# plt.yticks(list(plt.yticks()[0]) + extrayticks)
+plt.yticks(y_ticks + extrayticks)
+
 # sns.set(rc={'figure.figsize':(8,6)})
 # from matplotlib import rcParams
 # # figure size in inches
 # rcParams['figure.figsize'] = 11.7,8.27
 # g.figure.set_size_inches(11.7,8.27)
-g.figure.set_size_inches(5,3)
 
+g.figure.set_size_inches(5,2)
 
 # for idx in df_ModerateTask_Q1Q3.index:
 #     plt.text(df_ModerateTask_Q1Q3.loc[idx,x_str],df_ModerateTask_Q1Q3.loc[idx,y_str],idx, fontdict=dict(color='black', alpha=0.5, size=16))
 plt.savefig("images/Prevent_risk.png",dpi=300, bbox_inches='tight')
-
+import matplotlib
+print("Font family", matplotlib.rcParams['font.family']) #用來查目前是用什麼font family
 # Plot moderate special samples
 # x_str='Trend[dcorr_12]_d'
 # y_str='Trend[pear_12]_d'

@@ -85,16 +85,9 @@ def Add_label(df_formant_statistic,Label,label_choose='ADOS_cate_C'):
         bool_ind=Label.label_raw['name']==people
         df_formant_statistic.loc[people,label_choose]=Label.label_raw.loc[bool_ind,label_choose].values
     return df_formant_statistic
-def Swap2PaperName(feature_rawname,PprNmeMp,method='origin'):
-    if method=='origin':
-        PaperNameMapping=PprNmeMp.Paper_name_map
-    elif method=='inverse':
-        PaperNameMapping=PprNmeMp.Inverse_Paper_name_map
-    elif method=='idx':
-        PaperNameMapping=PprNmeMp.Feature2idx_map
-    
-    if feature_rawname in PaperNameMapping.keys():
-        featurename_paper=PaperNameMapping[feature_rawname]
+def Swap2PaperName(feature_rawname,PprNmeMp):
+    if feature_rawname in PprNmeMp.Paper_name_map.keys():
+        featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
         feature_keys=featurename_paper
     else: 
         feature_keys=feature_rawname
@@ -177,16 +170,12 @@ def get_args():
                         help='')
     parser.add_argument('--Plot', default=True,
                         help='')
-    parser.add_argument('--Reverse_exp', default=False, dest="Reverse_exp",
-                        help='')
     parser.add_argument('--selectModelScoring', default='recall_macro',
                         help='[recall_macro,accuracy]')
     parser.add_argument('--Mergefeatures', default=False,
                         help='')
-    parser.add_argument('--logit_number', default=0,
-                        help='現在都改用decision function了，所以指會有一個loigit')
-    parser.add_argument('--decision_boundary', default=0,
-                        help='現在都改用decision function了，decision_boundary = 0')
+    parser.add_argument('--logit_number', default=1,
+                        help='')
     parser.add_argument('--knn_weights', default='uniform',
                             help='path of the base directory')
     parser.add_argument('--knn_neighbors', default=2,  type=int,
@@ -204,8 +193,6 @@ knn_weights=args.knn_weights
 knn_neighbors=args.knn_neighbors
 Reorder_type=args.Reorder_type
 logit_number=args.logit_number
-Reverse_exp=args.Reverse_exp
-decision_boundary=args.decision_boundary
 #%%
 # =============================================================================
 
@@ -653,9 +640,6 @@ n_estimator=[ 32, 50, 64, 100 ,128, 256]
 
 '''
 
-from sklearn.calibration import CalibratedClassifierCV
-
-
 # This is the closest 
 Classifier={}
 Classifier['SVC']={'model':sklearn.svm.SVC(),\
@@ -699,7 +683,6 @@ sellect_people_define=SellectP_define()
 
 # ''' 要手動執行一次從Incorrect2Correct_indexes和Correct2Incorrect_indexes決定哪些indexes 需要算shap value 再在這邊指定哪些fold需要停下來算SHAP value '''
 SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
-# SHAP_inspect_idxs_manual=[15] # None means calculate SHAP value of all people
 # SHAP_inspect_idxs_manual=[] # empty list means we do not execute shap function
 # SHAP_inspect_idxs_manual=sorted(list(set([14, 21]+[]+[24, 28, 30, 31, 39, 41, 45]+[22, 23, 27, 47, 58]+[6, 13, 19, 23, 24, 25]+[28, 35, 38, 45])))
 
@@ -725,56 +708,25 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         Gclf = GridSearchCV(estimator=pipe, param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
         Gclf_manual = GridSearchCV(estimator=pipe, param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
         
+        CVpredict=cross_val_predict(Gclf, features.X, features.y, cv=CV_settings)  
         
         # The cv is as the one in cross_val_predict function
         cv = sklearn.model_selection.check_cv(CV_settings,features.y,classifier=sklearn.base.is_classifier(Gclf))
         splits = list(cv.split(features.X, features.y, groups=None))
         test_indices = np.concatenate([test for _, test in splits])
 
+        
         CVpredict_manual=np.zeros(len(features.y))
         for i, (train_index, test_index) in enumerate(splits):
             X_train, X_test = features.X.iloc[train_index], features.X.iloc[test_index]
             y_train, y_test = features.y.iloc[train_index], features.y.iloc[test_index]
             Gclf_manual.fit(X_train,y_train)
-            Gclf_manual_predict=Gclf_manual.predict(X_test)
-            ##################################################################
-            #確認predict proba會跟prediction有match到
-            #原本的SVM的predict proba (https://github.com/scikit-learn/scikit-learn/issues/13211)
-            # the normal classifiers' predictions are based on decision_function values
-            ##################################################################
-            calibrated_bestEst=CalibratedClassifierCV(
-                base_estimator=Gclf_manual.best_estimator_,
-                cv="prefit"
-                )
-            calibrated_bestEst.fit(X_train,y_train)
-            result_bestmodel=calibrated_bestEst.predict(X_test)
-            ##################################################################
-
-            decisFunc=Gclf_manual.decision_function(X_test)
-            # predict_proba 是把SVM的output另外fit一個ligistic regression 來smooth他的output到0~1之間
-            # https://splunktool.com/why-is-the-result-of-sklearnsvmsvcpredict-inconsistent-with-sklearnsvmsvcpredictproba
+            result_bestmodel=Gclf_manual.predict(X_test)
             
-            # ASSERT based on predict_proba
-            # TDPred_score_logit0=calibrated_bestEst.predict_proba(X_test)[:,0] 
-            # TDPred_score_logit1=calibrated_bestEst.predict_proba(X_test)[:,logit_number]
-            # Logit01=np.vstack([TDPred_score_logit0,TDPred_score_logit1])
-            # TDPredtion_Fromscore=np.argmax(Logit01,axis=0)
-            # assert (result_bestmodel-1 == TDPredtion_Fromscore).all()
+            CVpredict_manual[test_index]=result_bestmodel
             
-            
-            # 測試calibrated predict有沒有等於原本的predict
-            # assert (Gclf_manual_predict == result_bestmodel).all()
-            
-            # ASSERT based on decision function
-            # decision function的unit test
-            decisFunc_pred=np.ones(len(result_bestmodel)).astype(int)
-            decisFunc_pred[decisFunc >0]=2
-            assert (Gclf_manual_predict == decisFunc_pred).all()
-            # from sklearn.calibration import calibration_curve
-            # calibration_curve(Gclf_manual.decision_function(X_test))
-            ##################################################################
-            CVpredict_manual[test_index]=Gclf_manual_predict
-            # CVpred_fromFunction=CVpredict[test_index]
+            # result_bestmodel_fitted_again=best_model_fittedagain.predict(X_test_encoded)
+            CVpred_fromFunction=CVpredict[test_index]
             
             # SHAP value generating
             # logit_number=0
@@ -783,8 +735,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             # 先把整個fold記錄下來然後在analysis area再拆解
             SHAP_exam_lst=[i for i in test_index if i in SHAP_inspect_idxs]
             if len(SHAP_exam_lst) != 0:
-                explainer = shap.KernelExplainer(Gclf_manual.decision_function, X_train)
-                # explainer = shap.KernelExplainer(Gclf_manual.predict_proba, X_train)
+                explainer = shap.KernelExplainer(Gclf_manual.predict_proba, X_train)
                 shap_values = explainer.shap_values(X_test)
                 Session_level_all[feature_lab_str]['SHAP_info']['_'.join(test_index.astype(str))].explainer_expected_value=explainer.expected_value
                 Session_level_all[feature_lab_str]['SHAP_info']['_'.join(test_index.astype(str))].shap_values=shap_values # shap_values= [logit, index, feature]
@@ -796,12 +747,10 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             
             
             # assert (result_bestmodel==result_bestmodel_fitted_again).all()
-            # assert (result_bestmodel==CVpred_fromFunction).all()
-        # XXX 原本的CVpredict有點怪，他們經過
-        # CVpredict=cross_val_predict(Gclf, features.X, features.y, cv=CV_settings)   
-        CVpredict = CVpredict_manual
+            assert (result_bestmodel==CVpred_fromFunction).all()
         
-        # assert (CVpredict_manual==CVpredict).all()
+            
+        assert (CVpredict_manual==CVpredict).all()
         Session_level_all[feature_lab_str]['y_pred']=CVpredict_manual
         Session_level_all[feature_lab_str]['y_true']=features.y
         
@@ -914,7 +863,6 @@ writer_clf.save()
 df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Classification_"+args.Feature_mode+"_3clsferRESULT.xlsx")
 print(df_best_result_allThreeClassifiers)
 
-
 # Change to paper name
 df_allThreeClassifiers_paperName=df_best_result_allThreeClassifiers.copy()
 index_bag=[]
@@ -931,8 +879,6 @@ df_allThreeClassifiers_paperName.index=index_bag
     Analysis part
 
 '''
-
-
 def Organize_Needed_SHAP_info(Incorrect2Correct_indexes, Session_level_all, proposed_expstr):
     Incorrect2Correct_info_dict=Dict()
     for tst_idx in Incorrect2Correct_indexes:
@@ -942,12 +888,7 @@ def Organize_Needed_SHAP_info(Incorrect2Correct_indexes, Session_level_all, prop
                 if tst_idx == ii:
                     Incorrect2Correct_info_dict[tst_idx]['XTest']=values['XTest'].iloc[i,:]
                     Incorrect2Correct_info_dict[tst_idx]['explainer_expected_value']=values['explainer_expected_value']
-                    
-                    # 因為之前都用predict_proba 但是自從發現predict_proba有BUG之後就改用decision function了，
-                    # 但是改成decision function之後資料結構會跟原來的不一樣，所以額外仿造了一個logit的values
-                    # shap_values_array=[array[i,:] for array in values['shap_values']]
-                    shap_values_array=[array[i,:] for array in [values['shap_values'],-values['shap_values']]]
-                    
+                    shap_values_array=[array[i,:] for array in values['shap_values']]
                     df_shap_values=pd.DataFrame(shap_values_array,columns=Incorrect2Correct_info_dict[tst_idx]['XTest'].index)
                     Incorrect2Correct_info_dict[tst_idx]['shap_values']=df_shap_values
                     print("testing sample ", ii, "is in the ", i, "position of test fold", key)
@@ -981,65 +922,48 @@ if args.Print_Analysis_grp_Manual_select == True:
     
 
 ############################################################
-# XXX
 # Low Minimal
 # proposed_expstr='TD vs df_feature_lowMinimal_CSS >> LOC_columns+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
 # baseline_expstr='TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
-# Reverse_exp=False
-# [14, 21]
-# []
-
-
-proposed_expstr='TD vs df_feature_lowMinimal_CSS >> LOC_columns+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
-baseline_expstr='TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
-Reverse_exp=True
-[1, 14, 15, 21]
+[14, 21]
 []
 
-# proposed_expstr='TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
-# baseline_expstr='TD vs df_feature_lowMinimal_CSS >> LOC_columns+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
-# Reverse_exp=False
-# []
+# proposed_expstr='TD vs df_feature_lowMinimal_CSS >> LOC_columns+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
+# baseline_expstr='TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
 # [1, 14, 15, 21]
-
+# []
 
 # proposed_expstr='TD vs df_feature_lowMinimal_CSS >> LOC_columns+Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
 # baseline_expstr='TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
-# Reverse_exp=False
-# [12, 21]
-# [4 , 11]
+[12, 21]
+[4 , 11]
 
 # proposed_expstr='TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
 # baseline_expstr='TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_K_cols+Phonation_Syncrony_cols::ASDTD'
-# Reverse_exp=False
 # []
 # [1, 15]
 ############################################################
 # Moderate
-# proposed_expstr='TD vs df_feature_moderate_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
-# baseline_expstr='TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols::ASDTD'
-# Reverse_exp=False
-# [24, 28, 30, 31, 39, 41, 45]
-# [22, 23, 27, 47, 58]
+proposed_expstr='TD vs df_feature_moderate_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
+baseline_expstr='TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols::ASDTD'
+[24, 28, 30, 31, 39, 41, 45]
+[22, 23, 27, 47, 58]
 
 
 ############################################################
 # high
 # proposed_expstr='TD vs df_feature_high_CSS >> DEP_columns+Phonation_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
 # baseline_expstr='TD vs df_feature_high_CSS >> Phonation_Proximity_cols::ASDTD'
-# Reverse_exp=False
-# [6, 13, 19, 23, 24, 25]
-# [28, 35, 38, 45]
+[6, 13, 19, 23, 24, 25]
+[28, 35, 38, 45]
 
 # proposed_expstr='TD vs df_feature_high_CSS >> DEP_columns+Phonation_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
-# baseline_expstr='TD vs df_feature_high_CSS >> Phonation_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
-# Reverse_exp=True
-
+# proposed_expstr='TD vs df_feature_high_CSS >> Phonation_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
 
 # proposed_expstr='TD vs df_feature_high_CSS >> Phonation_Trend_D_cols+Phonation_Proximity_cols::ASDTD'
 # baseline_expstr='TD vs df_feature_high_CSS >> Phonation_Proximity_cols::ASDTD'
-# [13, 19, 23, 24, 25]
-# [2, 3, 28, 29, 35, 36, 38, 44]
+[13, 19, 23, 24, 25]
+[2, 3, 28, 29, 35, 36, 38, 44]
 
 # proposed_expstr='TD vs df_feature_high_CSS >> DEP_columns+Phonation_Proximity_cols::ASDTD'
 # baseline_expstr='TD vs df_feature_high_CSS >> Phonation_Proximity_cols::ASDTD'
@@ -1104,7 +1028,6 @@ quadrant2_indexes=intersection(Incorrect2Correct_indexes, Ones2Twos_indexes)
 quadrant3_indexes=intersection(Correct2Incorrect_indexes, Twos2Ones_indexes)
 quadrant4_indexes=intersection(Incorrect2Correct_indexes, Twos2Ones_indexes)
 
-
 Type1Err_dict, Type2Err_dict={}, {}
 for model_str in ['baseline', 'proposed']:
     Type1Err_dict[model_str], Type2Err_dict[model_str] = Get_Model_Type12Errors(model_str=model_str, tureLab_str='y_true')
@@ -1117,9 +1040,7 @@ Type1Err_proposed_indexes=list(df_Y_pred[Type1Err_dict[model_str]].index)
 Type2Err_proposed_indexes=list(df_Y_pred[Type2Err_dict[model_str]].index)
 
 
-
-All_err_indexes=list(set(Type1Err_baseline_indexes+Type2Err_baseline_indexes+Type1Err_proposed_indexes+Type2Err_proposed_indexes))
-All_indexes=list(df_Y_pred.index)
+All_indexes=list(set(Type1Err_baseline_indexes+Type2Err_baseline_indexes+Type1Err_proposed_indexes+Type2Err_proposed_indexes))
 '''
 
     Part 2: Check the SHAP values based on indexes in part 1
@@ -1130,8 +1051,7 @@ All_indexes=list(df_Y_pred.index)
 Manual_inspect_idxs=[2, 3, 29, 36, 44]
 ##############################################
 
-# selected_idxs=Ones2Twos_indexes+Twos2Ones_indexes
-selected_idxs=All_indexes
+selected_idxs=Ones2Twos_indexes+Twos2Ones_indexes
 Baseline_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, baseline_expstr)
 Proposed_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, proposed_expstr)
 
@@ -1140,7 +1060,6 @@ Proposed_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Sessio
 
 #%%
 # 畫炫炮的錯誤型態分析 (Changed smaples的logit 1 decision function 的移動)
-
 def Organize_Needed_decisionProb(Incorrect2Correct_indexes, Session_level_all, proposed_expstr):
     Incorrect2Correct_info_dict=Dict()
     for tst_idx in Incorrect2Correct_indexes:
@@ -1157,7 +1076,7 @@ def Organize_Needed_decisionProb(Incorrect2Correct_indexes, Session_level_all, p
 
 
 # step 1: prepare data
-# selected_idxs=Ones2Twos_indexes+Twos2Ones_indexes
+selected_idxs=Ones2Twos_indexes+Twos2Ones_indexes
 Baseline_changed_decision_info_dict=Organize_Needed_decisionProb(selected_idxs, Session_level_all, baseline_expstr)
 Proposed_changed_decision_info_dict=Organize_Needed_decisionProb(selected_idxs, Session_level_all, proposed_expstr)
 Baseline_total_decision_info_dict=Organize_Needed_decisionProb(df_Y_pred.index, Session_level_all, baseline_expstr)
@@ -1263,90 +1182,389 @@ ax.axis('off')
 plt.xlim(-0,1.1)
 plt.title(experiment_title)
 plt.show()
-#%%
-if experiment_title == 'lowMinimal': # Low minimal會有一個重複，所以這邊要多拿幾個人
-    show_number=11
-else:
-    show_number=10
-# TASLP binary分纇的圖， 記得要改926 927行，因為要跑三個binary classification task
-shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_totalPoeple_info_dict,\
+
+
+
+shap_values, df_XTest, keys=Prepare_data_for_summaryPlot(Proposed_changed_info_dict,\
                                                           feature_columns=None,\
                                                           PprNmeMp=PprNmeMp) 
 
-df_shap_values=pd.DataFrame(shap_values[1],columns=df_XTest.columns)
 
 
-
-df_shap_values_top5Important=df_shap_values.abs().sum(axis=0).sort_values(ascending=False)
-df_shap_values_top5Important_normalized=(df_shap_values_top5Important-df_shap_values_top5Important.min())/(df_shap_values_top5Important.max()-df_shap_values_top5Important.min()) * 100
-df_shap_values_top5Important_normalized_tailed5=df_shap_values_top5Important_normalized.head(show_number).round(1)
-selected_feature_array = df_shap_values_top5Important_normalized_tailed5.index.values
-selected_feature_lst = list(df_shap_values_top5Important_normalized_tailed5.index)
-
-
-# 做一個feature to feature set mapping
-cols2CategoricalName_PprNme={}
-for k,v in FeatSel.cols2CategoricalName.items():
-    name_k=Swap2PaperName(k, PprNmeMp, method='inverse')
-    name_v=Swap2PaperName(v, PprNmeMp, method='inverse')
-    cols2CategoricalName_PprNme[name_k]=name_v
-
-
-Updated_cols2Categorical_dict={}
-for featN in selected_feature_lst:
-    if re.search('GC\[(Max|Mean|Std).*\]*inv.*',featN) != None:
-        Updated_cols2Categorical_dict[featN]='GC[P]$_\mathrm{inv}$'
-    elif re.search('GC\[(Max|Mean|Std).*\]*part.*',featN) != None:
-        Updated_cols2Categorical_dict[featN]='GC[P]$_\mathrm{part}$'
-    elif re.search('Proximity\[(Max|Mean|Std).*\]',featN) != None:
-        Updated_cols2Categorical_dict[featN]='Proximity[P]'
-    elif re.search('Syncrony\[(Max|Mean|Std).*\]',featN) != None:
-        Updated_cols2Categorical_dict[featN]='Synchrony[P]'
-    elif re.search('Convergence\[(Max|Mean|Std).*\]',featN) != None:
-        Updated_cols2Categorical_dict[featN]='Convergence[P]'
-
-cols2CategoricalName_PprNme.update(Updated_cols2Categorical_dict)
-
-# 計算correlation between df_shap_values[selected_feature_lst],df_XTest[selected_feature_lst] 求他的正負來知道方向
-df_Table_FirstTotAnaly=pd.DataFrame()  # 直接output 一個好的表格啦
-for i,feat in enumerate(selected_feature_lst):
-    pear, pval=pearsonr(df_shap_values[[feat]].values.reshape(-1),df_XTest[[feat]].values.reshape(-1))
-    direction_str=''
-    if pear > 0:
-        direction_str='ASD$<$TD'
-    elif pear < 0:
-        direction_str='ASD$>$TD'
-    
-        
-    
-    # error handling: 不同的jitter measure 像是localdbJitter 或是 absoluteJitter 我這邊都當成Jitter，所以會有一次出現好幾個值的狀況
-    # if len(df_shap_values_top5Important_normalized_tailed5[feat]) > 1:
-    if type(df_shap_values_top5Important_normalized_tailed5[feat] ) == pd.Series:
-        Importance_val=df_shap_values_top5Important_normalized_tailed5[feat][0]
-    else:
-        Importance_val=df_shap_values_top5Important_normalized_tailed5[feat]
-        
-    feat_str='{} ({})'.format(feat,Importance_val)
-    df_Table_FirstTotAnaly.loc[feat_str,'Direction']=direction_str
-    # df_Table_FirstTotAnaly.loc[feat,'Feature Importance']=Importance_val
-    df_Table_FirstTotAnaly.loc[feat_str,'Feature type']=cols2CategoricalName_PprNme[feat]
-    
-
-# 畫出來用來驗證沒有錯
-shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,show=False, max_display=show_number)
+shap.summary_plot(shap_values[1], df_XTest,feature_names=df_XTest.columns,show=False, max_display=8)
 plt.title(experiment_title)
 plt.show()
 
 
 #%%
-# 個體分析： 會存到SAHP_figures/{quadrant}/的資料夾，再開Jupyter去看
+# 不重要的宣告放這邊
+import string
+import random
+import json
+from matplotlib import lines
+from matplotlib.path import Path
+from matplotlib.patches import PathPatch
+from matplotlib.font_manager import FontProperties
+class BaseVisualizer:
+    pass 
+def ensure_not_numpy(x):
+    if isinstance(x, bytes):
+        return x.decode()
+    elif isinstance(x, np.str):
+        return str(x)
+    elif isinstance(x, np.generic):
+        return float(x.item())
+    else:
+        return x
+err_msg = """
+<div style='color: #900; text-align: center;'>
+  <b>Visualization omitted, Javascript library not loaded!</b><br>
+  Have you run `initjs()` in this notebook? If this notebook was from another
+  user you must also trust this notebook (File -> Trust notebook). If you are viewing
+  this notebook on github the Javascript has been stripped for security. If you are using
+  JupyterLab this error is because a JupyterLab extension has not yet been written.
+</div>"""
+def id_generator(size=20, chars=string.ascii_uppercase + string.digits):
+    return "i"+''.join(random.choice(chars) for _ in range(size))
+class Explanation:
+    def __init__(self):
+        pass
+class AdditiveExplanation(Explanation):
+    def __init__(self, base_value, out_value, effects, effects_var, instance, link, model, data):
+        self.base_value = base_value
+        self.out_value = out_value
+        self.effects = effects
+        self.effects_var = effects_var
+        assert isinstance(instance, Instance)
+        self.instance = instance
+        assert isinstance(link, Link)
+        self.link = link
+        assert isinstance(model, Model)
+        self.model = model
+        assert isinstance(data, Data)
+        self.data = data
+
+def format_data(data):
+    """Format data."""
+    # Format negative features
+    neg_features = np.array([[data['features'][x]['effect'],
+                              data['features'][x]['value'],
+                              data['featureNames'][x]]
+                             for x in data['features'].keys() if data['features'][x]['effect'] < 0])
+    
+    neg_features = np.array(sorted(neg_features, key=lambda x: float(x[0]), reverse=False))
+    
+    # Format postive features
+    pos_features = np.array([[data['features'][x]['effect'],
+                              data['features'][x]['value'],
+                              data['featureNames'][x]]
+                             for x in data['features'].keys() if data['features'][x]['effect'] >= 0])
+    pos_features = np.array(sorted(pos_features, key=lambda x: float(x[0]), reverse=True))
+    
+    # Define link function
+    if data['link'] == 'identity':
+        convert_func = lambda x: x
+    elif data['link'] == 'logit':
+        convert_func = lambda x: 1 / (1 + np.exp(-x))
+    else:
+        assert False, "ERROR: Unrecognized link function: " + str(data['link'])
+    
+    # Convert negative feature values to plot values
+    neg_val = data['outValue']
+    for i in neg_features:
+        val = float(i[0])
+        neg_val = neg_val + np.abs(val)
+        i[0] = convert_func(neg_val)
+    if len(neg_features) > 0:
+        total_neg = np.max(neg_features[:, 0].astype(float)) - \
+                    np.min(neg_features[:, 0].astype(float))
+    else:
+        total_neg = 0
+    
+    # Convert positive feature values to plot values
+    pos_val = data['outValue']
+    for i in pos_features:
+        val = float(i[0])
+        pos_val = pos_val - np.abs(val)
+        i[0] = convert_func(pos_val)
+        
+    if len(pos_features) > 0:
+        total_pos = np.max(pos_features[:, 0].astype(float)) - \
+                    np.min(pos_features[:, 0].astype(float))
+    else:
+        total_pos = 0
+    
+    # Convert output value and base value
+    data['outValue'] = convert_func(data['outValue'])
+    data['baseValue'] = convert_func(data['baseValue'])
+    
+    return neg_features, total_neg, pos_features, total_pos
+def update_axis_limits(ax, total_pos, pos_features, total_neg,
+                       neg_features, base_value,
+                       ylim=(-0.5,0.15),
+                       ):
+    ax.set_ylim(ylim)
+    padding = np.max([np.abs(total_pos) * 0.2,
+                      np.abs(total_neg) * 0.2])
+    
+    if len(pos_features) > 0:
+        min_x = min(np.min(pos_features[:, 0].astype(float)), base_value) - padding
+    else:
+        min_x = 0
+    if len(neg_features) > 0:
+        max_x = max(np.max(neg_features[:, 0].astype(float)), base_value) + padding
+    else:
+        max_x = 0
+    ax.set_xlim(min_x, max_x)
+
+    plt.tick_params(top=True, bottom=False, left=False, right=False, labelleft=False,
+                    labeltop=True, labelbottom=False)
+    plt.locator_params(axis='x', nbins=12)
+
+    for key, spine in zip(plt.gca().spines.keys(), plt.gca().spines.values()):
+        if key != 'top':
+            spine.set_visible(False)
+def draw_bars(out_value, features, feature_type, width_separators, width_bar):
+    """Draw the bars and separators."""
+    rectangle_list = []
+    separator_list = []
+    
+    pre_val = out_value
+    for index, features in zip(range(len(features)), features):
+        if feature_type == 'positive':
+            left_bound = float(features[0])
+            right_bound = pre_val
+            pre_val = left_bound
+            
+            separator_indent = np.abs(width_separators)
+            separator_pos = left_bound
+            colors = ['#FF0D57', '#FFC3D5']
+        else:
+            left_bound = pre_val
+            right_bound = float(features[0])
+            pre_val = right_bound
+            
+            separator_indent = - np.abs(width_separators)
+            separator_pos = right_bound
+            colors = ['#1E88E5', '#D1E6FA']
+        
+        # Create rectangle
+        if index == 0:
+            if feature_type == 'positive':
+                points_rectangle = [[left_bound, 0],
+                                    [right_bound, 0],
+                                    [right_bound, width_bar],
+                                    [left_bound, width_bar],
+                                    [left_bound + separator_indent, (width_bar / 2)]
+                                    ]
+            else:
+                points_rectangle = [[right_bound, 0],
+                                    [left_bound, 0],
+                                    [left_bound, width_bar],
+                                    [right_bound, width_bar],
+                                    [right_bound + separator_indent, (width_bar / 2)]
+                                    ]
+        
+        else:
+            points_rectangle = [[left_bound, 0],
+                                [right_bound, 0],
+                                [right_bound + separator_indent * 0.90, (width_bar / 2)],
+                                [right_bound, width_bar],
+                                [left_bound, width_bar],
+                                [left_bound + separator_indent * 0.90, (width_bar / 2)]]
+
+        line = plt.Polygon(points_rectangle, closed=True, fill=True,
+                           facecolor=colors[0], linewidth=0)
+        rectangle_list += [line]
+
+        # Create seperator
+        points_separator = [[separator_pos, 0],
+                            [separator_pos + separator_indent, (width_bar / 2)],
+                            [separator_pos, width_bar]]
+        
+        line = plt.Polygon(points_separator, closed=None, fill=None,
+                           edgecolor=colors[1], lw=3)
+        separator_list += [line]
+
+    return rectangle_list, separator_list
+def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_effect=0, min_perc=0.05, text_rotation=0):
+    start_text = out_value
+    pre_val = out_value
+    
+    # Define variables specific to positive and negative effect features
+    if feature_type == 'positive':
+        colors = ['#FF0D57', '#FFC3D5']
+        alignement = 'right'
+        sign = 1
+    else:
+        colors = ['#1E88E5', '#D1E6FA']
+        alignement = 'left'
+        sign = -1
+    
+    # Draw initial line
+    if feature_type == 'positive':
+        x, y = np.array([[pre_val, pre_val], [0, -0.18]])
+        line = lines.Line2D(x, y, lw=1., alpha=0.5, color=colors[0])
+        line.set_clip_on(False)
+        ax.add_line(line)
+        start_text = pre_val
+    
+    box_end = out_value
+    val = out_value
+    for feature in features:
+        # Exclude all labels that do not contribute at least 10% to the total
+        feature_contribution = np.abs(float(feature[0]) - pre_val) / np.abs(total_effect)
+        if feature_contribution < min_perc:
+            break
+        
+        # Compute value for current feature
+        val = float(feature[0])
+        
+        # Draw labels.
+        if feature[1] == "":
+            text = feature[2]
+        else:
+            text = feature[2] + ' = ' + feature[1]
+
+        if text_rotation != 0:
+            va_alignment = 'top'
+        else:
+            va_alignment = 'baseline'
+
+        text_out_val = plt.text(start_text - sign * offset_text,
+                                -0.15, text,
+                                fontsize=12, color=colors[0],
+                                horizontalalignment=alignement,
+                                va=va_alignment,
+                                rotation=text_rotation)
+        text_out_val.set_bbox(dict(facecolor='none', edgecolor='none'))
+        
+        # We need to draw the plot to be able to get the size of the
+        # text box
+        fig.canvas.draw()
+        box_size = text_out_val.get_bbox_patch().get_extents()\
+                               .transformed(ax.transData.inverted())
+        if feature_type == 'positive':
+            box_end_ = box_size.get_points()[0][0]
+        else:
+            box_end_ = box_size.get_points()[1][0]
+        
+        # If the feature goes over the side of the plot, we remove that label
+        # and stop drawing labels
+        if box_end_ > ax.get_xlim()[1]:
+            text_out_val.remove()
+            break
+        
+        # Create end line
+        if (sign * box_end_) > (sign * val):
+            x, y = np.array([[val, val], [0, -0.18]])
+            line = lines.Line2D(x, y, lw=1., alpha=0.5, color=colors[0])
+            line.set_clip_on(False)
+            ax.add_line(line)
+            start_text = val
+            box_end = val
+
+        else:
+            box_end = box_end_ - sign * offset_text
+            x, y = np.array([[val, box_end, box_end],
+                             [0, -0.08, -0.18]])
+            line = lines.Line2D(x, y, lw=1., alpha=0.5, color=colors[0])
+            line.set_clip_on(False)
+            ax.add_line(line)
+            start_text = box_end
+        
+        # Update previous value
+        pre_val = float(feature[0])
+            
+    
+    # Create line for labels
+    extent_shading = [out_value, box_end, 0, -0.31]
+    path = [[out_value, 0], [pre_val, 0], [box_end, -0.08],
+            [box_end, -0.2], [out_value, -0.2],
+            [out_value, 0]]
+    
+    path = Path(path)
+    patch = PathPatch(path, facecolor='none', edgecolor='none')
+    ax.add_patch(patch) 
+    
+    # Extend axis if needed
+    lower_lim, upper_lim = ax.get_xlim()
+    if (box_end < lower_lim):
+        ax.set_xlim(box_end, upper_lim)
+    
+    if (box_end > upper_lim):
+        ax.set_xlim(lower_lim, box_end)
+        
+    # Create shading
+    if feature_type == 'positive':
+        colors = np.array([(255, 13, 87), (255, 255, 255)]) / 255.
+    else:
+        colors = np.array([(30, 136, 229), (255, 255, 255)]) / 255.
+    import matplotlib
+    cm = matplotlib.colors.LinearSegmentedColormap.from_list('cm', colors)
+    
+    _, Z2 = np.meshgrid(np.linspace(0, 10), np.linspace(-10, 10))
+    im = plt.imshow(Z2, interpolation='quadric', cmap=cm,
+                    vmax=0.01, alpha=0.3,
+                    origin='lower', extent=extent_shading,
+                    clip_path=patch, clip_on=True, aspect='auto')
+    im.set_clip_path(patch)
+    
+    return fig, ax
+def draw_higher_lower_element(out_value, offset_text, fontsize=13):
+    plt.text(out_value - offset_text, 0.405, 'higher',
+             fontsize=fontsize, color='#FF0D57',
+             horizontalalignment='right')
+
+    plt.text(out_value + offset_text, 0.405, 'lower',
+             fontsize=fontsize, color='#1E88E5',
+             horizontalalignment='left')
+    
+    plt.text(out_value, 0.4, r'$\leftarrow$',
+             fontsize=fontsize, color='#1E88E5',
+             horizontalalignment='center')
+    
+    plt.text(out_value, 0.425, r'$\rightarrow$',
+             fontsize=fontsize, color='#FF0D57',
+             horizontalalignment='center')
+def draw_base_element(base_value, ax):
+    x, y = np.array([[base_value, base_value], [0.13, 0.25]])
+    line = lines.Line2D(x, y, lw=2., color='#F2F2F2')
+    line.set_clip_on(False)
+    ax.add_line(line)
+    
+    text_out_val = plt.text(base_value, 0.33, 'base value',
+                            fontsize=12, alpha=0.5,
+                            horizontalalignment='center')
+    text_out_val.set_bbox(dict(facecolor='white', edgecolor='white'))
+def draw_output_element(out_name, out_value, ax,
+                        outValue_y_position=0.25,
+                        ):
+    # Add output value
+    x, y = np.array([[out_value, out_value], [0, 0.24]])
+    line = lines.Line2D(x, y, lw=2., color='#F2F2F2')
+    line.set_clip_on(False)
+    ax.add_line(line)
+    
+    font0 = FontProperties()
+    font = font0.copy()
+    font.set_weight('bold')
+    text_out_val = plt.text(out_value, outValue_y_position, '{0:.2f}'.format(out_value),
+                            fontproperties=font,
+                            fontsize=14,
+                            horizontalalignment='center')
+    text_out_val.set_bbox(dict(facecolor='white', edgecolor='white'))
+    
+    text_out_val = plt.text(out_value, 0.33, out_name,
+                            fontsize=12, alpha=0.5,
+                            horizontalalignment='center')
+    text_out_val.set_bbox(dict(facecolor='white', edgecolor='white'))
 SHAP_save_path_root="SHAP_figures/{quadrant}/"
 
 
 import shutil
 from collections import Counter
 shutil.rmtree(SHAP_save_path_root.format(quadrant=""), ignore_errors = True)
-
 
 Analysis_grp_bool=False
 N=5
@@ -1356,298 +1574,460 @@ UsePaperName_bool=True
 Quadrant_FeatureImportance_dict={}
 Quadrant_feature_AddedTopFive_dict={}
 Quadrant_feature_AddedFeatureImportance_dict={}
-Manual_inspect_idxs=[21, 1, 14, 15]
-df_Result_dict=Dict()
-# =============================================================================
-# 有predict probability的變數
-# 最後結果會放在一個nice table就不用一直手動複製了  
-# nice table 就放在df_Total_ErrAnal這個變數
-# XXX  放force plot的地方
-# =============================================================================
+Manual_inspect_idxs=[24]
 # for Analysis_grp_str in ['Manual_inspect_idxs','quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
-for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:    
-# for Analysis_grp_str in ['quadrant2_indexes','quadrant4_indexes']:
-# for Analysis_grp_str in ['Manual_inspect_idxs']:
+# for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_indexes','quadrant4_indexes']:
+# for Analysis_grp_str in ['quadrant2_indexes']:
+for Analysis_grp_str in ['Manual_inspect_idxs']:
     Analysis_grp_indexes=vars()[Analysis_grp_str]
     df_shap_values_stacked=pd.DataFrame([])
     for Inspect_samp in Analysis_grp_indexes:
-        shap_info_proposed=Proposed_changed_info_dict[Inspect_samp]
-        shap_info_baseline=Baseline_changed_info_dict[Inspect_samp]
-        # expected_value_proposed=shap_info_proposed['explainer_expected_value'][logit_number]
-        # expected_value_baseline=shap_info_baseline['explainer_expected_value'][logit_number]
-        expected_value_proposed=shap_info_proposed['explainer_expected_value']
-        expected_value_baseline=shap_info_baseline['explainer_expected_value']
-        df_shap_values_proposed=shap_info_proposed['shap_values'].loc[[logit_number]]
-        df_shap_values_baseline=shap_info_baseline['shap_values'].loc[[logit_number]]
-        deltaprob_baseline=df_shap_values_baseline.T.sum()
-        deltaprob_proposed=df_shap_values_proposed.T.sum()
-        BaselineFeatures=[getattr(FeatSel,k)  for k in baseline_featset_lst]
-        BaselineFeatures_flatten=[e for ee in BaselineFeatures for e in ee]
-        ProposedFeatures=[getattr(FeatSel,k)  for k in proposed_featset_lst]
-        ProposedFeatures_flatten=[e for ee in ProposedFeatures for e in ee]
-        Lists_of_addedFeatures=[getattr(FeatSel,k)  for k in Additional_featureSet]
-        Lists_of_addedFeatures_flatten=[e for ee in Lists_of_addedFeatures for e in ee]
-        deltaprob_baselineFeat_baseline=df_shap_values_baseline[BaselineFeatures_flatten].T.sum()
-        deltaprob_baselineFeat_proposed=df_shap_values_proposed[BaselineFeatures_flatten].T.sum()
-        deltaprob_additionalFeat_proposed=df_shap_values_proposed[Lists_of_addedFeatures_flatten].T.sum()
+        shap_info=Proposed_changed_info_dict[Inspect_samp]
         
-        
-        Prediction_prob_baseline=df_Baseline_changed_decision_info_dict.loc[Inspect_samp,'decisionfunc']
-        Prediction_prob_proposed=df_Proposed_changed_decision_info_dict.loc[Inspect_samp,'decisionfunc']
-        # Prediction_prob_baseline=df_Baseline_changed_decision_info_dict.loc[Inspect_samp,'predictproba']
-        # Prediction_prob_proposed=df_Proposed_changed_decision_info_dict.loc[Inspect_samp,'predictproba']
-
-        # =====================================================================
-        
-        if Reverse_exp == True:
-            shap_info=shap_info_baseline
-        else:
-            shap_info=shap_info_proposed
-        # expected_value=shap_info['explainer_expected_value'][logit_number]
-        expected_value=shap_info['explainer_expected_value']
+        expected_value=shap_info['explainer_expected_value'][logit_number]
         shap_values=shap_info['shap_values'].loc[logit_number].values
         df_shap_values=shap_info['shap_values'].loc[[logit_number]]
         df_shap_values.index=[Inspect_samp]
         
         df_shap_values_T=df_shap_values.T
         
-        if Reverse_exp == True:
-            Selected_feature_set=BaselineFeatures_flatten
-        else:
-            Selected_feature_set=ProposedFeatures_flatten
-        Xtest=shap_info['XTest']        
-        Xtest_additionaFeat=Xtest[Selected_feature_set]
-        Xtest_additionaFeat.index=[ Swap2PaperName(name,PprNmeMp) for name in Xtest_additionaFeat.index]
+        Xtest=shap_info['XTest']
         
         Xtest_dict[Inspect_samp]=Xtest
         df_shap_values_stacked=pd.concat([df_shap_values_stacked,df_shap_values],)
         expected_value_lst.append(expected_value)
         
-
+        Xtest.index=[ Swap2PaperName(name,PprNmeMp) for name in Xtest.index]
+        # Xtest.index=[ repr(Swap2PaperName(name,PprNmeMp)) for name in Xtest.index]
+        
         
         # 這個部份跑TASLP的Fig.7 也就是說明有些不顯著的feature卻shap value很高
         SHAP_save_path=SHAP_save_path_root.format(quadrant=Analysis_grp_str)
         if not os.path.exists(SHAP_save_path):
             os.makedirs(SHAP_save_path)
         # ============================================================================= 
-        # 觀察哪些additional feature有加分效用
-        df_shap_values_additionaFeat=df_shap_values_T.loc[Selected_feature_set].T
-        df_shap_values_toInspect=df_shap_values_T.loc[Selected_feature_set]
-        deltaprob_additionaFeat_proposed=df_shap_values_additionaFeat.T.sum()
-        # 把同一個feature set的SHAP values加總
-        # {Swap2PaperName(FestSet,PprNmeMp): for FestSet in Additional_featureSet:}
-        if Reverse_exp == True:
-            used_feature_lst=baseline_featset_lst
-        else:
-            used_feature_lst=proposed_featset_lst
-        FeatContrib_dict={}
-        for FestSet in used_feature_lst:
-            FeatContrib_dict[Swap2PaperName(FestSet,PprNmeMp)]=df_shap_values_toInspect.loc[getattr(FeatSel,FestSet)].sum().values[0]
-            df_shap_values_toInspect.loc[getattr(FeatSel,FestSet)].sum().values[0]
-        Sum_SHAPval=sum([v for k,v in FeatContrib_dict.items()])
-        
-            
-        # if Reverse_exp == True:
-        #     FeatContrib_percent_dict = {k:'{}%'.format('%.1f' % -np.round(v*100,3)) for k,v in FeatContrib_dict.items()}
-        # else:
-        #     FeatContrib_percent_dict = {k:'{}%'.format('%.1f' % np.round(v*100,3)) for k,v in FeatContrib_dict.items()}
-        FeatContrib_str_dict = {k:'{}'.format('%.3f' % np.round(v,3)) for k,v in FeatContrib_dict.items()}
-        SHAP_percent_lst=[float(v.replace("%","")) for k,v in FeatContrib_str_dict.items()]
-        # SHAP_percent_lst=[float(v.replace("%","")) for k,v in FeatContrib_percent_dict.items()]
-        
-        # df_FeatContrib 的整體在這裡
-        df_FeatContrib=pd.DataFrame(["\\textbf{base val}:"+ str(np.round(expected_value_proposed,3)) ],columns=['Feat_distrib'])
-        suffix_str=" + ".join([str(np.round(v,3)) for v in SHAP_percent_lst])
-        print("base value", np.round(expected_value_proposed,3), "%")
-        # for key, value in FeatContrib_str_dict.items():
-        #     print(key, " : ",value)
-        #     # print(Swap2PaperName(key,PprNmeMp,method='idx'), " : ",value)
-        #     # df_FeatContrib=pd.concat([df_FeatContrib,pd.DataFrame([','+str(Swap2PaperName(key,PprNmeMp,method='idx'))+ ": "+value])],axis=1)
-        #     df_FeatContrib['Feat_distrib']=df_FeatContrib['Feat_distrib']+','+str(Swap2PaperName(key,PprNmeMp,method='idx'))+ ":"+value
-        
-        def AppendStr(FeatContrib_str_dict):
-            Append_str=''
-            for i,(key, value) in enumerate(FeatContrib_str_dict.items()):
-                Append_str+=str(Swap2PaperName(key,PprNmeMp,method='idx'))+ ":"+value
-                if i % 2 ==1  and i < len(FeatContrib_str_dict.keys())-1:
-                    Append_str+='\n'
-                elif i % 2 ==0 and i < len(FeatContrib_str_dict.keys())-1:
-                    Append_str+=','
-                else:
-                    Append_str+=''
-            return Append_str
-        Append_str=AppendStr(FeatContrib_str_dict)
-        # Append_str=','.join([str(Swap2PaperName(key,PprNmeMp,method='idx'))+ ":"+value for key, value in FeatContrib_str_dict.items()])
-        df_FeatContrib=pd.concat([df_FeatContrib,pd.DataFrame([Append_str],columns=df_FeatContrib.columns)],axis=0)
-        
-        
-        #######################################################################
-        
-        if Reverse_exp == True:
-            FinalProb_fromSHAP=expected_value_baseline + sum([v for k,v in FeatContrib_dict.items()])
-        else:
-            FinalProb_fromSHAP=expected_value_proposed + sum([v for k,v in FeatContrib_dict.items()])
-        
-        print(np.round(expected_value_proposed,3),"+",suffix_str, '=', FinalProb_fromSHAP)
-        if Reverse_exp == True:
-            # TDProb_str="TD: ({Prediction_prob_proposed}% → {Prediction_prob_baseline}%)".format(
-            #                                                                 Prediction_prob_baseline='%.1f' % np.round(Prediction_prob_baseline*100,3),
-            #                                                                 Prediction_prob_proposed='%.1f' % np.round(Prediction_prob_proposed*100,3)
-            #                                                                 )
-            # ASDProb_str="ASD: ({Prediction_prob_proposed}% → {Prediction_prob_baseline}%)".format(
-            #                                                                 Prediction_prob_baseline='%.1f' % np.round((1-Prediction_prob_baseline)*100,3),
-            #                                                                 Prediction_prob_proposed='%.1f' % np.round((1-Prediction_prob_proposed)*100,3)
-            #                                                                 )
-            # print(TDProb_str)
-            # print(ASDProb_str)
-            from_str = "TD"  if Prediction_prob_proposed > decision_boundary else "ASD"
-            to_str = "TD"  if Prediction_prob_baseline > decision_boundary else "ASD"
-            PredictionProb_str="{from_str}: {Prediction_prob_proposed:.2f}→{to_str}: {Prediction_prob_baseline:.2f}".format(from_str=from_str,
-                                                                                                        to_str=to_str,
-                                                                                                        Prediction_prob_proposed=Prediction_prob_proposed,
-                                                                                                        Prediction_prob_baseline=Prediction_prob_baseline,
-                                                                                                        )
-            
-        else:
-            # TDProb_str="TD: ({Prediction_prob_baseline}% → {Prediction_prob_proposed}%)".format(
-            #                                                                 Prediction_prob_baseline='%.1f' % np.round(Prediction_prob_baseline*100,3),
-            #                                                                 Prediction_prob_proposed='%.1f' % np.round(Prediction_prob_proposed*100,3)
-            #                                                                 )
-            # ASDProb_str="ASD: ({Prediction_prob_baseline}% → {Prediction_prob_proposed}%)".format(
-            #                                                                  Prediction_prob_baseline='%.1f' % np.round((1-Prediction_prob_baseline)*100,3),
-            #                                                                  Prediction_prob_proposed='%.1f' % np.round((1-Prediction_prob_proposed)*100,3)
-            #                                                                 )
-            # print(TDProb_str)
-            # print(ASDProb_str)
-            from_str = "TD"  if Prediction_prob_baseline > decision_boundary else "ASD"
-            to_str = "TD"  if Prediction_prob_proposed > decision_boundary else "ASD"
-            PredictionProb_str="{from_str}:{Prediction_prob_baseline:.2f}→{to_str}:{Prediction_prob_proposed:.2f}".format(from_str=from_str,
-                                                                                                        to_str=to_str,
-                                                                                                        Prediction_prob_proposed=Prediction_prob_proposed,
-                                                                                                        Prediction_prob_baseline=Prediction_prob_baseline,
-                                                                                                        )
-        print(PredictionProb_str)
-        assert from_str != to_str
-        # 這邊確認SHAP value加起來要從baseline的score到proposed的score
-        if Reverse_exp == True:
-            assert np.round(Prediction_prob_baseline,2) == np.round(FinalProb_fromSHAP,2)
-        else:
-            assert np.round(Prediction_prob_proposed,2) == np.round(FinalProb_fromSHAP,2)
-        
-        
-        df_instance=pd.DataFrame([str(Inspect_samp)])
-        df_PredictionProb=pd.DataFrame()
-        
-        if Reverse_exp == True:
-            if Analysis_grp_str == 'quadrant1_indexes' or Analysis_grp_str == 'quadrant3_indexes':
-                df_classification_result=pd.DataFrame([str(Inspect_samp)+": X→O"])
-            elif Analysis_grp_str == 'quadrant2_indexes' or Analysis_grp_str == 'quadrant4_indexes':
-                df_classification_result=pd.DataFrame([str(Inspect_samp)+": O→X"])
-        else:
-            if Analysis_grp_str == 'quadrant1_indexes' or Analysis_grp_str == 'quadrant3_indexes':
-                df_classification_result=pd.DataFrame([str(Inspect_samp)+": O→X"])
-            elif Analysis_grp_str == 'quadrant2_indexes' or Analysis_grp_str == 'quadrant4_indexes':
-                df_classification_result=pd.DataFrame([str(Inspect_samp)+": X→O"])
-        
-        df_predictionProb=pd.DataFrame([PredictionProb_str])
-        df_predictionProbnResult=pd.concat([df_classification_result , df_predictionProb],axis=0).reset_index(drop=True)
-        # df_predictionProb=pd.concat([df_predictionProb,pd.DataFrame([TDProb_str])],axis=0)
-        # df_predictionProb=pd.concat([df_predictionProb,pd.DataFrame([ASDProb_str])],axis=0)
-        
-        # df_predictionProb.loc[0,'Prediction Prob.']=
-        # df_PredictionProb.loc[1,'Prediction Prob.']=TDProb_str
-        # df_PredictionProb.loc[2,'Prediction Prob.']=ASDProb_str
-        df_NICETABLE=pd.DataFrame()
-        # df_NICETABLE=pd.concat([df_instance,df_predictionProbnResult],axis=1, ignore_index=True).reset_index(drop=True)
-        df_NICETABLE=pd.concat([df_predictionProbnResult],axis=1, ignore_index=True).reset_index(drop=True)
-        # df_NICETABLE=pd.merge(df_instance.T,df_predictionProbnResult.T, on=[0], how='inner')
-        # pd.merge(df_instance,df_predictionProbnResult, how='outer')
-        # df_instance.merge(df_predictionProbnResult)
-        
-        df_NICETABLE.drop_duplicates()
-        df_NICETABLE.index = range(len(df_NICETABLE))
-        df_FeatContrib.index=range(len(df_FeatContrib))
-        
-        # 最後看這個變數，複製到excel上
-        df_NICETABLE=pd.concat([df_NICETABLE,df_FeatContrib],axis=1, ignore_index=True)
-        df_Result_dict[Inspect_samp]=df_NICETABLE
-        
-        
-        fig = shap.force_plot(expected_value, df_shap_values_additionaFeat.values, Xtest_additionaFeat.round(2).T, figsize=(8, 3) ,matplotlib=True,show=False)
+        # 魔改force plot
         # fig = shap.force_plot(expected_value, df_shap_values.values, Xtest.round(2).T, figsize=(8, 3) ,matplotlib=True,show=False)
         
+        from shap.plots._labels import labels
+        from shap.utils._legacy import convert_to_link, Instance, Model, Data, DenseData, Link
+        from shap.plots._force_matplotlib import draw_additive_plot
+        import scipy as sp
+        
+        
+        class AdditiveForceVisualizer(BaseVisualizer):
+            def __init__(self, e, plot_cmap="RdBu"):
+                assert isinstance(e, AdditiveExplanation), \
+                    "AdditiveForceVisualizer can only visualize AdditiveExplanation objects!"
+
+                # build the json data
+                features = {}
+                for i in filter(lambda j: e.effects[j] != 0, range(len(e.data.group_names))):
+                    features[i] = {
+                        "effect": ensure_not_numpy(e.effects[i]),
+                        "value": ensure_not_numpy(e.instance.group_display_values[i])
+                    }
+                self.data = {
+                    "outNames": e.model.out_names,
+                    "baseValue": ensure_not_numpy(e.base_value),
+                    "outValue": ensure_not_numpy(e.out_value),
+                    "link": str(e.link),
+                    "featureNames": e.data.group_names,
+                    "features": features,
+                    "plot_cmap": plot_cmap
+                }
+
+            def html(self, label_margin=20):
+                # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
+                self.data["labelMargin"] = label_margin
+                return """
+        <div id='{id}'>{err_msg}</div>
+         <script>
+           if (window.SHAP) SHAP.ReactDom.render(
+            SHAP.React.createElement(SHAP.AdditiveForceVisualizer, {data}),
+            document.getElementById('{id}')
+          );
+        </script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
+            
+            def matplotlib(self, figsize, show, text_rotation, min_perc=0.05):
+                fig = draw_additive_plot(self.data,
+                                         figsize=figsize,
+                                         show=show,
+                                         text_rotation=text_rotation,
+                                         min_perc=min_perc)
+                
+                return fig
+            
+            def _repr_html_(self):
+                return self.html()
+
+        
+        
+        def verify_valid_cmap(cmap):
+            assert (isinstance(cmap, str) or isinstance(cmap, list) or str(type(cmap)).endswith("unicode'>")
+                ),"Plot color map must be string or list! not: " + str(type(cmap))
+            if isinstance(cmap, list):
+                assert (len(cmap) > 1), "Color map must be at least two colors."
+                _rgbstring = re.compile(r'#[a-fA-F0-9]{6}$')
+                for color in cmap:
+                     assert(bool(_rgbstring.match(color))),"Invalid color found in CMAP."
+
+            return cmap
+        
+        def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True,
+                      ordering_keys=None, ordering_keys_time_format=None, text_rotation=0, min_perc=0.05):
+            plot_cmap = verify_valid_cmap(plot_cmap)
+            if isinstance(e, AdditiveExplanation):
+                if matplotlib:
+                    return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize,
+                                                                            show=show,
+                                                                            text_rotation=text_rotation,
+                                                                            min_perc=min_perc)
+            # 如果code出錯是因為應該要跑到這邊的話，就把槓掉的部份取消掉
+            #     else:
+            #         return AdditiveForceVisualizer(e, plot_cmap=plot_cmap)
+            # elif isinstance(e, Explanation):
+            #     if matplotlib:
+            #         assert False, "Matplotlib plot is only supported for additive explanations"
+            #     else:
+            #         return SimpleListVisualizer(e)
+            # elif isinstance(e, Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
+            #     if matplotlib:
+            #         assert False, "Matplotlib plot is only supported for additive explanations"
+            #     else:
+            #         return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap, ordering_keys=ordering_keys, ordering_keys_time_format=ordering_keys_time_format)
+            # else:
+            #     assert False, "visualize() can only display Explanation objects (or arrays of them)!"
+        
+        # base_value, shap_values, features =\
+        #     expected_value, df_shap_values.values, Xtest.round(2).T
+        base_value, shap_values, feature_names =\
+            expected_value, df_shap_values.values, list(Xtest.index)
+        
+        # features=Xtest.round(2).T
+        # feature_names=None
+        out_names=None
+        link="identity"
+        plot_cmap="RdBu"
+        ordering_keys=None
+        ordering_keys_time_format=None
+        text_rotation=0
+        contribution_threshold=0.075
+        matplotlib=True
+        show=False
+        figsize=(8, 3) 
+        ##################################  參數宣告完畢 ######################
+        # support passing an explanation object
+        if str(type(base_value)).endswith("Explanation'>"):
+            shap_exp = base_value
+            base_value = shap_exp.base_values
+            shap_values = shap_exp.values
+            if features is None:
+                if shap_exp.display_data is None:
+                    features = shap_exp.data
+                else:
+                    features = shap_exp.display_data
+            if sp.sparse.issparse(features):
+                features = features.toarray().flatten()
+            if feature_names is None:
+                feature_names = shap_exp.feature_names
+            # if out_names is None: # TODO: waiting for slicer support of this
+            #     out_names = shap_exp.output_names
+
+        # auto unwrap the base_value
+        if isinstance(base_value, np.ndarray):
+            if len(base_value) == 1:
+                base_value = base_value[0]
+            elif len(base_value) > 1 and np.all(base_value == base_value[0]):
+                base_value = base_value[0]
+
+        if (isinstance(base_value, np.ndarray) or type(base_value) == list):
+            if not isinstance(shap_values, list) or len(shap_values) != len(base_value):
+                raise Exception("In v0.20 force_plot now requires the base value as the first parameter! " \
+                                "Try shap.force_plot(explainer.expected_value, shap_values) or " \
+                                "for multi-output models try " \
+                                "shap.force_plot(explainer.expected_value[0], shap_values[0]).")
+
+
+        assert not type(shap_values) == list, "The shap_values arg looks looks multi output, try shap_values[i]."
+
+        link = convert_to_link(link)
+
+        if type(shap_values) != np.ndarray:
+            fig= visualize(shap_values)
+            print("[DEBUG] force function stop at if type(shap_values) != np.ndarray" , )
+
+        # convert from a DataFrame or other types
+        if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+            if feature_names is None:
+                feature_names = list(features.columns)
+            features = features.values
+        elif str(type(features)) == "<class 'pandas.core.series.Series'>":
+            if feature_names is None:
+                feature_names = list(features.index)
+            features = features.values
+        elif isinstance(features, list):
+            if feature_names is None:
+                feature_names = features
+            features = None
+        elif features is not None and len(features.shape) == 1 and feature_names is None:
+            feature_names = features
+            features = None
+
+        if len(shap_values.shape) == 1:
+            shap_values = np.reshape(shap_values, (1, len(shap_values)))
+
+        if out_names is None:
+            out_names = ["f(x)"]
+        elif type(out_names) == str:
+            out_names = [out_names]
+
+        if shap_values.shape[0] == 1:
+            if feature_names is None:
+                feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
+            if features is None:
+                features = ["" for _ in range(len(feature_names))]
+            if type(features) == np.ndarray:
+                features = features.flatten()
+
+            # check that the shape of the shap_values and features match
+            if len(features) != shap_values.shape[1]:
+                msg = "Length of features is not equal to the length of shap_values!"
+                if len(features) == shap_values.shape[1] - 1:
+                    msg += " You might be using an old format shap_values array with the base value " \
+                           "as the last column. In this case just pass the array without the last column."
+                raise Exception(msg)
+
+        instance = Instance(np.zeros((1, len(feature_names))), features)
+        e = AdditiveExplanation(
+            base_value,
+            np.sum(shap_values[0, :]) + base_value,
+            shap_values[0, :],
+            None,
+            instance,
+            link,
+            Model(None, out_names),
+            DenseData(np.zeros((1, len(feature_names))), list(feature_names))
+        )
+        
+        
+        # =============================================================================
+        ''' 夢的第二層，在visualize裡面 '''         
+
+        # fig = visualize(e,
+        #                  plot_cmap,
+        #                  matplotlib,
+        #                  figsize=figsize,
+        #                  show=show,
+        #                  text_rotation=text_rotation,
+        #                  min_perc=contribution_threshold)
+        
+        
+        # def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True,
+        #               ordering_keys=None, ordering_keys_time_format=None, text_rotation=0, min_perc=0.05):
+            
+        e, plot_cmap, matplotlib, figsize, show=\
+            e, plot_cmap, matplotlib, figsize, show
+                      
+
+        ordering_keys=None 
+        ordering_keys_time_format=None
+        
+        text_rotation, min_perc=\
+            text_rotation, contribution_threshold
+        
+        
+        plot_cmap = verify_valid_cmap(plot_cmap)
+        if isinstance(e, AdditiveExplanation):
+            if matplotlib:
+                # fig= AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize,
+                #                                                         show=show,
+                #                                                         text_rotation=text_rotation,
+                #                                                         min_perc=min_perc)
+                AddForcVis=AdditiveForceVisualizer(e, plot_cmap=plot_cmap)
+                # =============================================================================
+                ''' 夢的第三層，在matplotlib裡面 '''
+                fig=AddForcVis.matplotlib(figsize=figsize,
+                                        show=show,
+                                        text_rotation=text_rotation,
+                                        min_perc=min_perc)
+                
+                
+                figsize, show, text_rotation, min_perc=\
+                    figsize, show, text_rotation, min_perc
+                
+                
+                # =============================================================================
+                ''' 夢的第四層，在draw_additive_plot裡面 '''
+                fig = draw_additive_plot(AddForcVis.data,
+                                         figsize=figsize,
+                                         show=show,
+                                         text_rotation=text_rotation,
+                                         min_perc=min_perc)
+                data, figsize, show, text_rotation, min_perc=\
+                    AddForcVis.data, figsize, show, text_rotation, min_perc
+                    
+                """Draw additive plot."""
+                # Turn off interactive plot
+                if show is False:
+                    plt.ioff()
+                
+                # Format data
+                neg_features, total_neg, pos_features, total_pos = format_data(data)
+                
+                # Compute overall metrics
+                base_value = data['baseValue']
+                out_value = data['outValue']
+                offset_text = (np.abs(total_neg) + np.abs(total_pos)) * 0.04
+                
+                # Define plots
+                fig, ax = plt.subplots(figsize=figsize)
+                
+                # 這邊畫圖的邊界 (x_lim, y_lim)
+                # Compute axis limit
+                update_axis_limits(ax, total_pos, pos_features, total_neg,
+                                   neg_features, base_value,
+                                   ylim=(-0.2,0.15))
+                
+                # Define width of bar
+                width_bar = 0.1
+                width_separators = (ax.get_xlim()[1] - ax.get_xlim()[0]) / 200
+                
+                # Create bar for negative shap values
+                rectangle_list, separator_list = draw_bars(out_value, neg_features, 'negative',
+                                                           width_separators, width_bar)
+                for i in rectangle_list:
+                    ax.add_patch(i)
+                
+                for i in separator_list:
+                    ax.add_patch(i)
+                
+                # Create bar for positive shap values
+                rectangle_list, separator_list = draw_bars(out_value, pos_features, 'positive',
+                                                           width_separators, width_bar)
+                for i in rectangle_list:
+                    ax.add_patch(i)
+                
+                for i in separator_list:
+                    ax.add_patch(i)
+
+                # Add labels
+                total_effect = np.abs(total_neg) + total_pos
+                fig, ax = draw_labels(fig, ax, out_value, neg_features, 'negative',
+                                      offset_text, total_effect, min_perc=min_perc, text_rotation=text_rotation)
+                
+                fig, ax = draw_labels(fig, ax, out_value, pos_features, 'positive',
+                                      offset_text, total_effect, min_perc=min_perc, text_rotation=text_rotation)
+                
+                
+                
+                # higher lower legend
+                draw_higher_lower_element(out_value, offset_text, fontsize=TEXTFONTSIZE)
+                
+                # Debug用的
+                # import matplotlib
+                # print("Font family", matplotlib.rcParams['font.family'])
+                
+                
+                # 這個函數會畫base value的label在圖上面
+                # draw_base_element(base_value, ax)
+                
+                # Add output label
+                out_names = "Probability of predicting TD"
+                # out_names = data['outNames'][0]
+                draw_output_element(out_names, out_value, ax,
+                                    outValue_y_position=0.20)
+                
+                
+                # Scale axis
+                if data['link'] == 'logit':
+                    plt.xscale('logit')
+                    ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+                    ax.ticklabel_format(style='plain')
+
+                if show:
+                    plt.show()
+                else:
+                    fig= plt.gcf()
+                
+                # =============================================================================
+                # =============================================================================
+                
+                
+                
+                
+        ''' 夢的第二層，在visualize裡面 '''
+        # =============================================================================
+        # =============================================================================
+        
+        
+        
+        
+        fig=plt.gcf()
+        # equal_textwidth=4.7747/3 #the size of latex textwidth
+        equal_textwidth=4.7747 #the size of latex textwidth
+        figure_ratio=0.6
+        figsize_Textextwidth_tmp=(equal_textwidth, 0.8)
+        figsize_Textextwidth=tuple(ti/figure_ratio for ti in figsize_Textextwidth_tmp)
+        fig.set_size_inches(figsize_Textextwidth) #這個比例很好，三個圖都這樣fix住
         
         plt.savefig("images/SHAP_discussion_{sample}.png".format(sample=Inspect_samp),dpi=400, bbox_inches='tight')
         plt.savefig(SHAP_save_path+"{sample}.png".format(sample=Inspect_samp),dpi=150, bbox_inches='tight')
         # plt.savefig(SHAP_save_path+"{sample}.png".format(sample=Inspect_samp),dpi=150)
         
+        Lists_of_addedFeatures=[getattr(FeatSel,k)  for k in Additional_featureSet]
+        Lists_of_addedFeatures_flatten=[e for ee in Lists_of_addedFeatures for e in ee]
+        df_FeatureImportance_AddedFeatures=df_shap_values[Lists_of_addedFeatures_flatten].T
+        df_FeatureImportance_AddedFeatures_absSorted=df_FeatureImportance_AddedFeatures.abs()[Inspect_samp].sort_values(ascending=False)
         
         
         
-        # df_FeatureImportance_AddedFeatures=df_shap_values[Lists_of_addedFeatures_flatten].T
-        # df_FeatureImportance_AddedFeatures_absSorted=df_FeatureImportance_AddedFeatures.abs()[Inspect_samp].sort_values(ascending=False)
-        # df_addedFeatures_TopN=df_FeatureImportance_AddedFeatures.loc[df_FeatureImportance_AddedFeatures_absSorted.head(N).index]
+        df_addedFeatures_TopN=df_FeatureImportance_AddedFeatures.loc[df_FeatureImportance_AddedFeatures_absSorted.head(N).index]
         # Quadrant_feature_AddedTopFive_dict[Inspect_samp]=df_addedFeatures_TopN
-        # Quadrant_feature_AddedFeatureImportance_dict[Inspect_samp]=df_FeatureImportance_AddedFeatures[Inspect_samp].sort_values(ascending=False)
+        Quadrant_feature_AddedFeatureImportance_dict[Inspect_samp]=df_FeatureImportance_AddedFeatures[Inspect_samp].sort_values(ascending=False)
+        
     if UsePaperName_bool==False:
             df_shap_values_stacked.columns=[Swap2PaperName(idx, PprNmeMp) for idx in df_shap_values_stacked.columns]
     
     
     
-    ''' Analyses of per quadrants 
-        (NOT IN USED ANYMORE)
-    '''
-    
-    # if len(Analysis_grp_indexes)>0 and Analysis_grp_bool == True:
-    #     # =============================================================================
-    #     # Feature importance
-    #     # =============================================================================
-    #     df_shap_values_stacked_T=df_shap_values_stacked.T
-    #     df_FeatureImportance=df_shap_values_stacked_T.abs().sum(axis=1).sort_values(ascending=False)
+    ''' Analyses of per quadrants '''
+    if len(Analysis_grp_indexes)>0 and Analysis_grp_bool == True:
+        # =============================================================================
+        # Feature importance
+        # =============================================================================
+        df_shap_values_stacked_T=df_shap_values_stacked.T
+        df_FeatureImportance=df_shap_values_stacked_T.abs().sum(axis=1).sort_values(ascending=False)
 
-    #     df_TopN=df_FeatureImportance.head(N)
-    #     Quadrant_FeatureImportance_dict[Analysis_grp_str]=df_FeatureImportance
-    #     df_shap_values_stacked[df_FeatureImportance.index].T
+        df_TopN=df_FeatureImportance.head(N)
+        Quadrant_FeatureImportance_dict[Analysis_grp_str]=df_FeatureImportance
+        df_shap_values_stacked[df_FeatureImportance.index].T
         
-    #     # =============================================================================
-    #     # Count Top N occurence and plot histogram
-    #     N=5
-    #     # =============================================================================
-    #     df_shap_values_stacked_T=df_shap_values_stacked.T
-    #     N_totalpeople=len(df_shap_values_stacked_T.columns)
-    #     TopN_dict={}
-    #     LowN_dict={}
-    #     for Inspect_samp in df_shap_values_stacked_T.columns:
-    #         LowestN=df_shap_values_stacked_T[[Inspect_samp]].sort_values(by=[Inspect_samp])[:N].index
-    #         TopN=df_shap_values_stacked_T[[Inspect_samp]].sort_values(by=[Inspect_samp])[-N:].index
-    #         TopN_dict[Inspect_samp]=TopN
-    #         LowN_dict[Inspect_samp]=LowestN
-    #     df_TopN_dict=pd.DataFrame.from_dict(TopN_dict)
-    #     df_LowN_dict=pd.DataFrame.from_dict(LowN_dict)
+        # =============================================================================
+        # Count Top N occurence and plot histogram
+        N=5
+        # =============================================================================
+        df_shap_values_stacked_T=df_shap_values_stacked.T
+        N_totalpeople=len(df_shap_values_stacked_T.columns)
+        TopN_dict={}
+        LowN_dict={}
+        for Inspect_samp in df_shap_values_stacked_T.columns:
+            LowestN=df_shap_values_stacked_T[[Inspect_samp]].sort_values(by=[Inspect_samp])[:N].index
+            TopN=df_shap_values_stacked_T[[Inspect_samp]].sort_values(by=[Inspect_samp])[-N:].index
+            TopN_dict[Inspect_samp]=TopN
+            LowN_dict[Inspect_samp]=LowestN
+        df_TopN_dict=pd.DataFrame.from_dict(TopN_dict)
+        df_LowN_dict=pd.DataFrame.from_dict(LowN_dict)
     
-    #     TopN_total_feat_array=df_TopN_dict.to_numpy().flatten()
-    #     TopN_total_feat_counts_dict = Counter(TopN_total_feat_array)
+        TopN_total_feat_array=df_TopN_dict.to_numpy().flatten()
+        TopN_total_feat_counts_dict = Counter(TopN_total_feat_array)
         
-    #     df_TopN_total_feat_counts = pd.DataFrame.from_dict(TopN_total_feat_counts_dict, orient='index')
-    #     df_TopN_total_feat_counts.columns=['feature_counts']
-    #     df_TopN_total_feat_percentage=df_TopN_total_feat_counts/N_totalpeople*100
-    #     ax = df_TopN_total_feat_percentage.plot(kind='bar')
-    #     ax.set_ylabel("percentage")
-    #     ax.set_xlabel("feature")
-
-# pd.DataFrame.from_dict(df_Result_dict,orient='index')
-df_Total_ErrAnal_row=pd.DataFrame()
-df_Total_ErrAnal=pd.DataFrame()
-
-
-group_dict={}
-count=1
-for key, values in df_Result_dict.items():
-    df_Total_ErrAnal_row=pd.concat([df_Total_ErrAnal_row,values],axis=1)
-    if count % 3 == 0:
-        df_Total_ErrAnal=pd.concat([df_Total_ErrAnal,df_Total_ErrAnal_row])
-        df_Total_ErrAnal_row=pd.DataFrame()
-    count+=1
+        df_TopN_total_feat_counts = pd.DataFrame.from_dict(TopN_total_feat_counts_dict, orient='index')
+        df_TopN_total_feat_counts.columns=['feature_counts']
+        df_TopN_total_feat_percentage=df_TopN_total_feat_counts/N_totalpeople*100
+        ax = df_TopN_total_feat_percentage.plot(kind='bar')
+        ax.set_ylabel("percentage")
+        ax.set_xlabel("feature")
 
 
 #%%

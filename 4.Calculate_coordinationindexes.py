@@ -50,6 +50,9 @@ from scipy import special, stats
 import warnings
 from Syncrony import Syncrony
 from SlidingWindow import slidingwindow as SW
+
+from articulation.HYPERPARAM.PlotFigureVars import *
+
 # =============================================================================
 def get_args():
     # we add compulsary arguments as named arguments for readability
@@ -343,6 +346,8 @@ df_Phone_num_dict[0].mean()
 # =============================================================================
 ''' TD mean phone num: 591.55  '''
 ''' ASD mean phone num: 665.579  '''
+''' (591.55*20+665.579*88)/(20+88)  '''
+
 # =============================================================================
 
 

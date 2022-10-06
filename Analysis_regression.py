@@ -56,6 +56,9 @@ from collections import Counter
 import shutil
 import scipy
 
+from articulation.HYPERPARAM.PlotFigureVars import *
+
+
 def Assert_labelfeature(feat_name,lab_name):
     # =============================================================================
     #     To check if the label match with feature
@@ -119,6 +122,13 @@ def CCC_numpy(y_true, y_pred):
     
     return ccc
 
+def MAE_df(a,b, Sum=False):
+    assert type(a) == type(b)
+    if type(a)==pd.core.series.Series:
+        if Sum == True:
+            return np.abs(a - b).sum()
+        else:
+            return np.abs(a - b).mean()
 
 
 def get_args():
@@ -279,10 +289,17 @@ featuresOfInterest=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
 #             FeatureLabelMatch_manual.append('{0}-{1}'.format(key_layer1,key_layer2))
     
 
-# 2. 如果要手動設定實驗的話用這一區
+# XXX 2. 如果要手動設定實驗的話用這一區
 FeatureLabelMatch_manual=[
     # Rule: {layer1}-{layer2}
     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols',
+    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols',
+    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Syncrony_cols',
+    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns',
+    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns',
+    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-DEP_columns',
+    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Trend_D_cols',
+    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Syncrony_cols',
     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Trend_K_cols',
     ]
 # =============================================================================
@@ -564,7 +581,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             r2=r2_score(features.y,CVpredict )
             n,p=features.X.shape
             r2_adj=1-(1-r2)*(n-1)/(n-p-1)
-            MSE=sklearn.metrics.mean_squared_error(features.y.values.ravel(),CVpredict)
+            # MSE=sklearn.metrics.mean_squared_error(features.y.values.ravel(),CVpredict)
+            MAE=sklearn.metrics.mean_absolute_error(features.y.values.ravel(),CVpredict)
             pearson_result, pearson_p=pearsonr(features.y,CVpredict )
             spear_result, spearman_p=spearmanr(features.y,CVpredict )
             CCC = CCC_numpy(features.y, CVpredict)
@@ -620,8 +638,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             df_best_result_spear.loc[feature_keys,label_keys]='{0}/{1}'.format(np.round(spear_result,3),np.round(spearman_p,6))
             df_best_result_spear.loc[feature_keys,'de-zero_num']=len(features.X)
             # df_best_cross_score.loc[feature_keys,label_keys]=Score.mean()
-            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (MSE/pear/spear/CCC)'.format(label_keys,clf_keys)]\
-                        ='{0}/{1}/{2}/{3}'.format(np.round(MSE,3),np.round(pearson_result,3),np.round(spear_result,3),np.round(CCC,3))
+            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (MAE/pear/spear/CCC)'.format(label_keys,clf_keys)]\
+                        ='{0}/{1}/{2}/{3}'.format(np.round(MAE,3),np.round(pearson_result,3),np.round(spear_result,3),np.round(CCC,3))
 
         elif features.feattype == 'classification':
             df_best_result_UAR.loc[feature_keys,label_keys]='{0}'.format(UAR)
@@ -682,7 +700,8 @@ if args.Print_Analysis_grp_Manual_select == True:
 
 
 proposed_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols::ADOS_C'
-baseline_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Trend_K_cols::ADOS_C'
+# baseline_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Trend_K_cols::ADOS_C'
+baseline_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns::ADOS_C'
 experiment_title='Regression'
 
 
@@ -710,6 +729,20 @@ Session_level_all[proposed_expstr]['y_true'].index,
 df_Y_pred=pd.DataFrame(Y_pred_lst[:-1],index=['proposed','baseline','y_true']).T
 df_Y_pred_withName=pd.DataFrame(Y_pred_lst,index=['proposed','baseline','y_true','name']).T
 df_Index2Name_mapping=df_Y_pred_withName['name']
+
+# ASSERTION 確認沒有錯
+def MSE_df(a,b):
+    assert type(a) == type(b)
+    if type(a)==pd.core.series.Series:
+        return ((a - b)**2).mean()
+
+# mse_proposed = ((df_Y_pred['proposed'] - df_Y_pred['y_true'])**2).mean()
+# mse_baseline = ((df_Y_pred['baseline'] - df_Y_pred['y_true'])**2).mean()
+mse_proposed = MSE_df(df_Y_pred['proposed'] , df_Y_pred['y_true'])
+mse_baseline = MSE_df(df_Y_pred['baseline'] , df_Y_pred['y_true'])
+
+print("The MSE of proposed model is: ", mse_proposed)
+print("The MSE of baseline model is: ", mse_baseline)
 
 # proposed的距離比baseline 的還要近
 Improved=(df_Y_pred['y_true'] - df_Y_pred['proposed']).abs() < (df_Y_pred['y_true'] - df_Y_pred['baseline']).abs()
@@ -747,6 +780,28 @@ quadrant1_indexes=list(df_Y_pred[quadrant1].index)
 quadrant2_indexes=list(df_Y_pred[quadrant2].index)
 quadrant3_indexes=list(df_Y_pred[quadrant3].index)
 quadrant4_indexes=list(df_Y_pred[quadrant4].index)
+
+# XXX
+
+# y_hat^p - y > 0, y_hat^b - y > 0
+global  Q1_idx
+global  Q2_idx
+global  Q3_idx
+global  Q4_idx
+Q1_idx=list(df_Y_pred[(df_Y_pred['proposed'] > df_Y_pred['y_true']) & (df_Y_pred['baseline'] > df_Y_pred['y_true'])].index)
+# y_hat^p - y < 0, y_hat^b - y < 0
+Q2_idx=list(df_Y_pred[(df_Y_pred['proposed'] < df_Y_pred['y_true']) & (df_Y_pred['baseline'] < df_Y_pred['y_true'])].index)
+# y_hat^p - y > 0, y_hat^b - y < 0
+Q3_idx=list(df_Y_pred[(df_Y_pred['proposed'] > df_Y_pred['y_true']) & (df_Y_pred['baseline'] < df_Y_pred['y_true'])].index)
+# y_hat^p - y < 0, y_hat^b - y > 0
+Q4_idx=list(df_Y_pred[(df_Y_pred['proposed'] < df_Y_pred['y_true']) & (df_Y_pred['baseline'] > df_Y_pred['y_true'])].index)
+
+mae_proposed = MAE_df(df_Y_pred['proposed'] , df_Y_pred['y_true'])
+mae_baseline = MAE_df(df_Y_pred['baseline'] , df_Y_pred['y_true'])
+
+print("The MAE of proposed model is mae_proposed: ", mae_proposed)
+print("The MAE of baseline model is mae_baseline: ", mae_baseline)
+
 
 quadrant1_inner_indexes=list(df_Y_pred[quadrant1 & inner].index)
 quadrant1_outer_indexes=list(df_Y_pred[quadrant1 & outer].index)
@@ -812,7 +867,7 @@ assert len(Improved_indexes+Degraded_indexes) == len(LargerVal_indexes+LowerVal_
 '''
 
 
-def Organize_Needed_SHAP_info(Selected_indexes, Session_level_all, proposed_expstr):
+def Organize_Needed_SHAP_info(Selected_indexes, Session_level_all, proposed_expstr, verbose=False):
     Selected_info_dict=Dict()
     for tst_idx in Selected_indexes:
         for key, values in Session_level_all[proposed_expstr]['SHAP_info'].items():
@@ -824,7 +879,8 @@ def Organize_Needed_SHAP_info(Selected_indexes, Session_level_all, proposed_exps
                     shap_values_array=values['shap_values'][i,:].reshape(1,-1)
                     df_shap_values=pd.DataFrame(shap_values_array,columns=Selected_info_dict[tst_idx]['XTest'].index)
                     Selected_info_dict[tst_idx]['shap_values']=df_shap_values
-                    print("testing sample ", ii, "is in the ", i, "position of test fold", key)
+                    if verbose == True:
+                        print("testing sample ", ii, "is in the ", i, "position of test fold", key)
                     assert (Selected_info_dict[tst_idx]['XTest'] == Session_level_all[proposed_expstr]['X'].iloc[tst_idx]).all()
                     # print("It's feature value captured is", Selected_info_dict[tst_idx]['XTest'])
                     # print("It's original X value is", Session_level_all[proposed_expstr]['X'].iloc[tst_idx])
@@ -1144,6 +1200,37 @@ for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_inde
         shap.save_html(SHAP_save_path+'{sample}.html'.format(sample=Analysis_grp_str), p)
         Plot_FeatImportance_heatmap(df_table_info,outpath=SHAP_save_path+'{sample}'.format(sample=Analysis_grp_str),N=5,M=len(df_table_info.columns))
 
+
+#%%
+# # 以feature set為單位畫summary plot
+# def ReorganizeFeatures4SummaryPlot(shap_values_logit, df_XTest,FeatureSet_lst=None,Featurechoose_lst=None):
+#     # step1 convert shapvalue to df_shapvalues
+#     df_shap_values=pd.DataFrame(shap_values_logit,columns=df_XTest.columns)
+#     # step2 Categorize according to FeatureSet_lst
+#     df_Reorganized_shap_values=pd.DataFrame()
+#     df_Reorganized_XTest=pd.DataFrame()
+#     if FeatureSet_lst!=None:
+#         for FSL in FeatureSet_lst:
+#             FSL_papercolumns=[Swap2PaperName(k,PprNmeMp) for k in FeatSel.CategoricalName2cols[FSL]]
+        
+#             df_Reorganized_shap_values=pd.concat([df_Reorganized_shap_values,df_shap_values[FSL_papercolumns]],axis=1)
+#             df_Reorganized_XTest=pd.concat([df_Reorganized_XTest,df_XTest[FSL_papercolumns]],axis=1)
+#     elif Featurechoose_lst!=None:
+#         FSL_papercolumns=[Swap2PaperName(k,PprNmeMp) for k in Featurechoose_lst]
+#         df_Reorganized_shap_values=df_shap_values[FSL_papercolumns]
+#         df_Reorganized_XTest=df_XTest[FSL_papercolumns]
+
+#     assert df_Reorganized_shap_values.shape == df_Reorganized_XTest.shape
+#     return df_Reorganized_shap_values.values, df_Reorganized_XTest
+
+# shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_totalPoeple_info_dict,\
+#                                                           PprNmeMp=PprNmeMp)
+# # df_Reorganized_shap_values=ReorganizeFeatures4SummaryPlot(shap_values, df_XTest)
+# df_shap_values=pd.DataFrame(shap_values,columns=df_XTest.columns)
+
+
+
+
 #%%
 # =============================================================================
 '''
@@ -1190,7 +1277,7 @@ Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict['quadrant4_indexes']
 
 
 #%%
-# 觀察每個個案的Feature值
+# Feature set combination: Inter-VD+FD+GC[VSC]\textsubscript{inv}+Syncrony[VSC] 的summary plot
 def Prepare_data_for_summaryPlot_regression(SHAPval_info_dict, feature_columns=None,PprNmeMp=None):
     keys_bag=[]
     XTest_dict={}
@@ -1218,6 +1305,9 @@ def Prepare_data_for_summaryPlot_regression(SHAPval_info_dict, feature_columns=N
 # inspect_featuresets='Trend[LOCDEP]_d'  #Trend[LOCDEP]d + Proximity[phonation]
 # inspect_featuresets='LOC_columns'  #LOC_columns + Syncrony[phonation]
 # inspect_featuresets_lst=['LOC_columns','DEP_columns','Trend[LOCDEP]_d','Trend[LOCDEP]_k','Syncrony[LOCDEP]']
+
+
+
 inspect_featuresets_lst=list(Additional_featureSet)
 featuresetsListTotal_lst=[]
 for inspect_featuresets in inspect_featuresets_lst:
@@ -1226,7 +1316,6 @@ for inspect_featuresets in inspect_featuresets_lst:
 shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_totalPoeple_info_dict,\
                                                           feature_columns=featuresetsListTotal_lst,\
                                                           PprNmeMp=PprNmeMp)
-
 # Col2Delete=""
 Col2Delete="GC[BCC]$_\mathrm{inv}$"
 if len(Col2Delete) > 0:
@@ -1237,8 +1326,12 @@ else:
 # TASLP 跑Fig.5 圖片的時候會用到
 max_display=14
 if len(Colidx2Delete)>0:
-    shap.summary_plot(np.delete(shap_values,obj=Colidx2Delete,axis=1), df_XTest.drop(columns=Col2Delete),feature_names=df_XTest.drop(columns=Col2Delete).columns, max_display=max_display,\
-                      show=False)
+    shap.summary_plot(np.delete(shap_values,obj=Colidx2Delete,axis=1), df_XTest.drop(columns=Col2Delete),feature_names=df_XTest.drop(columns=Col2Delete).columns, \
+                      max_display=max_display,\
+                      axis_color='black',\
+                      
+                      show=False
+                      )
     plt.gcf().axes[-1].set_aspect(100)
     plt.gcf().axes[-1].set_box_aspect(100)
     # plt.gcf().axes[-1].set_aspect('auto')
@@ -1271,7 +1364,10 @@ for col in df_XTest.columns:
     # if col == '$BCC$':
     #     aaa=ccc
 #%%
+# XXX Feature sets Inter-VD, FD, GC[VSC]\textsubscript{inv}, Syncrony[VSC] 的summary plot
+
 def ReorganizeFeatures4SummaryPlot(shap_values_logit, df_XTest,FeatureSet_lst=None,Featurechoose_lst=None):
+    # 就按照指定的順序放feature
     # step1 convert shapvalue to df_shapvalues
     df_shap_values=pd.DataFrame(shap_values_logit,columns=df_XTest.columns)
     # step2 Categorize according to FeatureSet_lst
@@ -1317,28 +1413,401 @@ FeatureChoose_lst=[
     # 'Convergence[pear_12',
     # 'Convergence[dcorr_12]',
     ]
+FeatureSet_lst=['LOC_columns','DEP_columns','LOCDEP_Syncrony_cols','LOCDEP_Trend_D_cols']
+for FSL in FeatureSet_lst:
+    print(FeatSel.CategoricalName2cols[FSL])
 
-Reorganized_shap_values, df_Reorganized_XTest=ReorganizeFeatures4SummaryPlot(shap_values, df_XTest, Featurechoose_lst=FeatureChoose_lst)
+
+
+# 第一個分析，Inter-VD+GC[P]\textsubscript{inv}+GC[P]\textsubscript{part}+Syncrony[P] 的 SHAP分析
+###############################################################################
+proposed_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols::ADOS_C'
+Proposed_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, proposed_expstr)
+shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_changed_info_dict,\
+                                                          PprNmeMp=PprNmeMp)
+
+# Reorganized_shap_values, df_Reorganized_XTest=ReorganizeFeatures4SummaryPlot(shap_values, df_XTest, Featurechoose_lst=FeatureChoose_lst)
+# Reorganized_shap_values, df_Reorganized_XTest=ReorganizeFeatures4SummaryPlot(shap_values, df_XTest, \
+#                     FeatureSet_lst=['LOC_columns','DEP_columns','LOCDEP_Trend_D_cols','LOCDEP_Syncrony_cols'])
+Reorganized_shap_values, df_Reorganized_XTest=ReorganizeFeatures4SummaryPlot(shap_values, df_XTest, \
+                    FeatureSet_lst=['DEP_columns'])
 shap.summary_plot(Reorganized_shap_values, df_Reorganized_XTest,show=False, max_display=len(df_XTest.columns),sort=False)
+
 plt.title(experiment_title)
-plt.show()
-# shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_changed_info_dict,\
-#                                                          feature_columns=getattr(FeatSel, 'LOC_columns') + getattr(FeatSel, 'DEP_columns') + getattr(FeatSel, 'LOCDEP_Trend_D_cols'),\
-#                                                          )
-
-# shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False)
-# plt.title(experiment_title)
-# plt.show()
-# shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_totalPoeple_info_dict,\
-#                                                          feature_columns=getattr(FeatSel, 'LOC_columns') + getattr(FeatSel, 'DEP_columns') + getattr(FeatSel, 'LOCDEP_Trend_D_cols'),\
-#                                                          )
-
-# shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False)
-# plt.title(experiment_title)
-# plt.show()
+fig = plt.gcf()
+plt.gcf().axes[-1].set_aspect(100)
+plt.gcf().axes[-1].set_box_aspect(20)
+plt.gcf().axes[-1].set_aspect('auto')
+# plt.colorbar()
+fig = plt.gcf()
+fig.set_size_inches((4,1.5))
+fig.savefig('images/SHAP_RegressionTask.png',format = "png",dpi = 300,bbox_inches = 'tight')
+plt.close(fig)
 
 
+# Exp_str_lst=[
+# 'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns::ADOS_C',
+# 'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-DEP_columns::ADOS_C',
+# 'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Trend_D_cols::ADOS_C',
+# 'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Syncrony_cols::ADOS_C',]
 
+# Exp_strs='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns::ADOS_C'
+
+
+# def ExportSummaryImages(Exp_strs,Session_level_all):
+#     FeatSet=Exp_strs[re.search("-",Exp_strs).end():re.search("::",Exp_strs).start()]
+#     changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, Exp_strs)
+#     shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(changed_info_dict,\
+#                                                               feature_columns=getattr(FeatSel,FeatSet),\
+#                                                               PprNmeMp=PprNmeMp)
+    
+#     Reorganized_shap_values, Reorganized_df_XTest=ReorganizeFeatures4SummaryPlot(shap_values, df_XTest, FeatureSet_lst=[FeatSet])
+#     shap.summary_plot(Reorganized_shap_values, Reorganized_df_XTest,show=False, max_display=len(Reorganized_df_XTest.columns),sort=False)
+    
+#     # plt.title(experiment_title)
+#     fig = plt.gcf()
+#     fig.savefig('images/SHAP_RegressionTask_{}.png'.format(FeatSet),format = "png",dpi = 300,bbox_inches = 'tight')
+#     plt.close(fig)
+
+# proposed_expstr
+
+# ExportSummaryImages(proposed_expstr,Session_level_all)
+# for Exp_strs in Exp_str_lst:
+#     ExportSummaryImages(Exp_strs,Session_level_all)
+
+    
+#%%
+# 第二個分析GC[P]\textsubscript{part}+Syncrony[P]是幫助到哪幾個quadrant
+PprNme2OriginNme={
+    'InterVD':'LOC_columns',
+    'FD':'DEP_columns',
+    'GCVSCinv':'LOCDEP_Trend_D_cols',
+    'SynchronyVSC':'LOCDEP_Syncrony_cols',
+    }
+
+
+FeatSetLst=['InterVD','FD','GCVSCinv','SynchronyVSC']
+def featureSetSHAPVal(df_shap_values, FeatSel , FeatSetLst=['InterVD','FD','GCVSCinv','SynchronyVSC']):
+    InterVD=[Swap2PaperName(e, PprNmeMp) for e in FeatSel.LOC_columns]
+    FD=[Swap2PaperName(e, PprNmeMp) for e in FeatSel.DEP_columns]
+    GCVSCinv=[Swap2PaperName(e, PprNmeMp) for e in FeatSel.LOCDEP_Trend_D_cols]
+    SynchronyVSC=[Swap2PaperName(e, PprNmeMp) for e in FeatSel.LOCDEP_Syncrony_cols]
+    df_shap_sum_dict={}
+    for FS in FeatSetLst:
+        df_shap_sum_dict[FS]=df_shap_values[vars()[FS]].sum(axis=1)
+    return df_shap_sum_dict  
+
+
+
+proposed_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols::ADOS_C'
+baseline_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns::ADOS_C'
+Proposed_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, proposed_expstr)
+Baseline_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, baseline_expstr)
+def GetdfSHAPSUMdict(Proposed_changed_info_dict, FeatSetLst):
+    featuresetsListTotal_lst=[]
+    for inspect_featuresets in FeatSetLst:
+        featuresetsListTotal_lst+=getattr(FeatSel,PprNme2OriginNme[inspect_featuresets])
+     
+    shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_changed_info_dict,\
+                                                              feature_columns=featuresetsListTotal_lst,\
+                                                              PprNmeMp=PprNmeMp)
+    BaseVal_dict={}
+    for key, value in Proposed_changed_info_dict.items():
+        BaseVal_dict[key]=value.explainer_expected_value
+    df_BaseVal=pd.DataFrame.from_dict(BaseVal_dict,orient='index').sort_index().squeeze()  # 轉成Series
+      
+    df_shap_values=pd.DataFrame(shap_values,columns=df_XTest.columns)
+    # 先把同個feature set的shap values加總
+    
+    df_shap_sum_dict=featureSetSHAPVal(df_shap_values,FeatSel,FeatSetLst)
+    df_shap_sum_dict['baseval']=df_BaseVal
+    return df_shap_sum_dict
+proposed_shap_sum_dict=GetdfSHAPSUMdict(Proposed_changed_info_dict, FeatSetLst=['InterVD', 'FD', 'GCVSCinv', 'SynchronyVSC'])
+baseline_shap_sum_dict=GetdfSHAPSUMdict(Baseline_changed_info_dict, FeatSetLst=['InterVD', 'FD'])
+# for key in proposed_shap_sum_dict.keys(): # 就確認沒錯做而已，可刪
+#     assert (proposed_shap_sum_dict[key] - df_shap_sum_dict_copy[key]).sum()==0
+
+DELTAshap_sum_dict={}
+for key in proposed_shap_sum_dict.keys():
+    if key in baseline_shap_sum_dict.keys():
+        DELTAshap_sum_dict[key]=proposed_shap_sum_dict[key]-baseline_shap_sum_dict[key]
+    else:
+        DELTAshap_sum_dict[key]=proposed_shap_sum_dict[key]-pd.Series(np.zeros(len(proposed_shap_sum_dict[key])))
+
+
+additionSets=set(['InterVD', 'FD', 'GCVSCinv', 'SynchronyVSC']) - set(['InterVD', 'FD'])
+for S in additionSets:
+    assert (DELTAshap_sum_dict[S] == proposed_shap_sum_dict[S]).all()
+
+
+# quadrant1 = Degraded & LargerVal
+# quadrant2 = Improved & LargerVal
+# quadrant3 = Degraded & LowerVal
+# quadrant4 = Improved & LowerVal
+
+# Improved_indexes=list(df_Y_pred[Improved].index)
+# Degraded_indexes=list(df_Y_pred[Degraded].index)
+# LargerVal_indexes=list(df_Y_pred[LargerVal].index)
+# LowerVal_indexes=list(df_Y_pred[LowerVal].index)
+
+# quadrant1_indexes=list(df_Y_pred[quadrant1].index)
+# quadrant2_indexes=list(df_Y_pred[quadrant2].index)
+# quadrant3_indexes=list(df_Y_pred[quadrant3].index)
+# quadrant4_indexes=list(df_Y_pred[quadrant4].index)
+MSE_Q1=MSE_df(df_Y_pred['proposed'][Q1_idx], df_Y_pred['y_true'][Q1_idx])
+MSE_Q2=MSE_df(df_Y_pred['proposed'][Q2_idx], df_Y_pred['y_true'][Q2_idx])
+MSE_Q3=MSE_df(df_Y_pred['proposed'][Q3_idx], df_Y_pred['y_true'][Q3_idx])
+MSE_Q4=MSE_df(df_Y_pred['proposed'][Q4_idx], df_Y_pred['y_true'][Q4_idx])
+MSE_all=MSE_df(df_Y_pred['proposed'], df_Y_pred['y_true'])
+
+def square_Err(a,b):
+    assert type(a) == type(b)
+    if type(a)==pd.core.series.Series:
+        return ((a - b)**2).sum()
+SE_Q1=square_Err(df_Y_pred['proposed'][Q1_idx], df_Y_pred['y_true'][Q1_idx])
+SE_Q2=square_Err(df_Y_pred['proposed'][Q2_idx], df_Y_pred['y_true'][Q2_idx])
+SE_Q3=square_Err(df_Y_pred['proposed'][Q3_idx], df_Y_pred['y_true'][Q3_idx])
+SE_Q4=square_Err(df_Y_pred['proposed'][Q4_idx], df_Y_pred['y_true'][Q4_idx])
+
+SE_all=square_Err(df_Y_pred['proposed'], df_Y_pred['y_true'])    
+
+print("sigma_MSE(Qs) {} = MSE_all {}".format(sum([MSE_Q1,MSE_Q2,MSE_Q3,MSE_Q4]),MSE_all))
+print("sigma_SE(Qs) {} = SE_all {}".format(sum([SE_Q1,SE_Q2,SE_Q3,SE_Q4]),SE_all))
+
+round_number=6
+delta_group=['Δbaseval','ΔInterVD','ΔFD','ΔGCVSCinv','ΔSynchronyVSC']
+proposed_group=['P_baseval','P_InterVD','P_FD','P_GCVSCinv','P_SynchronyVSC']
+baseline_group=['b_baseval','b_InterVD','b_FD','b_GCVSCinv','b_SynchronyVSC']
+MSE_group=['AE_proposed', 'AE_baseline', 'AE_DELTA']
+Y_group=['Y']
+
+df_FS_Qdrant_rslt=pd.DataFrame()
+for q in range(1,5):
+    vrble='Q{}_idx'.format(q)
+    u_true_Q=df_Y_pred['y_true'][vars()['Q{}_idx'.format(q)]].sum()
+    df_FS_Qdrant_rslt.loc['Y',vrble]=np.round(u_true_Q,round_number)
+    for FSL in DELTAshap_sum_dict.keys():        
+        value_delta=np.round(DELTAshap_sum_dict[FSL][vars()[vrble]].sum(),round_number)
+        value_proposed = np.round(proposed_shap_sum_dict[FSL][vars()[vrble]].sum(),round_number)
+        
+        value_baseline = np.round(baseline_shap_sum_dict[FSL][vars()[vrble]].sum(),round_number) if FSL in baseline_shap_sum_dict.keys() else 0
+        df_FS_Qdrant_rslt.loc['Δ'+FSL,vrble]=value_delta
+        df_FS_Qdrant_rslt.loc['P_'+FSL,vrble]=value_proposed
+        df_FS_Qdrant_rslt.loc['b_'+FSL,vrble]=value_baseline
+
+
+for q in range(1,5):
+    vrble='Q{}_idx'.format(q)
+    # value=MSE_df(df_Y_pred['proposed'][vars()['quadrant{}'.format(q)]], df_Y_pred['y_true'][vars()['quadrant{}'.format(q)]])
+    AE_proposed=MAE_df(df_Y_pred['proposed'][vars()['Q{}_idx'.format(q)]],\
+                 df_Y_pred['y_true'][vars()['Q{}_idx'.format(q)]],\
+                 Sum=True)
+    AE_baseline=MAE_df(df_Y_pred['baseline'][vars()['Q{}_idx'.format(q)]],\
+                 df_Y_pred['y_true'][vars()['Q{}_idx'.format(q)]],\
+                 Sum=True)
+    AE_DELTA=AE_proposed-AE_baseline
+    df_FS_Qdrant_rslt.loc['AE_proposed',vrble]=np.round(AE_proposed,round_number)
+    df_FS_Qdrant_rslt.loc['AE_baseline',vrble]=np.round(AE_baseline,round_number)
+    df_FS_Qdrant_rslt.loc['AE_DELTA',vrble]=np.round(AE_DELTA,round_number)
+
+for q in range(1,5):
+    df_FS_Qdrant_rslt.loc['N','Q{}_idx'.format(q)]=len(vars()['Q{}_idx'.format(q)])
+
+
+# 這個MAE要跟experiment 1一樣
+df_FS_Qdrant_rslt.loc['MAE_proposed'] = df_FS_Qdrant_rslt.loc['AE_proposed'] / df_FS_Qdrant_rslt.loc['N']
+df_FS_Qdrant_rslt.loc['MAE_baseline'] = df_FS_Qdrant_rslt.loc['AE_baseline'] / df_FS_Qdrant_rslt.loc['N']
+df_FS_Qdrant_rslt.loc['MAE_delta'] = (df_FS_Qdrant_rslt.loc['AE_proposed'] - df_FS_Qdrant_rslt.loc['AE_baseline']) / df_FS_Qdrant_rslt.loc['N']
+
+for feat_str in delta_group+proposed_group+baseline_group:
+    df_FS_Qdrant_rslt.loc['Mean_'+feat_str]=df_FS_Qdrant_rslt.loc[feat_str].multiply(1/df_FS_Qdrant_rslt.loc['N'])
+
+
+
+
+df_FS_Qdrant_rslt_rounded=df_FS_Qdrant_rslt.round(3)
+df_deltagroup=df_FS_Qdrant_rslt_rounded.loc[delta_group]
+df_proposednbaselinegroup=df_FS_Qdrant_rslt_rounded.loc[proposed_group+baseline_group]
+Total_MAE_delta=df_FS_Qdrant_rslt.loc['MAE_delta'].dot(df_FS_Qdrant_rslt.loc['N'])/df_FS_Qdrant_rslt.loc['N'].sum()
+
+
+# =============================================================================
+''' Unit tests '''
+def unit_test(**kwargs):
+    epsilon=0.0001
+    
+    
+    
+    N = len(df_Y_pred)
+    deltaAE_Q1=df_FS_Qdrant_rslt.loc[delta_group,'Q1_idx'].sum() 
+    assert np.abs(df_FS_Qdrant_rslt.loc['AE_DELTA']['Q1_idx'] - deltaAE_Q1) < epsilon
+    deltaAE_Q2=-df_FS_Qdrant_rslt.loc[delta_group,'Q2_idx'].sum() 
+    assert np.abs(df_FS_Qdrant_rslt.loc['AE_DELTA']['Q2_idx'] - deltaAE_Q2) < epsilon
+    
+    deltaAE_Q3=df_FS_Qdrant_rslt.loc[proposed_group,'Q3_idx'].sum()  +\
+                df_FS_Qdrant_rslt.loc[baseline_group,'Q3_idx'].sum()  +\
+                -2 * df_FS_Qdrant_rslt.loc[Y_group,'Q3_idx'].sum() 
+                
+                
+    assert np.abs(df_FS_Qdrant_rslt.loc['AE_DELTA']['Q3_idx'] - deltaAE_Q3) < epsilon
+    deltaAE_Q4=-df_FS_Qdrant_rslt.loc[proposed_group,'Q4_idx'].sum()  +\
+                -df_FS_Qdrant_rslt.loc[baseline_group,'Q4_idx'].sum()  +\
+                2 * df_FS_Qdrant_rslt.loc[Y_group,'Q4_idx'].sum()             
+                
+                
+    assert np.abs(df_FS_Qdrant_rslt.loc['AE_DELTA']['Q4_idx'] - deltaAE_Q4) < epsilon
+    
+    
+    set(Q1_idx).intersection(Q2_idx)
+    set(Q1_idx).intersection(Q3_idx)
+    set(Q1_idx).intersection(Q4_idx)
+    assert len(Q1_idx) + len(Q2_idx) + len(Q3_idx) + len(Q4_idx) == N
+    assert df_FS_Qdrant_rslt.loc['N'].sum() == N
+    
+    df_proposed_shap_sum=pd.DataFrame.from_dict(proposed_shap_sum_dict)
+    df_baseline_shap_sum=pd.DataFrame.from_dict(baseline_shap_sum_dict)
+    for i in range(9):
+        expval_0=Session_level_all[proposed_expstr]['SHAP_info']['0_1_2_3_4_5_6_7_8'].explainer_expected_value
+        shapval_0=Session_level_all[proposed_expstr]['SHAP_info']['0_1_2_3_4_5_6_7_8'].shap_values[i,:].sum()
+        y_proposed_fromshap=shapval_0 + expval_0
+        y_proposed_0=df_Y_pred.loc[i,'proposed']
+        
+        assert  y_proposed_0 == df_proposed_shap_sum.loc[i].sum()
+        assert  (df_proposed_shap_sum.loc[i].sum() - y_proposed_fromshap) < epsilon
+        # 單個instance的absolute error關係確認沒問題
+    # Ep = Ep_shap
+    assert np.abs(df_proposed_shap_sum.loc[Q1_idx].sum().sum() - df_Y_pred.loc[Q1_idx,'proposed'].sum()) < epsilon
+    assert np.abs(df_proposed_shap_sum.loc[Q2_idx].sum().sum() - df_Y_pred.loc[Q2_idx,'proposed'].sum()) < epsilon
+    assert np.abs(df_proposed_shap_sum.loc[Q3_idx].sum().sum() - df_Y_pred.loc[Q3_idx,'proposed'].sum()) < epsilon
+    assert np.abs(df_proposed_shap_sum.loc[Q4_idx].sum().sum() - df_Y_pred.loc[Q4_idx,'proposed'].sum()) < epsilon
+    # Qudrant的absolute error關係確認沒問題
+    def AssertMeanAbsErr_Q(df_shap_sum,df_Y_pred,Qudrant_idxes,epsilon=0.0001,cmp_col='proposed'):
+        SHAP_added_Q=df_shap_sum.loc[Qudrant_idxes].sum(axis=1)
+        
+        y_proposed_Q=df_Y_pred.loc[Qudrant_idxes,cmp_col]
+        y_true_Q=df_Y_pred.loc[Qudrant_idxes,'y_true']
+        
+        # E^P_Q1
+        Mean_absolute_err_Fromshap_Q=(SHAP_added_Q - y_true_Q).abs().mean()
+        Mean_absolute_err_Frompred_Q=(y_proposed_Q - y_true_Q).abs().mean()  
+        
+        assert np.abs(Mean_absolute_err_Fromshap_Q - Mean_absolute_err_Frompred_Q) < epsilon
+    
+    
+    formula_dict={
+        'proposed_Q1':1,
+        'proposed_Q2':-1,
+        'proposed_Q3':1,
+        'proposed_Q4':-1,
+        'baseline_Q1':1,
+        'baseline_Q2':-1,
+        'baseline_Q3':-1,
+        'baseline_Q4':1
+        }
+    def AssertMeanAbsErr_Feat(df_shap_sum,df_Y_pred,Qudrant_idxes,formula_dict,q,epsilon=0.0001,cmp_col='proposed'):
+        SHAP_added_feat=df_shap_sum.loc[Qudrant_idxes].sum(axis=0)
+        y_true_Q=df_Y_pred.loc[Qudrant_idxes,'y_true']
+        y_proposed_Q=df_Y_pred.loc[Qudrant_idxes,cmp_col]
+        
+        query_str='{}_Q{}'.format(cmp_col,q)
+        sign=formula_dict[query_str]
+        
+        Mean_absolute_err_Fromshap_Feat=sign * (SHAP_added_feat.sum() - y_true_Q.sum())/len(Qudrant_idxes)
+        # Mean_absolute_err_Fromshap_Feat=(SHAP_added_feat.sum() - y_true_Q.sum())/len(Qudrant_idxes)
+        Mean_absolute_err_Frompred_Q=(y_proposed_Q - y_true_Q).abs().mean()  
+        
+        assert np.abs(Mean_absolute_err_Fromshap_Feat - Mean_absolute_err_Frompred_Q) < epsilon
+    
+    def AssertDeltaMeanAbsErr_Feat(df_proposed_shap_sum,df_baseline_shap_sum,df_Y_pred,Qudrant_idxes,\
+                                   epsilon=0.0001):
+        #接下來是ΔE的部份
+        SHAP_added_feat_proposed=df_proposed_shap_sum.loc[Qudrant_idxes].sum(axis=0)
+        SHAP_added_feat_baseline=df_baseline_shap_sum.loc[Qudrant_idxes].sum(axis=0)
+        y_true_Q=df_Y_pred.loc[Qudrant_idxes,'y_true']
+        y_proposed_Q=df_Y_pred.loc[Qudrant_idxes,'proposed']
+        y_baseline_Q=df_Y_pred.loc[Qudrant_idxes,'baseline']
+        
+        sign_proposed=formula_dict['proposed_Q{}'.format(q)]
+        sign_baseline=formula_dict['baseline_Q{}'.format(q)]
+        
+        Absolute_err_Fromshap_Feat_proposed=sign_proposed * (SHAP_added_feat_proposed.sum() - y_true_Q.sum())
+        Absolute_err_Fromshap_Feat_baseline=sign_baseline * (SHAP_added_feat_baseline.sum() - y_true_Q.sum())
+        
+        #ΔE_Q = E^P_Q - E^b_Q
+        delta_AE_shap=Absolute_err_Fromshap_Feat_proposed / len(Qudrant_idxes) - Absolute_err_Fromshap_Feat_baseline/ len(Qudrant_idxes)
+        delta_AE_true=(np.abs((y_proposed_Q - y_true_Q)) - np.abs((y_baseline_Q - y_true_Q))).mean()
+        
+        assert (delta_AE_shap - delta_AE_true)  < epsilon
+        return delta_AE_shap
+    
+    
+    
+    
+    AE_delta_shap_dict={}    
+    for q in range(1,5):
+        # 抓到有些quadrant會與公式不符，目前可以的只有E proposed q1 和 q3 ，當然也有可能是
+        Qudrant_idxes=kwargs['Q{}_idx'.format(q)]
+        
+        AssertMeanAbsErr_Q(df_proposed_shap_sum,df_Y_pred,Qudrant_idxes,cmp_col='proposed')
+        AssertMeanAbsErr_Q(df_baseline_shap_sum,df_Y_pred,Qudrant_idxes,cmp_col='baseline')
+        # sum quadrant沒問題，但是sum feature就要符合公式
+        AssertMeanAbsErr_Feat(df_proposed_shap_sum,df_Y_pred,Qudrant_idxes,formula_dict,q,cmp_col='proposed')
+        AssertMeanAbsErr_Feat(df_baseline_shap_sum,df_Y_pred,Qudrant_idxes,formula_dict,q,cmp_col='baseline')
+        
+        AE_delta_shap_dict['Q{}_idx'.format(q)]=AssertDeltaMeanAbsErr_Feat(df_proposed_shap_sum,df_baseline_shap_sum,df_Y_pred,Qudrant_idxes)
+        # Mean absolute Error的部份沒問題了， 
+    Sers_AE_delta_shap = pd.DataFrame.from_dict(AE_delta_shap_dict,orient='index').squeeze()
+    Sers_QLen=pd.Series([len(Q1_idx),len(Q2_idx),len(Q3_idx),len(Q4_idx)],index=Sers_AE_delta_shap.index)
+    
+    assert len(df_Y_pred['y_true']) == Sers_QLen.sum()
+    daltaMAE_from_shap=Sers_AE_delta_shap.dot(Sers_QLen.T) / Sers_QLen.sum()
+    daltaMAE_from_pred=(np.abs((df_Y_pred['proposed'] - df_Y_pred['y_true'])) - np.abs((df_Y_pred['baseline'] - df_Y_pred['y_true']))).sum()/ len(df_Y_pred['y_true'])
+    assert (daltaMAE_from_shap - daltaMAE_from_pred) < epsilon
+    # 最後總delta AE要等於 四個quadrant 的delta AE
+    
+    # 確認 daltaAE_from_shap 都正確了，  剩下就是 df_FS_Qdrant_rslt 要跟 daltaAE_from_shap 一樣
+    for q in range(1,5):
+        Q_str='Q{}_idx'.format(q)
+        Q=kwargs[Q_str]
+        df_Pverify=df_proposed_shap_sum.loc[Q].sum().rename(index={e:'P_'+e for e in df_proposed_shap_sum.columns}).round(round_number)
+        df_bverify=df_baseline_shap_sum.loc[Q].sum().rename(index={e:'b_'+e for e in df_baseline_shap_sum.columns}).round(round_number)
+        df_P_fs=df_FS_Qdrant_rslt.loc[proposed_group][Q_str].reindex(df_Pverify.index)
+        df_b_fs=df_FS_Qdrant_rslt.loc[baseline_group][Q_str].reindex(df_bverify.index)
+        
+        assert ((df_Pverify - df_P_fs) < epsilon).all()
+        assert ((df_bverify - df_b_fs) < epsilon).all()
+
+    # 由上面P 正確 b 正確可以推導dalta也正確
+    for d_, p_, b_ in zip(delta_group,proposed_group,baseline_group):
+        assert ((df_FS_Qdrant_rslt.loc[p_] - df_FS_Qdrant_rslt.loc[b_]) - df_FS_Qdrant_rslt.loc[d_] < epsilon).all()
+
+    assert (df_FS_Qdrant_rslt.loc['N'] == pd.Series([len(Q1_idx), len(Q2_idx), len(Q3_idx), len(Q4_idx)],index=df_FS_Qdrant_rslt.loc['N'].index)).all()
+
+    for q in range(1,5):
+        Q_str='Q{}_idx'.format(q)
+        assert (df_FS_Qdrant_rslt.loc['AE_proposed'][Q_str] - np.abs((df_FS_Qdrant_rslt.loc[proposed_group][Q_str].sum() - df_FS_Qdrant_rslt.loc['Y'][Q_str]))) < epsilon
+        assert (df_FS_Qdrant_rslt.loc['AE_baseline'][Q_str] - np.abs((df_FS_Qdrant_rslt.loc[baseline_group][Q_str].sum() - df_FS_Qdrant_rslt.loc['Y'][Q_str]))) < epsilon
+        
+    
+    ''' unit test done '''
+    # =============================================================================
+unit_test(Q1_idx=Q1_idx,Q2_idx=Q2_idx,Q3_idx=Q3_idx,Q4_idx=Q4_idx)
+
+
+
+MAE_from_classifier_proposed=float(df_best_result_allThreeClassifiers.loc[proposed_expstr[:proposed_expstr.find("::")]].squeeze().split("/")[0])
+MAE_from_classifier_baseline=float(df_best_result_allThreeClassifiers.loc[baseline_expstr[:baseline_expstr.find("::")]].squeeze().split("/")[0])
+
+
+TotalAE_tolarence=0.05
+assert np.abs(df_FS_Qdrant_rslt.loc['MAE_baseline'].dot(df_FS_Qdrant_rslt.loc['N']) - MAE_from_classifier_baseline * df_FS_Qdrant_rslt.loc['N'].sum()) < TotalAE_tolarence
+assert np.abs(df_FS_Qdrant_rslt.loc['MAE_proposed'].dot(df_FS_Qdrant_rslt.loc['N']) - MAE_from_classifier_proposed * df_FS_Qdrant_rslt.loc['N'].sum()) < TotalAE_tolarence
+assert np.abs((MAE_from_classifier_proposed - MAE_from_classifier_baseline) * df_FS_Qdrant_rslt.loc['N'].sum() - df_FS_Qdrant_rslt.loc['MAE_delta'].dot(df_FS_Qdrant_rslt.loc['N'])) < TotalAE_tolarence
+ 
+# XXX
+
+
+#%%
 
 def Get_Inspected_SHAP_df(Info_dict,logits=[0,1]):
     Top_shap_values_collect=Dict()
@@ -1378,8 +1847,6 @@ LowerVal_indexes=list(df_Y_pred[Degraded].index)
 
 '''
 # =============================================================================
-
-
 Proposed_changed_shap_values=Get_Inspected_SHAP_df(Proposed_changed_info_dict,logits=[SHAP_Inspect_logit]) [SHAP_Inspect_logit]
 Proposed_All_shap_values=Get_Inspected_SHAP_df(Proposed_totalPoeple_info_dict,logits=[SHAP_Inspect_logit]) [SHAP_Inspect_logit]
 

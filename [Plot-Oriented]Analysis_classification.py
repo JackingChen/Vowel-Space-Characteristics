@@ -54,6 +54,9 @@ import seaborn as sns
 from scipy.stats import gaussian_kde
 from shap.plots._labels import labels
 from shap.plots import colors
+
+from articulation.HYPERPARAM.PlotFigureVars import *
+
 def Find_Experiment_actualindex(Total_FeatComb_idxs,search_string):
     # usage:
     # e.x. :
@@ -923,6 +926,8 @@ Twos2Ones_indexes=list(df_Y_pred[Twos2Ones].index)
     Part 2: Check the SHAP values based on indexes in part 1
     
     先紀錄，再執行分析和畫圖
+    
+    畫TASLP的分析大圖
 
 '''
 
@@ -944,7 +949,17 @@ def Plot_CoolErrorAnal(
                        margin_ratio_x=10,
                        margin_ratio_y=20,
                        ):
-
+    # selected_idxs,
+    # Baseline_changed_decision_info_dict,
+    # Proposed_changed_decision_info_dict,
+    # Baseline_total_decision_info_dict,
+    # Proposed_total_decision_info_dict=\
+    # selected_idxs,
+    # Baseline_changed_decision_info_dict,
+    # Proposed_changed_decision_info_dict,
+    # Baseline_total_decision_info_dict,
+    # Proposed_total_decision_info_dict
+    
     df_Proposed_changed_decision_info_dict=pd.DataFrame.from_dict(Proposed_changed_decision_info_dict,orient='index')
     df_Baseline_changed_decision_info_dict=pd.DataFrame.from_dict(Baseline_changed_decision_info_dict,orient='index')
     df_Proposed_total_decision_info_dict=pd.DataFrame.from_dict(Proposed_total_decision_info_dict,orient='index')
@@ -1010,40 +1025,83 @@ def Plot_CoolErrorAnal(
     x_middle=(x_max+x_min)/2
     y_middle=(y_max+y_min)/2
     
-    # ax.annotate("", xy=(起點x, 起點y), xytext=(終點x, 終點y),arrowprops=dict(arrowstyle="->"))
-    for B_x, B_y, P_x, P_y,idx in zip(Baseline_x,Baseline_y,Proposed_x,Proposed_y,Sample_idxs_array):
-        plt.annotate("", xy=(B_x, B_y), xytext=(P_x, P_y),arrowprops=dict(arrowstyle="<-",alpha=.4))
     
-    plt.scatter(Baseline_x, Baseline_y, c='b', alpha=1)
-    plt.scatter(Proposed_x, Proposed_y, c='r', alpha=1)
+    zippedList=zip(Baseline_x,Baseline_y,Proposed_x,Proposed_y,Sample_idxs_array,(Proposed_y - Baseline_y))
+    zippedList_sorted=sorted(zippedList, key = lambda x: x[-1])
+    # ax.annotate("", xy=(起點x, 起點y), xytext=(終點x, 終點y),arrowprops=dict(arrowstyle="->"))
+    for B_x, B_y, P_x, P_y,idx,P_sub_B in zippedList_sorted:
+    # for B_x, B_y, P_x, P_y,idx in zip(zippedList):
+        # print(P_sub_B)
+        arrow_alpha=.2 if P_sub_B < 0 else .6
+        plt.annotate("", xy=(B_x, B_y), xytext=(P_x, P_y),arrowprops=dict(arrowstyle="<|-",color='black',alpha=arrow_alpha,linewidth=2.5))
+        # plt.annotate("", xy=(B_x, B_y), xytext=(P_x, P_y),arrowprops=dict(arrowstyle="wedge",color='black',alpha=arrow_alpha,linewidth=1.0))
+    
+    
+    # print("Proposed_y - Baseline_y: ",Proposed_y - Baseline_y)
+    
+    baselinecolor='k'
+    proposedcolor='g'
+    
+    Marker_size=200
+    
+    plt.scatter(Baseline_x, Baseline_y, c=baselinecolor, alpha=1, s=Marker_size)
+    plt.scatter(Proposed_x, Proposed_y, c=proposedcolor, alpha=1, s=Marker_size)
     
     # 去掉那些背景但是大於1.1的點
     BackgroundDots_baseline=df_Baseline_total_decision_info_dict[df_Baseline_total_decision_info_dict['predictproba'].abs()<show_dots_max]
     BackgroundDots_proposed=df_Proposed_total_decision_info_dict[df_Proposed_total_decision_info_dict['predictproba'].abs()<show_dots_max]
     
-    plt.scatter(df_Baseline_total_decision_info_dict.predictproba, Baseline_total_y, c='b', alpha=.05)
-    plt.scatter(df_Proposed_total_decision_info_dict.predictproba, Proposed_total_y, c='r', alpha=.05)
+    
     
     plt.annotate('',xy=(0, 0), xytext=(1, 0),arrowprops=dict(arrowstyle="<->",alpha=1,))                                                                     
     plt.annotate('',xy=(0.5, y_min), xytext=(0.5, y_max),arrowprops=dict(arrowstyle="<->",alpha=1,))
-    margin_y=(y_max-y_min)/margin_ratio_x
-    margin_x=(1-0)/margin_ratio_y
+
     
-    # plt.text(0, y_middle-margin_y, 'ASD', fontsize=font_size)
-    # plt.text(1-margin_x, y_middle-margin_y, 'TD', fontsize=font_size)
-    plt.text(0, y_middle, 'ASD', fontsize=font_size)
-    plt.text(1-margin_x, y_middle, 'TD', fontsize=font_size)
+    plt.scatter(df_Baseline_total_decision_info_dict.predictproba, Baseline_total_y, c=baselinecolor, alpha=.2)
+    plt.scatter(df_Proposed_total_decision_info_dict.predictproba, Proposed_total_y, c=proposedcolor, alpha=.2)
+
+    fig, ax = plt.gcf(), plt.gca()
+    # 這邊需要一個組合： 1. 決定座標系統:ax.transAxes （這個座標系統的（0,0）在左下方，(1,1)在左上方）
+    #                    2. x y 軸座標這時候就可以在0 - 1之間選取了
+    
+    plt.text(0-0.12, 0.5, 'ASD',   
+             horizontalalignment='left',  # 用alignment來對齊
+             verticalalignment='center',
+             fontsize=font_size,
+             transform=ax.transAxes,
+             )
+    plt.text(1+.08, 0.5, 'TD',
+             horizontalalignment='right',
+             verticalalignment='center',
+             fontsize=font_size,
+             transform=ax.transAxes,
+             )
         
-    plt.text(0.5, y_min, 'Incorrect', fontsize=font_size)
-    plt.text(0.5, y_max-margin_y, 'Correct', fontsize=font_size)   
-    # fig.patch.set_visible(True)
-    plt.axis('off')
+    plt.text(0.5 , 0-.09, 'Incorrect', 
+              horizontalalignment='center',
+              verticalalignment='bottom',
+              fontsize=font_size,
+              transform=ax.transAxes,
+              )
+    plt.text(0.5 , 1+.07, 'Correct', 
+              horizontalalignment='center',
+              verticalalignment='top',
+              fontsize=font_size,
+              transform=ax.transAxes,
+              )   
+
+    fig.patch.set_visible(True)
+    
+    plt.xticks([]) #拿掉x軸與y軸的values
+    plt.yticks([]) #拿掉x軸與y軸的values
+    # plt.axis('off')  # 把邊界拿掉的code
     # plt.ylim(-1.5,1.5)
     # plt.xlim(-0,1.1)
     # plt.title(experiment_title)
     # plt.show()
     
-    plt.xlim(-0,1.1)
+    plt.xlim(-0,1.0)
+    # plt.xlim(-0,1.1)
     plt.ylim(-show_dots_max,show_dots_max)
     # plt.title(experiment_title)
     # plt.show()
@@ -1067,13 +1125,12 @@ Subplot_columns=3*plt_unit
 Subplot_rows=2
 ErrPlt_base_idx=2
 SummaryPlt_base_idx=8
-global_font_size=18
-plt.figure(figsize=(6,8))
+
 
 ExperimentTitleMap_dict={
-    'lowMinimal':'low-symptom',
-    'moderate':'moderate-symptom',
-    'high':'high-symptom',
+    'lowMinimal':'Low-symptom',
+    'moderate':'Moderate-symptom',
+    'high':'High-symptom',
     
     }
 
@@ -1122,6 +1179,7 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
     
     
     experiment_title=baseline_expstr[re.search("df_feature_",baseline_expstr).end():re.search("_CSS >> ",baseline_expstr).start()]
+    # global_font_size=18 if experiment_title == 'lowMinimal' else 25
     #//////////////////////////////////////////////////////////////////////////
     
     
@@ -1145,16 +1203,18 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
     df_Proposed_total_decision_info_dict=pd.DataFrame.from_dict(Proposed_total_decision_info_dict,orient='index')
     df_Baseline_total_decision_info_dict=pd.DataFrame.from_dict(Baseline_total_decision_info_dict,orient='index')
     
-    Debug_dict[proposed_expstr]=df_Proposed_total_decision_info_dict
-    print(experiment_title)
-    # print("Proposed_changed_decision: min: {}, max: {}".format(df_Proposed_changed_decision_info_dict.min(),\
-    #                                            df_Proposed_changed_decision_info_dict.max()) )
-    print("Proposed_total_decision: min: {}, max: {}".format(df_Proposed_total_decision_info_dict.min(),\
-                                                df_Proposed_total_decision_info_dict.max()) )
+    # 這邊用來debug
+    # Debug_dict[proposed_expstr]=df_Proposed_total_decision_info_dict
+    # print(experiment_title)
+    # # print("Proposed_changed_decision: min: {}, max: {}".format(df_Proposed_changed_decision_info_dict.min(),\
+    # #                                            df_Proposed_changed_decision_info_dict.max()) )
+    # print("Proposed_total_decision: min: {}, max: {}".format(df_Proposed_total_decision_info_dict.min(),\
+    #                                             df_Proposed_total_decision_info_dict.max()) )
+    
     # =============================================================================
-    show_dots_max=2.0
-    y_scale=1.9
-    y_scale = 2.0 if experiment_title == 'lowMinimal' else y_scale
+    show_dots_max=.75
+    y_scale=0.75
+    # y_scale = 2.0 if experiment_title == 'lowMinimal' else y_scale
     # show_dots_max=.5 if experiment_title == 'lowMinimal' else show_dots_max
     y_scale = show_dots_max-.05 if show_dots_max < y_scale else y_scale
     
@@ -1167,24 +1227,23 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
                        Correct2Incorrect_bool=Correct2Incorrect,
                        df_Y_pred=df_Y_pred,
                        show_dots_max=show_dots_max,
-                       font_size=global_font_size,
+                       font_size=TEXTFONTSIZE,
                        y_scale=y_scale,
                        margin_ratio_x=8,
-                       margin_ratio_y=15
+                       margin_ratio_y=20
                        )
     
     ''' 第一步： 輸出error analysis圖 '''
-    plt.gca().set_title(ExperimentTitleMap_dict[experiment_title], fontsize=global_font_size)
+    plt.gca().set_title(ExperimentTitleMap_dict[experiment_title], fontsize=TITLEFONTSIZE, y=1.0, pad=17)
+    
     fig=plt.gcf()
     # equal_textwidth=4.7747/3 #the size of latex textwidth
     equal_textwidth=4.7747 #the size of latex textwidth
-    size = fig.get_size_inches()
-    size_ratio= size[-1] / size[0]
-    setFigSizes=(equal_textwidth,equal_textwidth*size_ratio)
-    setFigSizes = (equal_textwidth, equal_textwidth*size_ratio/2.9) if experiment_title == 'lowMinimal' else setFigSizes
-    fig.set_size_inches(setFigSizes)
-    # fig.savefig(fname='images/Err_anals/{}.png'.format(ExperimentTitleMap_dict[experiment_title]),\
-    #             bbox_inches='tight',dpi=600)
+    figure_ratio=1.
+    figsize_Textextwidth_tmp=(equal_textwidth, 3.6)
+    figsize_Textextwidth=tuple(ti/figure_ratio for ti in figsize_Textextwidth_tmp)
+    fig.set_size_inches(figsize_Textextwidth) #這個比例很好，三個圖都這樣fix住
+
     fig.savefig(fname='images/Err_anals/{}.png'.format(ExperimentTitleMap_dict[experiment_title]),dpi=300)
     plt.clf()
     
@@ -1260,40 +1319,37 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
         shap_values=df_shap_values.values
     
         multi_class = False
-        if isinstance(shap_values, list):
-            multi_class = True
-            if plot_type is None:
-                plot_type = "bar" # default for multi-output explanations
-            assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
-        else:
-            if plot_type is None:
-                plot_type = "dot" # default for single output explanations
-            assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
+        # if isinstance(shap_values, list):
+        #     multi_class = True
+        #     if plot_type is None:
+        #         plot_type = "bar" # default for multi-output explanations
+        #     assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
+        # else:
+        if plot_type is None:
+            plot_type = "dot" # default for single output explanations
+        assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
     
         # default color:
         if color is None:
-            if plot_type == 'layered_violin':
-                color = "coolwarm"
-            elif multi_class:
-                color = lambda i: colors.red_blue_circle(i/len(shap_values))
-            else:
-                color = colors.blue_rgb
+            color = colors.blue_rgb
     
         idx2cat = None
         # convert from a DataFrame or other types
+        # 我會餵 df_XTest 也就是dataframe進去
         if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
             if feature_names is None:
                 feature_names = features.columns
             # feature index to category flag
             idx2cat = features.dtypes.astype(str).isin(["object", "category"]).tolist()
             features = features.values
-        elif isinstance(features, list):
-            if feature_names is None:
-                feature_names = features
-            features = None
-        elif (features is not None) and len(features.shape) == 1 and feature_names is None:
-            feature_names = features
-            features = None
+        # 以下這邊都是算feature importance的部份
+        # elif isinstance(features, list):
+        #     if feature_names is None:
+        #         feature_names = features
+        #     features = None
+        # elif (features is not None) and len(features.shape) == 1 and feature_names is None:
+        #     feature_names = features
+        #     features = None
     
         num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1])
     
@@ -1309,8 +1365,8 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
         if feature_names is None:
             feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
     
-        if use_log_scale:
-            plt.xscale('symlog')
+        # if use_log_scale:
+        #     plt.xscale('symlog')
         if max_display is None:
             max_display = 20
         if sort:
@@ -1323,17 +1379,23 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
         else:
             feature_order = np.flip(np.arange(min(max_display, num_features)), 0)
     
+        y_scatter_scale=0.7
         
+        # !!!! 注意這邊會更動到figure的size
         if plot_size == "auto":
-            plt.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
+            plt.gcf().set_size_inches(8, len(feature_order) * row_height  + 1.5) # (寬度，長度)
+            # plt.gcf().set_size_inches(8, len(feature_order) * row_height * y_scatter_scale) # (寬度，長度)
         elif type(plot_size) in (list, tuple):
             plt.gcf().set_size_inches(plot_size[0], plot_size[1])
         elif plot_size is not None:
             plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
-        plt.axvline(x=0, color="#999999", zorder=-1)
-    
+        plt.axvline(x=0, color="#999999", zorder=-1, ymax=1.5 * y_scatter_scale)
+        
+        
+        
         for pos, i in enumerate(feature_order):
-            plt.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+            plt.axhline(y=pos*y_scatter_scale, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1) # 縮小dotted line的間距
+            # plt.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
             shaps = shap_values[:, i]  # shap_values: (feature_num, people)
             values = None if features is None else features[:, i]
             inds = np.arange(len(shaps))
@@ -1364,8 +1426,12 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
                 ys[ind] = np.ceil(layer / 2) * ((layer % 2) * 2 - 1)
                 layer += 1
                 last_bin = quant[ind]
-            ys *= 0.9 * (row_height / np.max(ys + 1))
-    
+            # print("DEBUG, before normalize ys: ",ys)
+            
+            ys *= 0.9 * (row_height / np.max(ys + 1))   # 代表第幾個feature安置在y-axis上那一個position
+            
+            # print("DEBUG, ys: ",ys)
+            
             if features is not None and colored_feature:
                 # trim the color range, but prevent the color range from collapsing
                 vmin = np.nanpercentile(values, 5)
@@ -1407,10 +1473,12 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
                 position_Incorrect_bool=np.array(markers_bag) == 'X'
                 
                 shap_position_correct_x_array=shaps[np.invert(nan_mask)][position_correct_bool]
-                shap_position_correct_y_array=(pos + ys[np.invert(nan_mask)])[position_correct_bool]
+                # shap_position_correct_y_array=(pos + ys[np.invert(nan_mask)])[position_correct_bool]
+                shap_position_correct_y_array=(pos + ys[np.invert(nan_mask)])[position_correct_bool]  * y_scatter_scale
                 
                 shap_position_Incorrect_x_array=shaps[np.invert(nan_mask)][position_Incorrect_bool]
-                shap_position_Incorrect_y_array=(pos + ys[np.invert(nan_mask)])[position_Incorrect_bool]
+                # shap_position_Incorrect_y_array=(pos + ys[np.invert(nan_mask)])[position_Incorrect_bool]
+                shap_position_Incorrect_y_array=(pos + ys[np.invert(nan_mask)])[position_Incorrect_bool] * y_scatter_scale #縮小scatter y之間的間距
                 
                 cvals_correct=cvals[position_correct_bool]
                 cvals_Incorrect=cvals[position_Incorrect_bool]
@@ -1422,6 +1490,8 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
                                marker=Marker_dict['O'],
                                c=cvals_correct, alpha=alpha, linewidth=0,
                                zorder=3, rasterized=len(shaps) > 500)
+                
+                # print("DEBUG, shap_position_correct_y_array: ",shap_position_correct_y_array)
                 if len(shap_position_Incorrect_x_array)>0:
                     plt.scatter(shap_position_Incorrect_x_array, shap_position_Incorrect_y_array,
                                cmap=cmap, vmin=vmin, vmax=vmax, s=dot_size,
@@ -1429,9 +1499,12 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
                                c=cvals_Incorrect, alpha=alpha, linewidth=0,
                                zorder=3, rasterized=len(shaps) > 500)
                 
-            else:
-                plt.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
-                           color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
+            # else:
+            #     plt.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
+            #                color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
+    
+        tick_sizes *=   y_scatter_scale
+    
         # draw the color bar
         if color_bar and features is not None and plot_type != "bar" and \
                 (plot_type != "layered_violin" or color in plt.cm.datad):
@@ -1455,17 +1528,22 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
     
         plt.gca().xaxis.set_ticks_position('bottom')
         plt.gca().yaxis.set_ticks_position('none')
-        plt.gca().spines['right'].set_visible(False)
-        plt.gca().spines['top'].set_visible(False)
-        plt.gca().spines['left'].set_visible(False)
+        plt.gca().spines['right'].set_visible(False) #隱藏掉邊界
+        plt.gca().spines['top'].set_visible(False) #隱藏掉邊界
+        plt.gca().spines['left'].set_visible(False) #隱藏掉邊界
         plt.gca().tick_params(color=axis_color, labelcolor=axis_color)
         # Get or set the current tick locations and labels of the y-axis.
-        # 這邊用來把feature 名稱放在y軸
-        plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=font_size)
+        # 這邊用來把feature 名稱放在y軸，row上的文字其實叫做tick 只是這邊的tick是文字
+        
+        plt.yticks(np.arange(len(feature_order)) * y_scatter_scale,  # y tick 在y軸的位置
+                   [feature_names[i] for i in feature_order], #y tick 的名稱
+                   fontsize=font_size
+                   )
+        # 
         if plot_type != "bar":
-            plt.gca().tick_params('y', length=20, width=0.5, which='major')
-        plt.gca().tick_params('x', labelsize=font_size)
-        plt.ylim(-1, len(feature_order))
+            plt.gca().tick_params('y', length=20, width=0.5, which='major') # 這是y-軸的ticks
+        plt.gca().tick_params('x', labelsize=font_size)  # 這是x-軸的ticks
+        plt.ylim(-1, len(feature_order) * y_scatter_scale)   # 這邊會關係到圖片天花板的高度
         if plot_type == "bar":
             plt.xlabel(labels['GLOBAL_VALUE'], fontsize=font_size)
         else:
@@ -1476,12 +1554,13 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
     
     summary_legacy_jack(df_shap_values_proposedchanged_corrIncorrMarkers, df_XTest,feature_names=df_XTest.columns,\
                     plot_size='auto',show=False, max_display=max_display,title=None,\
+                    axis_color='black',\
                     color_bar=color_bar,\
-                    tick_sizes=2,\
-                    font_size=36,\
+                    tick_sizes=5,\
+                    font_size=TEXTFONTSIZE,\
                     dot_size=230,\
                     colorbar_aspect=60,
-                    row_height = 2.0)
+                    row_height = .1)
     
     ''' 第二步： 輸出shap plot 圖 '''
     # fig=plt.gca().set_title(ExperimentTitleMap_dict[experiment_title], fontsize=global_font_size)
@@ -1489,8 +1568,12 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
     # size = fig.get_size_inches()
     # fig.savefig(fname='images/Err_anals/{}_shap.png'.format(ExperimentTitleMap_dict[experiment_title]),\
     #             bbox_inches='tight',dpi=600)
-    size_shap=(6,12)
-    fig.set_size_inches(size_shap)
+    size_shap=(6,4)
+    summaryplot_scale=1.0
+    size_shap_scale=tuple(summaryplot_scale*e for e in size_shap)
+    fig.set_size_inches(figsize_Textextwidth)
+    # fig.set_size_inches(size_shap_scale)
+    print("Font family", matplotlib.rcParams['font.family']) #用來查目前是用什麼font family
     fig.savefig(fname='images/Err_anals/{}_shap.png'.format(ExperimentTitleMap_dict[experiment_title]),\
                 bbox_inches='tight',dpi=300)
     
@@ -1500,7 +1583,7 @@ for baseline_expstr, proposed_expstr in zip(baseline_expstr_lst,proposed_expstr_
 # plt.tight_layout()
 # plt.subplots_adjust(wspace=1.0)
 plt.show()
-print(f'Size: {plt.gcf().get_size_inches()}')
+# print(f'Size: {plt.gcf().get_size_inches()}')
 #%%
 
 

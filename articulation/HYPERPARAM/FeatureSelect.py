@@ -439,7 +439,7 @@ LOCDEP=Vowel_dispersion+formant_dependency
 
 # =============================================================================
 PaperVariables=['Vowel_dispersion','Vowel_dispersion_inter','Vowel_dispersion_inter__vowel_centralization','Vowel_dispersion_inter__vowel_dispersion',\
- 'Vowel_dispersion_intra','formant_dependency','LOCDEP','LOC_columns','DEP_columns']
+ 'Vowel_dispersion_intra','formant_dependency','LOCDEP','LOC_columns','DEP_columns','LOCDEP_Syncrony_cols','LOCDEP_Trend_D_cols']
 
 CategoricalName2cols={}
 for variables in PaperVariables:
@@ -451,7 +451,15 @@ for Syncwrapper in Syncrony_functions:
         for singlefeatures in vars()[variables]:
             FeatSet_bag.append(Syncwrapper.format(singlefeatures))
         CategoricalName2cols[Syncwrapper.format(variables)]=FeatSet_bag
-    
+
+
+# 做一個相反的
+cols2CategoricalName={}
+for FeatCategory, FeatLsts in CategoricalName2cols.items():
+    for feat in FeatLsts:
+        cols2CategoricalName[feat]=FeatCategory
+
+
 # CategoricalName2cols={
 #     'Inter-vowel-dispersion':[
 #         'Trend[VSA2]_d',

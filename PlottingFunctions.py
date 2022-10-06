@@ -30,6 +30,9 @@ import articulation.Multiprocess as Multiprocess
 import articulation.HYPERPARAM.PaperNameMapping as PprNmeMp
 from tqdm import tqdm
 import seaborn as sns
+from articulation.HYPERPARAM.PlotFigureVars import *
+
+
 def Swap2PaperName(feature_rawname,PprNmeMp):
     if feature_rawname in PprNmeMp.Paper_name_map.keys():
         featurename_paper=PprNmeMp.Paper_name_map[feature_rawname]
@@ -234,8 +237,8 @@ def PlotSyncronyFeatures(score_df,df_person_segment_feature_DKIndividual_dict,\
     #     '2017_03_05_01_365_1':'Low GC[FCR]\textsubscript{inv}',
     #     }
     Title_dict={
-        '2016_12_24_01_233':'High GC[FCR]$_\mathrm{inv}$',\
-        '2017_03_05_01_365_1':'Low GC[FCR]$_\mathrm{inv}$',
+        '2016_12_24_01_233':'Low GC[FCR]$_\mathrm{inv}$',\
+        '2017_03_05_01_365_1':'High GC[FCR]$_\mathrm{inv}$',
         }    
     
     FileName_dict={
@@ -264,8 +267,8 @@ def PlotSyncronyFeatures(score_df,df_person_segment_feature_DKIndividual_dict,\
     Colormap_role_dict['K']='magenta'
 
     PprNme_role_dict=Dict()
-    PprNme_role_dict['D']='investigator'
-    PprNme_role_dict['K']='participant'
+    PprNme_role_dict['D']='Investigator'
+    PprNme_role_dict['K']='Participant'
     
     linestyle_dict=Dict()
     # linestyle_dict['D']='dashed'
@@ -278,6 +281,9 @@ def PlotSyncronyFeatures(score_df,df_person_segment_feature_DKIndividual_dict,\
     else:
         # All people and sort by certian score
         Inspect_people=list(score_df.sort_values(by=score_column).index)
+        
+    # Legend只需畫一個，後面的就不用畫了
+    legend_bool_flag=True
     for people in Inspect_people:
         df_person_segment_feature_role_dict=df_person_segment_feature_DKIndividual_dict[people]
         fig, ax = plt.subplots()
@@ -296,15 +302,51 @@ def PlotSyncronyFeatures(score_df,df_person_segment_feature_DKIndividual_dict,\
             for x_1 , x_2, y in zip(df_stidx.values ,df_edidx.values,df_dynVals_deleteOutlier.values):            
                 ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],alpha=0.5))
             
-            # add an totally overlapped rectangle but it will show the label
-            ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],label=PprNme_role_dict[role_choose],alpha=0.5))
+
+            # ax.legend().set_visible(False)
             
-            
-            plt.plot(functionDK_people[people][role_choose],color=Colormap_role_dict[role_choose],\
+            line, =plt.plot(functionDK_people[people][role_choose],color=Colormap_role_dict[role_choose],\
                      linewidth=linewidth,linestyle=linestyle_dict[role_choose])
+            
+            # 增加趨勢線
+            # print("type", type(functionDK_people[people][role_choose]))
+            # print("shape", functionDK_people[people][role_choose].shape)
+            # print("value", functionDK_people[people][role_choose])
+            
+            x= range(len(functionDK_people[people][role_choose]))
+            y= functionDK_people[people][role_choose]
+            
+            
+            # print(functionDK_people[people][role_choose])    
+            z = np.polyfit(x, y, 1)
+            p = np.poly1d(z)
+            
+            x_start=x[0]
+            y_start=p(x)[0]
+            x_end=x[-1]
+            y_end=p(x)[-1]
+            dx=x_end-x_start
+            dy=y_end-y_start
+            # plt.arrow(x_start, y_start, dx, dy,  
+            #   head_width = 0.02, 
+            #   # width = 0.05, 
+            #   # ec ='green'
+            #   ) 
+            # plt.annotate('', xy=(x_end,y_end), xytext=(x_start,y_start), arrowprops=dict(arrowstyle='-|>'))
+            
+            plt.plot(x, p(x),label='Trend Line',color='black',linestyle='--', alpha=0.7)
+            
             # 為了有更清晰的legend
             # plt.legend(fontsize=90, framealpha=1.0)
-            plt.legend(framealpha=1.0)
+            
+            # t_line.set_label('Trend line')
+            if legend_bool_flag==True:
+                line.set_label(PprNme_role_dict[role_choose])
+                plt.legend(bbox_to_anchor=(.72, 1.5), loc='upper left',prop={'size': 8})
+                legend_bool_flag=False
+            else:
+                ax=plt.gca()
+                ax.legend().set_visible(False)
         ax.autoscale()
         if show_title==True:
             if Title_dict !=None:
@@ -343,10 +385,13 @@ def PlotSyncronyFeatures(score_df,df_person_segment_feature_DKIndividual_dict,\
         if Plot_experiExamp:
             # 壓縮 TASLP experiment1 example
             fig = plt.gcf()
-            fig.set_size_inches((2.5,3))
+            # fig.set_size_inches((2.5,3))
+            FIGSIZE_EXAMPLECLASSFY=(4.7747, 1.2)
+            fig.set_size_inches(FIGSIZE_EXAMPLECLASSFY)
+            
         
         # TASLP 跑Experiment1_example 圖片的時候會用到
-        plt.legend(fontsize="xx-large")
+        # plt.legend(fontsize="xx-large")
         if FileName_dict != None:
             outputName='images/{}'.format(FileName_dict[people])
         else:
@@ -426,13 +471,21 @@ def PlotSyncronyFeatures_axes(ax,score_df,df_person_segment_feature_DKIndividual
             ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],alpha=0.5))
         
         # add an totally overlapped rectangle but it will show the label
-        ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],label=PprNme_role_dict[role_choose],alpha=0.5))
+        # ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],label=PprNme_role_dict[role_choose],alpha=0.5))
         
         
-        ax.plot(functionDK_people[people][role_choose],color=Colormap_role_dict[role_choose])
+        line, =ax.plot(functionDK_people[people][role_choose],color=Colormap_role_dict[role_choose])
+        
+        
+        # line, =plt.plot(functionDK_people[people][role_choose],color=Colormap_role_dict[role_choose],\
+        #          linewidth=linewidth,linestyle=linestyle_dict[role_choose])
+        line.set_label(PprNme_role_dict[role_choose])
+        
     ax.autoscale()
     if legend_bool == True:
-        ax.legend()
+        # plt.legend(framealpha=1.0)
+        # ax.legend(bbox_to_anchor=(.72, 1.5), loc='upper left',prop={'size': 8})
+        ax.legend(framealpha=1.0)
     
     score=score_df.loc[people,score_cols]
     info_arr=["{}: {}".format(idx,v) for idx, v in zip(score.index.values,np.round(score.values,3))]
@@ -532,7 +585,7 @@ Inspect_people=[
 #                           st_col_str='IPU_st',ed_col_str='IPU_ed')
 PlotSyncronyFeatures(feature_df,df_person_segment_feature_DKIndividual_dict,\
                           knn_weights,knn_neighbors,col,\
-                          linewidth=4,\
+                          linewidth=2,\
                           Inspect_people_lst=Inspect_people,\
                           Inspect_role_lst=['D'],\
                           score_column=score_cols,\
@@ -594,12 +647,12 @@ Inspect_roles=[
     ]
 Legend_bool=[
     True,
-    True,
-    True,
     False,
-    True,
-    True,
-    True,
+    False,
+    False,
+    False,
+    False,
+    False,
     False,
     ]
 

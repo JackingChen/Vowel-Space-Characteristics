@@ -65,18 +65,19 @@ Paper_name_map['VSA2']='VSA'
 
 Paper_name_map['intensity_mean_mean(A:,i:,u:)']='Mean($\\overline{int}$)'
 Paper_name_map['meanF0_mean(A:,i:,u:)']='Mean($\\overline{F0}$)'
-Paper_name_map['meanF0_mean(A:,i:,u:)']='Mean($\\rho$(F0))'
-Paper_name_map['hnr_mean(A:,i:,u:)']='$Mean(HNR)$'
+# Paper_name_map['stdevF0_mean(A:,i:,u:)']='Mean($\\rho$(F0))'
+Paper_name_map['hnr_mean(A:,i:,u:)']='Mean(HNR)'
 Paper_name_map['localShimmer_mean(A:,i:,u:)']='Mean(Shimmer)'
 Paper_name_map['localdbShimmer_mean(A:,i:,u:)']='Mean(Shimmer)'
 Paper_name_map['localJitter_mean(A:,i:,u:)']='Mean(Jitter)'
 # Paper_name_map['']='$Std(\overline{F0})$'
-Paper_name_map['stdevF0_mean(A:,i:,u:)']='Std($\\rho$(F0))'
+Paper_name_map['stdevF0_mean(A:,i:,u:)']='Mean($\\rho$(F0))'
 Paper_name_map['intensity_mean_var(A:,i:,u:)']='Std($\overline{int}$)'
 Paper_name_map['meanF0_var(A:,i:,u:)']='Std($\\overline{F0}$)'
 Paper_name_map['localabsoluteJitter_mean(A:,i:,u:)']='Mean(Jitter)'
 Paper_name_map['intensity_mean_max(A:,i:,u:)']='Max($\overline{int}$)'
-Paper_name_map['meanF0_max(A:,i:,u:)']='Max($\\rho$(F0))'
+Paper_name_map['stdevF0_max(A:,i:,u:)']='Max($\\rho$(F0))'
+Paper_name_map['meanF0_max(A:,i:,u:)']='Max($\overline{F0}$)'
 Paper_name_map['hnr_max(A:,i:,u:)']='Max(HNR)'
 Paper_name_map['localShimmer_max(A:,i:,u:)']='Max(Shimmer)'
 Paper_name_map['localJitter_mean_max(A:,i:,u:)']='Max(Jitter)'
@@ -129,13 +130,13 @@ Paper_name_map.update(Paper_name_map_ToBeAdded)
 Paper_name_map['LOC_columns']='Inter-Vowel Dispersion'
 Paper_name_map['LOC_columns_Intra']='Intra-Vowel Dispersion'
 Paper_name_map['DEP_columns']='formant dependency'
-Paper_name_map['Phonation_Trend_D_cols']='Mod[P]_{d}'
-Paper_name_map['Phonation_Trend_K_cols']='Mod[P]_{k}'
+Paper_name_map['Phonation_Trend_D_cols']='GC[P]\\textsubscript{inv}'
+Paper_name_map['Phonation_Trend_K_cols']='GC[P]\\textsubscript{part}'
 Paper_name_map['Phonation_Proximity_cols']='Proximity[P]'
 Paper_name_map['Phonation_Convergence_cols']='Convergence[P]'
 Paper_name_map['Phonation_Syncrony_cols']='Syncrony[P]'
-Paper_name_map['LOCDEP_Trend_D_cols']='Mod[VSC]_{d}'
-Paper_name_map['LOCDEP_Trend_K_cols']='Mod[VSC]_{k}'
+Paper_name_map['LOCDEP_Trend_D_cols']='GC[VSC]\\textsubscript{inv}'
+Paper_name_map['LOCDEP_Trend_K_cols']='GC[VSC]\\textsubscript{part}'
 Paper_name_map['LOCDEP_Proximity_cols']='Proximity[VSC]'
 Paper_name_map['LOCDEP_Convergence_cols']='Convergence[VSC]'
 Paper_name_map['LOCDEP_Syncrony_cols']='Syncrony[VSC]'
@@ -149,5 +150,32 @@ Inverse_Paper_name_map={v:k for k,v in Paper_name_map.items()}
 
 
 
+Feature2idx_map={}
+# Feature2idx_map['Proximity[P]']=1
+# Feature2idx_map['Convergence[P]']=2
+# Feature2idx_map['Syncrony[P]']=3
+# Feature2idx_map['GC[P]\\textsubscript{inv}']=4
+# Feature2idx_map['GC[P]\\textsubscript{part}']=5
+# Feature2idx_map['Proximity[VSC]']=6
+# Feature2idx_map['Convergence[VSC]']=7
+# Feature2idx_map['Syncrony[VSC]']=8
+# Feature2idx_map['GC[VSC]\\textsubscript{inv}']=9
+# Feature2idx_map['GC[VSC]\\textsubscript{part}']=10
+# Feature2idx_map['Inter-Vowel Dispersion']=11
+# Feature2idx_map['Intra-Vowel Dispersion']=12
+# Feature2idx_map['formant dependency']=13
 
+Feature2idx_map['Proximity[P]']='(a)'
+Feature2idx_map['Convergence[P]']='(b)'
+Feature2idx_map['Syncrony[P]']='(c)'
+Feature2idx_map['GC[P]\\textsubscript{inv}']='(d)'
+Feature2idx_map['GC[P]\\textsubscript{part}']='(e)'
+Feature2idx_map['Proximity[VSC]']='(f)'
+Feature2idx_map['Convergence[VSC]']='(g)'
+Feature2idx_map['Syncrony[VSC]']='(h)'
+Feature2idx_map['GC[VSC]\\textsubscript{inv}']='(i)'
+Feature2idx_map['GC[VSC]\\textsubscript{part}']='(j)'
+Feature2idx_map['Inter-Vowel Dispersion']='(k)'
+Feature2idx_map['Intra-Vowel Dispersion']='(l)'
+Feature2idx_map['formant dependency']='(m)'
 
