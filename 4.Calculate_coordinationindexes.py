@@ -154,6 +154,7 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
                 if len(Formants_utt_symb_SegmentRole)==0:
                     MissingSegment_bag.append([people,role,segment])
                 
+                # 解決數值問題，如果遇到空的或不足的就填補那個人acoustic value的統計值
                 AUI_info_filled = Fill_n_Create_AUIInfo(Formants_utt_symb_SegmentRole, People_data_distrib, Inspect_features ,PhoneMapp_dict, PhoneOfInterest ,people, vowel_min_num)
     
                 Vowels_AUI=Get_Vowels_AUI(AUI_info_filled, Inspect_features,VUIsource="From__Formant_people_information")
@@ -376,6 +377,7 @@ for key, values in HalfDesider.items():
 
 # =============================================================================
 def Reorder2Emotion_PER_utt(Formants_utt_symb, HalfDesider, PhonesOfInterest=['u:', 'i:', 'A:']):
+    # 這個函數可以把原本Session level的Formants_utt_symb切成emotion segments或是對半切
     Formants_people_segment_role_utt_dict=Dict()
     Formants_people_half_role_utt_dict=Dict()
     FormantsUttKeys_numberOrder=sorted(list(Formants_utt_symb.keys()),key=lambda x: (x[:re.search("_[K|D]_",x).start()], int(x.split("_")[-1])))
@@ -570,6 +572,7 @@ pickle.dump(df_syncrony_measurement,open(outpklpath+"Syncrony_measure_of_varianc
 
 # =============================================================================
 # Generate LOC indexes for fraction people for ASD/non-ASD classification
+# 以下不需要了因為我們最後沒有手動選擇mild/severe組別的個案
 # =============================================================================
 dfFormantStatisticFractionpath=dfFormantStatisticpath+'/Fraction'
 if not os.path.exists(dfFormantStatisticFractionpath):

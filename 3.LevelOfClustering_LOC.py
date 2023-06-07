@@ -44,7 +44,7 @@ from scipy.stats import spearmanr,pearsonr
 import statistics 
 import os, glob, sys
 import statsmodels.api as sm
-from varname import nameof
+# from varname import nameof
 from tqdm import tqdm
 import re
 from multiprocessing import Pool, current_process
@@ -61,7 +61,9 @@ from metric import Evaluation_method
 # from sklearn.utils import (as_float_array, check_array, check_X_y, safe_sqr,
 #                      safe_mask)
 from scipy import special, stats
+from utils_jack  import Info_name_sex
 import warnings
+import math
 
 def Add_label(df_formant_statistic,Label,label_choose='ADOS_cate_C'):
     for people in df_formant_statistic.index:
@@ -108,7 +110,7 @@ def NameMatchAssertion(Formants_people_symb,name):
 
 
 def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule,\
-                               outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+                               outpath='/media/jack/workspace/DisVoice/articulation/Pickles',\
                                prefix='Formants_utt_symb',\
                                suffix='KID_FromASD_DOCKID'):
     pool = Pool(int(os.cpu_count()))
@@ -156,13 +158,13 @@ def get_args():
     parser = argparse.ArgumentParser(
         description="Select utterances with entropy values that are close to disribution of target domain data",
         )
-    parser.add_argument('--base_path', default='/homes/ssd1/jackchen/DisVoice/articulation',
+    parser.add_argument('--base_path', default='/media/jack/workspace/DisVoice/articulation',
                         help='path of the base directory', dest='base_path')
-    parser.add_argument('--inpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--inpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--outpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--dfFormantStatisticpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--dfFormantStatisticpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--Inspect', default=False,
                             help='path of the base directory')
@@ -233,7 +235,7 @@ PhoneOfInterest=list(PhoneMapp_dict.keys())
 ''' Vowel AUI rule is using phonewoprosody '''
 Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
 AUI_info=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
-limit_people_rule=GetValuelimit_IQR(AUI_info,PhoneMapp_dict,args.Inspect_features)
+limit_people_rule=GetValuelimit_IQR(AUI_info,PhoneMapp_dict,args.Inspect_features)  # 每個人都有自己Formant的IQR值的統計分佈， limit_people_rule就是存每個人的boundary
 
 
 
@@ -241,7 +243,7 @@ limit_people_rule=GetValuelimit_IQR(AUI_info,PhoneMapp_dict,args.Inspect_feature
 prefix,suffix = 'Formants_utt_symb', role
 # date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
 date_now='{0}-{1}-{2}'.format(dt.now().year,dt.now().month,dt.now().day)
-outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
+outpath='/media/jack/workspace/DisVoice/articulation/Pickles'
 filepath=outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix)
 if os.path.exists(filepath) and args.reFilter==False:
     fname = pathlib.Path(filepath)
@@ -296,7 +298,58 @@ additional_columns=['ADOS_cate_C','dia_num']
 
 label_generate_choose_lst=['ADOS_C'] + additional_columns
 
+class Normalizer:
+    def __init__(self):
+        self.mean = None
+        self.std = None
+    
+    def _func1(self, x):
+        """
+            x should be dataFrame
+        """
+        norm_x = 1127 * x.applymap(lambda val: math.log(float(val) / 700 + 1))
+        return norm_x
+    
+    def transform(self, data):
+        return (data - self.mean) / self.std
+    
+    def fit_transform(self, data):
+        self.fit(data)
+        return self.transform(data)
 
+# 年齡性別的data存在變數:Info_name_sex
+# _func1: 
+normalizer=Normalizer()
+Vowels_AUI_norm=Dict()
+for people in Vowels_AUI.keys():
+    for phone in Vowels_AUI[people].keys():
+        df_Vwls=Vowels_AUI[people][phone]
+        df_Vwls=df_Vwls[args.Inspect_features]
+        df_Vwls_norm=normalizer._func1(df_Vwls)
+        Vowels_AUI_norm[people][phone]=df_Vwls_norm
+
+#               F1           F2
+# text                         
+# A:    626.063374  2211.949605
+# A:    897.777810  1526.367364
+# A:    741.677195  1871.745522
+# A:1   326.671436  1068.048559
+# A:3   880.188256  1674.493077
+# A:3   857.329737  1737.416894
+# A:3   721.434689  1665.090699
+# A:3   444.509805  1476.154364
+# A:4   396.851885  1754.904178
+# A:4   788.004335  1781.307778
+# A:4   722.525178  1797.408315
+# A:5   825.557645  1418.863323
+# A:5   682.699067  1790.946459
+aaa=ccc
+# =============================================================================
+import copy
+
+Vowels_AUI = copy.deepcopy(Vowels_AUI_norm)
+
+=copy.
 
 articulation=Articulation(Stat_med_str_VSA='mean')
 # df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst, FILTERING_method='KDE', KDE_THRESHOLD=40)
@@ -352,18 +405,18 @@ columns = columns + ['VSA2','FCR2']
 
 
 
-ManualCondition=Dict()
-suffix='.xlsx'
-condfiles=glob.glob('Inspect/condition/*'+suffix)
-for file in condfiles:
-    df_cond=pd.read_excel(file)
-    name=os.path.basename(file).replace(suffix,"")
-    ManualCondition[name]=df_cond['Unnamed: 0'][df_cond['50%']==True]
+# ManualCondition=Dict()
+# suffix='.xlsx'
+# condfiles=glob.glob('Inspect/condition/*'+suffix)
+# for file in condfiles:
+#     df_cond=pd.read_excel(file)
+#     name=os.path.basename(file).replace(suffix,"")
+#     ManualCondition[name]=df_cond['Unnamed: 0'][df_cond['50%']==True]
 
 label_correlation_choose_lst=label_generate_choose_lst
 # label_correlation_choose_lst=['ADOS_C']
 
-
+# feature生出來後先做個簡單的evaluation
 N=2
 Eval_med=Evaluation_method()
 Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_formant_statistic,N,columns,constrain_sex=-1, constrain_module=-1,feature_type='Session_formant')
@@ -377,7 +430,8 @@ Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_c
 
 
 # =============================================================================
-
+# 以下的部份都是實驗或測試用的， 不在主要的流程裡面，
+# maintain程式的話以下的部份都跳過。
 # =============================================================================
 '''
 

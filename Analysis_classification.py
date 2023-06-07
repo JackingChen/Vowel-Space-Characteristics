@@ -206,26 +206,7 @@ Reorder_type=args.Reorder_type
 logit_number=args.logit_number
 Reverse_exp=args.Reverse_exp
 decision_boundary=args.decision_boundary
-#%%
-# =============================================================================
 
-#[tmp] should remove soon
-# Check the input data  are all right
-
-# sellect_people_define=SellectP_define()
-# selected_columns=['Divergence[sam_wilks_lin_norm(A:,i:,u:)]',\
-#                                               'Divergence[within_variance_norm(A:,i:,u:)]_var_p1',\
-#                                               'Divergence[between_covariance_norm(A:,i:,u:)]_var_p1']
-    
-# Aaa_data=ados_ds.Features_comb['TD_normal vs ASDMild_agesexmatch -> FeatCoor']
-
-
-# Aaa_df_formant_statistic_agesexmatch_ASDMild=\
-#     Aaa_data.loc[sellect_people_define.MildASD_age_sex_match_ver2,selected_columns]
-# df_formant_statistic_TD_normal=\
-#     Aaa_data.loc[sellect_people_define.TD_normal_ver2,selected_columns]
-
-# =============================================================================
 
 Session_level_all=Dict()
 # Discriminative analysis Main
@@ -385,10 +366,7 @@ class ADOSdataset():
         self._FeatureBuild_Module()
     def Get_FormantAUI_feat(self,label_choose,pickle_path,featuresOfInterest=['MSB_f1','MSB_f2','MSB_mix'],filterbyNum=True,**kwargs):
         arti=articulation.articulation.Articulation()
-        
-        
         #如果path有放的話字串的話，就使用path的字串，不然就使用「feat_」等於的東西，在function裡面會以kwargs的形式出現
-        
         if not kwargs and len(pickle_path)>0:
             df_tmp=pickle.load(open(pickle_path,"rb")).sort_index()
         elif len(kwargs)>0: # usage Get_FormantAUI_feat(...,key1=values1):
@@ -462,9 +440,6 @@ class ADOSdataset():
             
             # ADD label
             df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_CSS')
-            df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_C')
-            df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_S')
-            df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_SC')
             df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='age_year')
             df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='sex')
             # create different ASD cohort
@@ -472,18 +447,6 @@ class ADOSdataset():
             filter_low_TCSS=df_feature_ASD['ADOS_cate_CSS']==1
             filter_moderate_TCSS=df_feature_ASD['ADOS_cate_CSS']==2
             filter_high_TCSS=df_feature_ASD['ADOS_cate_CSS']==3
-            
-            filter_Notautism_TC=df_feature_ASD['ADOS_cate_C']==0
-            filter_ASD_TC=df_feature_ASD['ADOS_cate_C']==1
-            filter_Autism_TC=df_feature_ASD['ADOS_cate_C']==2
-            
-            filter_Notautism_TS=df_feature_ASD['ADOS_cate_S']==0
-            filter_ASD_TS=df_feature_ASD['ADOS_cate_S']==1
-            filter_Autism_TS=df_feature_ASD['ADOS_cate_S']==2
-            
-            filter_Notautism_TSC=df_feature_ASD['ADOS_cate_SC']==0
-            filter_ASD_TSC=df_feature_ASD['ADOS_cate_SC']==1
-            filter_Autism_TSC=df_feature_ASD['ADOS_cate_SC']==2
             
             df_feauture_ASDgrp_dict={}
             df_feauture_ASDgrp_dict['df_feature_ASD']=df_feature_ASD
@@ -495,24 +458,8 @@ class ADOSdataset():
             df_feauture_ASDgrp_dict['df_feature_lowMinimal_CSS']=df_feature_ASD[filter_low_TCSS | filter_Minimal_TCSS]
             df_feauture_ASDgrp_dict['df_feature_moderate_CSS']=df_feature_ASD[filter_moderate_TCSS]
             df_feauture_ASDgrp_dict['df_feature_high_CSS']=df_feature_ASD[filter_high_TCSS]
-            
-            # df_feauture_ASDgrp_dict['df_feature_Notautism_TC']=df_feature_ASD[filter_Notautism_TC]
-            # df_feauture_ASDgrp_dict['df_feature_ASD_TC']=df_feature_ASD[filter_ASD_TC]
-            # df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TC']=df_feature_ASD[filter_Notautism_TC | filter_ASD_TC]
-            # df_feauture_ASDgrp_dict['df_feature_Autism_TC']=df_feature_ASD[filter_Autism_TC]
-            
-            # df_feauture_ASDgrp_dict['df_feature_Notautism_TS']=df_feature_ASD[filter_Notautism_TS]
-            # df_feauture_ASDgrp_dict['df_feature_ASD_TS']=df_feature_ASD[filter_ASD_TS]
-            # df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TS']=df_feature_ASD[filter_Notautism_TS | filter_ASD_TS]
-            # df_feauture_ASDgrp_dict['df_feature_Autism_TS']=df_feature_ASD[filter_Autism_TS]
-            
-            # df_feauture_ASDgrp_dict['df_feature_Notautism_TSC']=df_feature_ASD[filter_Notautism_TSC]
-            # df_feauture_ASDgrp_dict['df_feature_ASD_TSC']=df_feature_ASD[filter_ASD_TSC]
-            # df_feauture_ASDgrp_dict['df_feature_NotautismandASD_TSC']=df_feature_ASD[filter_Notautism_TSC | filter_ASD_TSC]
-            # df_feauture_ASDgrp_dict['df_feature_Autism_TSC']=df_feature_ASD[filter_Autism_TSC]
-            
+
             #Check the length of each paired comparison, should be stored on the top of for loop
-            
             Tmp_Numcmp_dict={}
             for key in df_feauture_ASDgrp_dict.keys():
                 Numcmp_str='ASD({0}) vs TD({1})'.format(len(df_feauture_ASDgrp_dict[key]),len(df_feature_TD))
@@ -527,11 +474,10 @@ class ADOSdataset():
             else:
                 df_Top_Check_length=Merge_dfs(df_Top_Check_length,df_Tmp_Numcmp_list)
             # 手動執行到這邊，從for 上面
-            
-            
             for k_FeatTypeLayer2 in ModuledFeatureCombination[k_FeatTypeLayer1].keys():
                 colums_sel=ModuledFeatureCombination[k_FeatTypeLayer1][k_FeatTypeLayer2]
                 
+
                 # 1. Set ASD vs TD experiment
                 for k_ASDgrp in df_feauture_ASDgrp_dict.keys():
                     df_ASD_subgrp=df_feauture_ASDgrp_dict[k_ASDgrp].copy()[colums_sel+Labels_add]

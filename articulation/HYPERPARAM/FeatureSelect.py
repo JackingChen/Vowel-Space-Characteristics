@@ -24,28 +24,15 @@ Phonation_Proximity_cols=[
  'Proximity[hnr_mean(A:,i:,u:)]',
  'Proximity[localJitter_mean(A:,i:,u:)]',
  'Proximity[localabsoluteJitter_mean(A:,i:,u:)]',
- # 'Proximity[rapJitter_mean(A:,i:,u:)]',
- # 'Proximity[ddpJitter_mean(A:,i:,u:)]',
  'Proximity[localShimmer_mean(A:,i:,u:)]',
  'Proximity[localdbShimmer_mean(A:,i:,u:)]',
  'Proximity[intensity_mean_var(A:,i:,u:)]',
- # 'Proximity[meanF0_var(A:,i:,u:)]',
- # 'Proximity[stdevF0_var(A:,i:,u:)]',
- # 'Proximity[hnr_var(A:,i:,u:)]',
- # 'Proximity[localJitter_var(A:,i:,u:)]',
- # 'Proximity[localabsoluteJitter_var(A:,i:,u:)]',
- # 'Proximity[rapJitter_var(A:,i:,u:)]',
- # 'Proximity[ddpJitter_var(A:,i:,u:)]',
- # 'Proximity[localShimmer_var(A:,i:,u:)]',
- # 'Proximity[localdbShimmer_var(A:,i:,u:)]',
  'Proximity[intensity_mean_max(A:,i:,u:)]',
  'Proximity[meanF0_max(A:,i:,u:)]',
  'Proximity[stdevF0_max(A:,i:,u:)]',
  'Proximity[hnr_max(A:,i:,u:)]',
  'Proximity[localJitter_max(A:,i:,u:)]',
  'Proximity[localabsoluteJitter_max(A:,i:,u:)]',
- # 'Proximity[rapJitter_max(A:,i:,u:)]',
- # 'Proximity[ddpJitter_max(A:,i:,u:)]',
  'Proximity[localShimmer_max(A:,i:,u:)]',
  'Proximity[localdbShimmer_max(A:,i:,u:)]'
  ]
@@ -56,28 +43,14 @@ Phonation_Trend_D_cols=[
  'Trend[hnr_mean(A:,i:,u:)]_d',
  'Trend[localJitter_mean(A:,i:,u:)]_d',
  'Trend[localabsoluteJitter_mean(A:,i:,u:)]_d',
- # 'Trend[rapJitter_mean(A:,i:,u:)]_d',
- # 'Trend[ddpJitter_mean(A:,i:,u:)]_d',
  'Trend[localShimmer_mean(A:,i:,u:)]_d',
  'Trend[localdbShimmer_mean(A:,i:,u:)]_d',
- # 'Trend[intensity_mean_var(A:,i:,u:)]_d',
- # 'Trend[meanF0_var(A:,i:,u:)]_d',
- # 'Trend[stdevF0_var(A:,i:,u:)]_d',
- # 'Trend[hnr_var(A:,i:,u:)]_d',
- # 'Trend[localJitter_var(A:,i:,u:)]_d',
- # 'Trend[localabsoluteJitter_var(A:,i:,u:)]_d',
- # 'Trend[rapJitter_var(A:,i:,u:)]_d',
- # 'Trend[ddpJitter_var(A:,i:,u:)]_d',
- # 'Trend[localShimmer_var(A:,i:,u:)]_d',
- # 'Trend[localdbShimmer_var(A:,i:,u:)]_d',
  'Trend[intensity_mean_max(A:,i:,u:)]_d',
  'Trend[meanF0_max(A:,i:,u:)]_d',
  'Trend[stdevF0_max(A:,i:,u:)]_d',
  'Trend[hnr_max(A:,i:,u:)]_d',
  'Trend[localJitter_max(A:,i:,u:)]_d',
  'Trend[localabsoluteJitter_max(A:,i:,u:)]_d',
- # 'Trend[rapJitter_max(A:,i:,u:)]_d',
- # 'Trend[ddpJitter_max(A:,i:,u:)]_d',
  'Trend[localShimmer_max(A:,i:,u:)]_d',
  'Trend[localdbShimmer_max(A:,i:,u:)]_d'
     ]
@@ -88,28 +61,14 @@ Phonation_Trend_K_cols=[
  'Trend[hnr_mean(A:,i:,u:)]_k',
  'Trend[localJitter_mean(A:,i:,u:)]_k',
  'Trend[localabsoluteJitter_mean(A:,i:,u:)]_k',
- # 'Trend[rapJitter_mean(A:,i:,u:)]_k',
- # 'Trend[ddpJitter_mean(A:,i:,u:)]_k',
  'Trend[localShimmer_mean(A:,i:,u:)]_k',
  'Trend[localdbShimmer_mean(A:,i:,u:)]_k',
- # 'Trend[intensity_mean_var(A:,i:,u:)]_k',
- # 'Trend[meanF0_var(A:,i:,u:)]_k',
- # 'Trend[stdevF0_var(A:,i:,u:)]_k',
- # 'Trend[hnr_var(A:,i:,u:)]_k',
- # 'Trend[localJitter_var(A:,i:,u:)]_k',
- # 'Trend[localabsoluteJitter_var(A:,i:,u:)]_k',
- # 'Trend[rapJitter_var(A:,i:,u:)]_k',
- # 'Trend[ddpJitter_var(A:,i:,u:)]_k',
- # 'Trend[localShimmer_var(A:,i:,u:)]_k',
- # 'Trend[localdbShimmer_var(A:,i:,u:)]_k',
  'Trend[intensity_mean_max(A:,i:,u:)]_k',
  'Trend[meanF0_max(A:,i:,u:)]_k',
  'Trend[stdevF0_max(A:,i:,u:)]_k',
  'Trend[hnr_max(A:,i:,u:)]_k',
  'Trend[localJitter_max(A:,i:,u:)]_k',
  'Trend[localabsoluteJitter_max(A:,i:,u:)]_k',
- # 'Trend[rapJitter_max(A:,i:,u:)]_k',
- # 'Trend[ddpJitter_max(A:,i:,u:)]_k',
  'Trend[localShimmer_max(A:,i:,u:)]_k',
  'Trend[localdbShimmer_max(A:,i:,u:)]_k'
     ]
@@ -120,28 +79,14 @@ Phonation_Convergence_cols=[
  'Convergence[hnr_mean(A:,i:,u:)]',
  'Convergence[localJitter_mean(A:,i:,u:)]',
  'Convergence[localabsoluteJitter_mean(A:,i:,u:)]',
- # 'Convergence[rapJitter_mean(A:,i:,u:)]',
- # 'Convergence[ddpJitter_mean(A:,i:,u:)]',
  'Convergence[localShimmer_mean(A:,i:,u:)]',
  'Convergence[localdbShimmer_mean(A:,i:,u:)]',
- # 'Convergence[intensity_mean_var(A:,i:,u:)]',
- # 'Convergence[meanF0_var(A:,i:,u:)]',
- # 'Convergence[stdevF0_var(A:,i:,u:)]',
- # 'Convergence[hnr_var(A:,i:,u:)]',
- # 'Convergence[localJitter_var(A:,i:,u:)]',
- # 'Convergence[localabsoluteJitter_var(A:,i:,u:)]',
- # 'Convergence[rapJitter_var(A:,i:,u:)]',
- # 'Convergence[ddpJitter_var(A:,i:,u:)]',
- # 'Convergence[localShimmer_var(A:,i:,u:)]',
- # 'Convergence[localdbShimmer_var(A:,i:,u:)]',
  'Convergence[intensity_mean_max(A:,i:,u:)]',
  'Convergence[meanF0_max(A:,i:,u:)]',
  'Convergence[stdevF0_max(A:,i:,u:)]',
  'Convergence[hnr_max(A:,i:,u:)]',
  'Convergence[localJitter_max(A:,i:,u:)]',
  'Convergence[localabsoluteJitter_max(A:,i:,u:)]',
- # 'Convergence[rapJitter_max(A:,i:,u:)]',
- # 'Convergence[ddpJitter_max(A:,i:,u:)]',
  'Convergence[localShimmer_max(A:,i:,u:)]',
  'Convergence[localdbShimmer_max(A:,i:,u:)]'
  ]
@@ -152,28 +97,14 @@ Phonation_Syncrony_cols=[
  'Syncrony[hnr_mean(A:,i:,u:)]',
  'Syncrony[localJitter_mean(A:,i:,u:)]',
  'Syncrony[localabsoluteJitter_mean(A:,i:,u:)]',
- # 'Syncrony[rapJitter_mean(A:,i:,u:)]',
- # 'Syncrony[ddpJitter_mean(A:,i:,u:)]',
  'Syncrony[localShimmer_mean(A:,i:,u:)]',
  'Syncrony[localdbShimmer_mean(A:,i:,u:)]',
- # 'Syncrony[intensity_mean_var(A:,i:,u:)]',
- # 'Syncrony[meanF0_var(A:,i:,u:)]',
- # 'Syncrony[stdevF0_var(A:,i:,u:)]',
- # 'Syncrony[hnr_var(A:,i:,u:)]',
- # 'Syncrony[localJitter_var(A:,i:,u:)]',
- # 'Syncrony[localabsoluteJitter_var(A:,i:,u:)]',
- # 'Syncrony[rapJitter_var(A:,i:,u:)]',
- # 'Syncrony[ddpJitter_var(A:,i:,u:)]',
- # 'Syncrony[localShimmer_var(A:,i:,u:)]',
- # 'Syncrony[localdbShimmer_var(A:,i:,u:)]',
  'Syncrony[intensity_mean_max(A:,i:,u:)]',
  'Syncrony[meanF0_max(A:,i:,u:)]',
  'Syncrony[stdevF0_max(A:,i:,u:)]',
  'Syncrony[hnr_max(A:,i:,u:)]',
  'Syncrony[localJitter_max(A:,i:,u:)]',
  'Syncrony[localabsoluteJitter_max(A:,i:,u:)]',
- # 'Syncrony[rapJitter_max(A:,i:,u:)]',
- # 'Syncrony[ddpJitter_max(A:,i:,u:)]',
  'Syncrony[localShimmer_max(A:,i:,u:)]',
  'Syncrony[localdbShimmer_max(A:,i:,u:)]'
     
@@ -319,24 +250,12 @@ Utt_prosodyF0=[
 
 Utt_VoiceQuality = ['avg Jitter',
  'avg Shimmer',
- # 'avg apq',
- # 'avg ppq',
- # 'avg logE',
  'std Jitter',
  'std Shimmer',
- # 'std apq',
- # 'std ppq',
- # 'std logE',
  'skewness Jitter',
  'skewness Shimmer',
- # 'skewness apq',
- # 'skewness ppq',
- # 'skewness logE',
  'kurtosis Jitter',
  'kurtosis Shimmer',
- # 'kurtosis apq',
- # 'kurtosis ppq',
- # 'kurtosis logE'
  ]
 
 Utt_energy = [
@@ -459,51 +378,6 @@ for FeatCategory, FeatLsts in CategoricalName2cols.items():
     for feat in FeatLsts:
         cols2CategoricalName[feat]=FeatCategory
 
-
-# CategoricalName2cols={
-#     'Inter-vowel-dispersion':[
-#         'Trend[VSA2]_d',
-#         'Trend[FCR2]_d',
-#         'Trend[between_covariance_norm(A:,i:,u:)]_d',
-#         'Trend[between_variance_norm(A:,i:,u:)]_d',
-#         'Trend[total_covariance_norm(A:,i:,u:)]_d',
-#         'Trend[total_variance_norm(A:,i:,u:)]_d',
-#         'Trend[sam_wilks_lin_norm(A:,i:,u:)]_d',
-#         'Trend[pillai_lin_norm(A:,i:,u:)]_d',
-#         'Trend[hotelling_lin_norm(A:,i:,u:)]_d',
-#         'Trend[roys_root_lin_norm(A:,i:,u:)]_d',
-#         'Trend[Between_Within_Det_ratio_norm(A:,i:,u:)]_d',
-#         'Trend[Between_Within_Tr_ratio_norm(A:,i:,u:)]_d',
-#         ],
-#     'Inter-vowel-dispersion_vowel-centralization':[
-#         'Trend[FCR2]_d',
-#         'Trend[sam_wilks_lin_norm(A:,i:,u:)]_d',
-#         ],
-#     'Inter-vowel-dispersion_vowel-dispersion':[
-#         'Trend[VSA2]_d',
-#         'Trend[between_covariance_norm(A:,i:,u:)]_d',
-#         'Trend[between_variance_norm(A:,i:,u:)]_d',
-#         'Trend[total_covariance_norm(A:,i:,u:)]_d',
-#         'Trend[total_variance_norm(A:,i:,u:)]_d',
-#         'Trend[pillai_lin_norm(A:,i:,u:)]_d',
-#         'Trend[hotelling_lin_norm(A:,i:,u:)]_d',
-#         'Trend[roys_root_lin_norm(A:,i:,u:)]_d',
-#         'Trend[Between_Within_Det_ratio_norm(A:,i:,u:)]_d',
-#         'Trend[Between_Within_Tr_ratio_norm(A:,i:,u:)]_d',
-#         ],
-    
-#     'Intra-vowel-dispersion': [
-                         
-#         'Trend[within_covariance_norm(A:,i:,u:)]_d',
-#         'Trend[within_variance_norm(A:,i:,u:)]_d',
-                         
-#                          ],
-#     'formant-dependency': ['Trend[pear_12]_d',
-#                          'Trend[spear_12]_d',
-#                          'Trend[kendall_12]_d',
-#                          'Trend[dcorr_12]_d'
-#                          ],
-#     }
 # =============================================================================
 '''
     static_feautre_phonation
@@ -514,7 +388,6 @@ Phonation_columns=[
 'intensity_mean_mean(A:,i:,u:)', 'meanF0_mean(A:,i:,u:)',
        'stdevF0_mean(A:,i:,u:)', 'hnr_mean(A:,i:,u:)',
        'localJitter_mean(A:,i:,u:)', 'localabsoluteJitter_mean(A:,i:,u:)',
-       # 'rapJitter_mean(A:,i:,u:)', 'ddpJitter_mean(A:,i:,u:)',
        'localShimmer_mean(A:,i:,u:)', 'localdbShimmer_mean(A:,i:,u:)',
 ]
 # =============================================================================
@@ -523,14 +396,6 @@ Phonation_columns=[
     Columns combination
 
 '''
-# def Get_columnproduct(Comb1,Block_columns_dict):
-#     Comb1_result = list(itertools.product(*Comb1))
-#     comb1_append=[]
-#     for c in Comb1_result:
-        
-#         comb1_append.append(Block_columns_dict[c[0]]+ Block_columns_dict[c[1]])
-#     return comb1_append
-
 def Get_columnproduct(Comb1,Block_columns_dict):
     Comb1_result = list(itertools.product(*Comb1))
     comb1_dict={}
@@ -646,8 +511,6 @@ Columns_comb3['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation'
 Columns_comb4=Dict()
 Columns_comb4['Utt_feature+static_feautre_LOC+dynamic_feature_LOC']=\
     Get_LOCCombs_withSelectedFeat(Comb1,Block_columns_dict,SelectedFeat='Utt_prosodyF0_VoiceQuality_energy')
-# Columns_comb['static_feautre_LOC+static_feautre_phonation']=Get_columnproduct(Comb1,Block_columns_dict)
-# Columns_comb['static_feautre_LOC+static_feautre_phonation']+=Get_columnproduct(Comb2,Block_columns_dict)
 
 ''' Columns_comb5 = All possible feature combination + Phonation_Syncrony_cols'''
 Comb1=['LOC_columns','LOC_columns_Intra','DEP_columns']+dynamic_feature_LOC
@@ -678,7 +541,6 @@ Comb_dynPhonation=Dict()
 Comb_dynPhonation['dynamic_feature_phonation']=Get_Combs_Feat(Comb2,Block_columns_dict)
     
 ''' Columns_TotalComb = All possible feature combination of static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation'''
-# Comb3=['LOC_columns','DEP_columns','LOC_columns_Intra'] + dynamic_feature_LOC + dynamic_feature_phonation
 Comb3=['LOC_columns','DEP_columns'] + dynamic_feature_LOC + dynamic_feature_phonation
 Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation=Dict()
 Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=Get_Combs_Feat(Comb3,Block_columns_dict)
@@ -688,6 +550,3 @@ Comb3=['LOC_columns','DEP_columns'] + dynamic_feature_LOC + dynamic_feature_phon
 Comb_Utt_feature_staticLOCDEP_dynamicLOCDEP_dynamicphonation=Dict()
 Comb_Utt_feature_staticLOCDEP_dynamicLOCDEP_dynamicphonation['Utt_features+static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation']=\
     Get_LOCCombs_withSelectedFeat(Comb3,Block_columns_dict,SelectedFeat='Utt_prosodyF0_VoiceQuality_energy')
-
-# Columns_comb['static_feautre_LOC+dynamic_feature_LOC']=Get_columnproduct(Comb1,Block_columns_dict)
-# Columns_comb['static_feautre_LOC+dynamic_feature_LOC']+=Get_columnproduct(Comb2,Block_columns_dict)

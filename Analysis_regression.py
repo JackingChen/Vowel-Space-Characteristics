@@ -280,28 +280,29 @@ featuresOfInterest=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
 
 # =============================================================================
 # 1. 如果要做全盤的實驗的話用這一區
-# FeatureLabelMatch_manual=[]
-# All_combinations=featuresOfInterest
-# # All_combinations4=FeatSel.Columns_comb4.copy()
-# for key_layer1 in All_combinations.keys():
-#     for key_layer2 in All_combinations[key_layer1].keys():
-#         if 'Utt_prosodyF0_VoiceQuality_energy' in key_layer2:
-#             FeatureLabelMatch_manual.append('{0}-{1}'.format(key_layer1,key_layer2))
-    
+FeatureLabelMatch_manual=[]
+All_combinations=featuresOfInterest
+# All_combinations4=FeatSel.Columns_comb4.copy()
+for key_layer1 in All_combinations.keys():
+    for key_layer2 in All_combinations[key_layer1].keys():
+        
+        # if 'Utt_prosodyF0_VoiceQuality_energy' in key_layer2:
+        #     FeatureLabelMatch_manual.append('{0}-{1}'.format(key_layer1,key_layer2))
+        FeatureLabelMatch_manual.append('{0}-{1}'.format(key_layer1,key_layer2))
 
 # XXX 2. 如果要手動設定實驗的話用這一區
-FeatureLabelMatch_manual=[
-    # Rule: {layer1}-{layer2}
-    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols',
-    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols',
-    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Syncrony_cols',
-    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns',
-    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns',
-    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-DEP_columns',
-    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Trend_D_cols',
-    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Syncrony_cols',
-    'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Trend_K_cols',
-    ]
+# FeatureLabelMatch_manual=[
+#     # Rule: {layer1}-{layer2}
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Syncrony_cols',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-DEP_columns',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Trend_D_cols',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Syncrony_cols',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Trend_K_cols',
+#     ]
 # =============================================================================
 
 
@@ -493,8 +494,8 @@ OutFeature_dict=Dict()
 Best_param_dict=Dict()
 
 # ''' 要手動執行一次從Incorrect2Correct_indexes和Correct2Incorrect_indexes決定哪些indexes 需要算shap value 再在這邊指定哪些fold需要停下來算SHAP value '''
-# SHAP_inspect_idxs_manual=[]
-SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
+SHAP_inspect_idxs_manual=[]
+# SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
 # SHAP_inspect_idxs_manual=[1,3,5] # empty list means we do not execute shap function
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
     writer_clf = pd.ExcelWriter(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_"+final_result_file, engine = 'xlsxwriter')
@@ -1576,8 +1577,9 @@ print("sigma_SE(Qs) {} = SE_all {}".format(sum([SE_Q1,SE_Q2,SE_Q3,SE_Q4]),SE_all
 
 round_number=6
 delta_group=['Δbaseval','ΔInterVD','ΔFD','ΔGCVSCinv','ΔSynchronyVSC']
-proposed_group=['P_baseval','P_InterVD','P_FD','P_GCVSCinv','P_SynchronyVSC']
-baseline_group=['b_baseval','b_InterVD','b_FD','b_GCVSCinv','b_SynchronyVSC']
+# proposed_group=['P_baseval','P_InterVD','P_FD','P_GCVSCinv','P_SynchronyVSC']
+# baseline_group=['b_baseval','b_InterVD','b_FD','b_GCVSCinv','b_SynchronyVSC']
+ProposedBaseline_group=['I+F_baseval','I+F_InterVD','I+F_FD','I+F_GCVSCinv','I+F_SynchronyVSC']
 MSE_group=['AE_proposed', 'AE_baseline', 'AE_DELTA']
 Y_group=['Y']
 
@@ -1592,9 +1594,10 @@ for q in range(1,5):
         
         value_baseline = np.round(baseline_shap_sum_dict[FSL][vars()[vrble]].sum(),round_number) if FSL in baseline_shap_sum_dict.keys() else 0
         df_FS_Qdrant_rslt.loc['Δ'+FSL,vrble]=value_delta
-        df_FS_Qdrant_rslt.loc['P_'+FSL,vrble]=value_proposed
-        df_FS_Qdrant_rslt.loc['b_'+FSL,vrble]=value_baseline
-
+        # df_FS_Qdrant_rslt.loc['P_'+FSL,vrble]=value_proposed
+        # df_FS_Qdrant_rslt.loc['b_'+FSL,vrble]=value_baseline
+        df_FS_Qdrant_rslt.loc['I+F_'+FSL,vrble]=value_baseline + value_proposed
+    # df_FS_Qdrant_rslt.loc['Y',vrble]=value_baseline + value_proposed
 
 for q in range(1,5):
     vrble='Q{}_idx'.format(q)
@@ -1619,15 +1622,15 @@ df_FS_Qdrant_rslt.loc['MAE_proposed'] = df_FS_Qdrant_rslt.loc['AE_proposed'] / d
 df_FS_Qdrant_rslt.loc['MAE_baseline'] = df_FS_Qdrant_rslt.loc['AE_baseline'] / df_FS_Qdrant_rslt.loc['N']
 df_FS_Qdrant_rslt.loc['MAE_delta'] = (df_FS_Qdrant_rslt.loc['AE_proposed'] - df_FS_Qdrant_rslt.loc['AE_baseline']) / df_FS_Qdrant_rslt.loc['N']
 
-for feat_str in delta_group+proposed_group+baseline_group:
+# for feat_str in proposed_group+baseline_group:
+#     df_FS_Qdrant_rslt.loc['Mean_'+feat_str]=df_FS_Qdrant_rslt.loc[feat_str].multiply(1/df_FS_Qdrant_rslt.loc['N'])
+for feat_str in delta_group+ProposedBaseline_group+['Y']:
     df_FS_Qdrant_rslt.loc['Mean_'+feat_str]=df_FS_Qdrant_rslt.loc[feat_str].multiply(1/df_FS_Qdrant_rslt.loc['N'])
-
-
 
 
 df_FS_Qdrant_rslt_rounded=df_FS_Qdrant_rslt.round(3)
 df_deltagroup=df_FS_Qdrant_rslt_rounded.loc[delta_group]
-df_proposednbaselinegroup=df_FS_Qdrant_rslt_rounded.loc[proposed_group+baseline_group]
+# df_proposednbaselinegroup=df_FS_Qdrant_rslt_rounded.loc[proposed_group+baseline_group]
 Total_MAE_delta=df_FS_Qdrant_rslt.loc['MAE_delta'].dot(df_FS_Qdrant_rslt.loc['N'])/df_FS_Qdrant_rslt.loc['N'].sum()
 
 

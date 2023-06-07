@@ -2,3 +2,10 @@ Plots*/
 Pickles/
 excels/
 *.xlsx
+HYPERPARAM/__pycache__/*.pyc
+Inspect/**/*
+Plot/**/*
+HYPERPARAM/SAHP_figures/**/*
+Plot_cmp_ori/**
+HYPERPARAM/SHAP_figures/**/*
+Pickles_BeforeReview20230607/**/*

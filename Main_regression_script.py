@@ -124,105 +124,13 @@ knn_neighbors=args.knn_neighbors
 Reorder_type=args.Reorder_type
 # Add_UttLvl_feature=args.Add_UttLvl_feature
 # =============================================================================
-# Feature
-# columns=[
-    # 'FCR2+AUINum',
-    # 'VSA2+AUINum',
-    # 'FCR2*AUINum',
-    # 'VSA2*AUINum',
-    # 'FCR2',
-    # 'VSA2',
-    # 'between_covariance_norm(A:,i:,u:)', 
-    # 'between_variance_norm(A:,i:,u:)',
-    # 'within_covariance_norm(A:,i:,u:)', 
-    # 'within_variance_norm(A:,i:,u:)',
-    # 'total_covariance_norm(A:,i:,u:)', 
-    # 'total_variance_norm(A:,i:,u:)',
-    # 'sam_wilks_lin_norm(A:,i:,u:)', 
-    # 'pillai_lin_norm(A:,i:,u:)',
-    # 'hotelling_lin_norm(A:,i:,u:)', 
-    # 'roys_root_lin_norm(A:,i:,u:)',
-    # 'Between_Within_Det_ratio_norm(A:,i:,u:)',
-    # 'Between_Within_Tr_ratio_norm(A:,i:,u:)'
-    # 'pear_12',
-    # 'spear_12',
-    # 'kendall_12',
-    # 'dcorr_12'
-    # 'u_num+i_num+a_num',
-    # ]
 columns=[
 'intensity_mean_mean(A:,i:,u:)', 'meanF0_mean(A:,i:,u:)',
        'stdevF0_mean(A:,i:,u:)', 'hnr_mean(A:,i:,u:)',
        'localJitter_mean(A:,i:,u:)', 'localabsoluteJitter_mean(A:,i:,u:)',
        'rapJitter_mean(A:,i:,u:)', 'ddpJitter_mean(A:,i:,u:)',
        'localShimmer_mean(A:,i:,u:)', 'localdbShimmer_mean(A:,i:,u:)',
-       # 'intensity_mean_var(A:,i:,u:)', 'meanF0_var(A:,i:,u:)',
-       # 'stdevF0_var(A:,i:,u:)', 'hnr_var(A:,i:,u:)',
-       # 'localJitter_var(A:,i:,u:)', 'localabsoluteJitter_var(A:,i:,u:)',
-       # 'rapJitter_var(A:,i:,u:)', 'ddpJitter_var(A:,i:,u:)',
-       # 'localShimmer_var(A:,i:,u:)', 'localdbShimmer_var(A:,i:,u:)',
-       # 'intensity_mean_max(A:,i:,u:)', 'meanF0_max(A:,i:,u:)',
-       # 'stdevF0_max(A:,i:,u:)', 'hnr_max(A:,i:,u:)',
-       # 'localJitter_max(A:,i:,u:)', 'localabsoluteJitter_max(A:,i:,u:)',
-       # 'rapJitter_max(A:,i:,u:)', 'ddpJitter_max(A:,i:,u:)',
-       # 'localShimmer_max(A:,i:,u:)', 'localdbShimmer_max(A:,i:,u:)'
 ]
-# 這些會有虛數
-# 'Norm(B_CRatio)_sam_wilks_DKRaito', 'Norm(B_CRatio)_pillai_DKRaito',
-# 'Norm(B_CRatio)_hotelling_DKRaito', 'Norm(B_CRatio)_roys_root_DKRaito',
-# 'Norm(B_CRatio)_Det_DKRaito', 'Norm(B_CRatio)_Tr_DKRaito',
-# columns=[
-#     'Norm(WC)_sam_wilks_DKRaito', 'Norm(WC)_pillai_DKRaito',
-#     'Norm(WC)_hotelling_DKRaito', 'Norm(WC)_roys_root_DKRaito',
-#     'Norm(WC)_Det_DKRaito', 'Norm(WC)_Tr_DKRaito',
-#     'Norm(BC)_sam_wilks_DKRaito', 'Norm(BC)_pillai_DKRaito',
-#     'Norm(BC)_hotelling_DKRaito', 'Norm(BC)_roys_root_DKRaito',
-#     'Norm(BC)_Det_DKRaito', 'Norm(BC)_Tr_DKRaito',
-
-#     'Norm(TotalVar)_sam_wilks_DKRaito', 'Norm(TotalVar)_pillai_DKRaito',
-#     'Norm(TotalVar)_hotelling_DKRaito', 'Norm(TotalVar)_roys_root_DKRaito',
-#     'Norm(TotalVar)_Det_DKRaito', 'Norm(TotalVar)_Tr_DKRaito'
-# ]
-
-# Comb=Dict()
-# Comb['LOC_columns']=FeatSel.LOC_columns
-# Comb['DEP_columns']=FeatSel.DEP_columns
-# Comb['LOC_columns+DEP_columns']=FeatSel.LOC_columns+FeatSel.DEP_columns
-
-# Comb['Utt_prosodyF0']=FeatSel.Utt_prosodyF0
-# Comb['Utt_prosodyF0+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.LOC_columns
-# Comb['Utt_prosodyF0+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.DEP_columns
-# Comb['Utt_prosodyF0+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.LOC_columns+FeatSel.DEP_columns
-
-# Comb['Utt_VoiceQuality']=FeatSel.Utt_VoiceQuality
-# Comb['Utt_VoiceQuality+LOC_columns']=FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns
-# Comb['Utt_VoiceQuality+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.DEP_columns
-# Comb['Utt_VoiceQuality+LOC_columns+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns+FeatSel.DEP_columns
-
-# Comb['Utt_energy']=FeatSel.Utt_energy
-# Comb['Utt_energy+LOC_columns']=FeatSel.Utt_energy+FeatSel.LOC_columns 
-# Comb['Utt_energy+DEP_columns']=FeatSel.Utt_energy+FeatSel.DEP_columns 
-# Comb['Utt_energy+LOC_columns+DEP_columns']=FeatSel.Utt_energy+FeatSel.LOC_columns+FeatSel.DEP_columns
-
-# Comb['Utt_prosodyF0+Utt_energy']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy 
-# Comb['Utt_prosodyF0+Utt_energy+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.LOC_columns
-# Comb['Utt_prosodyF0+Utt_energy+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.DEP_columns
-# Comb['Utt_prosodyF0+Utt_energy+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.LOC_columns+FeatSel.DEP_columns
-
-# Comb['Utt_VoiceQuality+Utt_energy']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy 
-# Comb['Utt_VoiceQuality+Utt_energy+LOC_columns']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy+FeatSel.LOC_columns
-# Comb['Utt_VoiceQuality+Utt_energy+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy+FeatSel.DEP_columns
-# Comb['Utt_VoiceQuality+Utt_energy+LOC_columns+DEP_columns']=FeatSel.Utt_VoiceQuality+FeatSel.Utt_energy+FeatSel.LOC_columns+FeatSel.DEP_columns
-
-# Comb['Utt_prosodyF0+Utt_VoiceQuality']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality 
-# Comb['Utt_prosodyF0+Utt_VoiceQuality+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns
-# Comb['Utt_prosodyF0+Utt_VoiceQuality+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality+FeatSel.DEP_columns
-# Comb['Utt_prosodyF0+Utt_VoiceQuality+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns+FeatSel.DEP_columns
-
-# Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality
-# Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality+LOC_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality+FeatSel.LOC_columns
-# Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality+FeatSel.DEP_columns
-# Comb['Utt_prosodyF0+Utt_energy+Utt_VoiceQuality+LOC_columns+DEP_columns']=FeatSel.Utt_prosodyF0+FeatSel.Utt_energy+FeatSel.Utt_VoiceQuality+ FeatSel.LOC_columns+ FeatSel.DEP_columns
 
 
 
@@ -248,12 +156,8 @@ Top_ModuleColumn_mapping_dict['baselineFeats']=FeatSel.Baseline_comb.copy()
 featuresOfInterest=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
 
 
-# label_choose=['ADOS_C','Multi1','Multi2','Multi3','Multi4']
-# label_choose=['ADOS_S','ADOS_C']
-# label_choose=['ADOS_D']
 label_choose=['ADOS_C']
-# label_choose=['ADOS_S']
-# label_choose=['ADOS_cate','ASDTD']
+
 
 pearson_scorer = make_scorer(pearsonr, greater_is_better=False)
 
@@ -272,12 +176,7 @@ class ADOSdataset():
         self.LabelType['ASDTD']='classification'
         self.Fractionfeatures_str='Features/artuculation_AUI/Vowels/Fraction/*.pkl'    
         self.FeatureCombs=Dict()
-        # self.FeatureCombs['TD_normal vs ASDSevere_agesexmatch']=['df_formant_statistic_TD_normal', 'df_formant_statistic_agesexmatch_ASDSevere']
-        # self.FeatureCombs['TD_normal vs ASDMild_agesexmatch']=['df_formant_statistic_TD_normal', 'df_formant_statistic_agesexmatch_ASDMild']
-        # self.FeatureCombs['Notautism vs ASD']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_ASD']
-        # self.FeatureCombs['ASD vs Autism']=['df_formant_statistic_77_ASD', 'df_formant_statistic_77_Autism']
-        # self.FeatureCombs['Notautism vs Autism']=['df_formant_statistic_77_Notautism', 'df_formant_statistic_77_Autism']
-    
+
         # self._FeatureBuild()
     def Get_FormantAUI_feat(self,label_choose,pickle_path,featuresOfInterest=['MSB_f1','MSB_f2','MSB_mix'],filterbyNum=True,**kwargs):
         self.featuresOfInterest=featuresOfInterest
@@ -423,15 +322,9 @@ if args.Mergefeatures:
 # =============================================================================
 # Model parameters
 # =============================================================================
-# C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
-# C_variable=np.array(np.arange(0.1,1.1,0.2))
-# C_variable=np.array([0.1,0.5,0.9])
-# epsilon=np.array(np.arange(0.1,1.5,0.1) )
+
 epsilon=np.array([0.001,0.01,0.1,0.5,1,5,10.0,25,50,75,100])
-# C_variable=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
-# epsilon=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
-# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.2))  )
-# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.1))  )
+
 n_estimator=[2, 4, 8, 16, 32, 64]
 
 
@@ -451,26 +344,7 @@ CV_settings=10
 
 '''
 ###############################################################################
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#                   'parameters':{'model__alpha':np.arange(0,1,0.25),\
-#                                 'model__l1_ratio': np.arange(0,1,0.25)}} #Just a initial value will be changed by parameter tuning
-                                                    ## l1_ratio = 1 is the lasso penalty
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#                   'parameters':{'alpha':[0.25,],\
-#                                 'l1_ratio': [0.5]}} #Just a initial value will be changed by parameter tuning
-    
-    
-# from sklearn.neural_network import MLPRegressor
-# Classifier['MLP']={'model':MLPRegressor(),\
-#                   'parameters':{'random_state':[1],\
-#                                 'hidden_layer_sizes':[(40,),(60,),(80,),(100)],\
-#                                 'activation':['relu'],\
-#                                 'solver':['adam'],\
-#                                 'early_stopping':[True],\
-#                                 # 'max_iter':[1000],\
-#                                 # 'penalty':['elasticnet'],\
-#                                 # 'l1_ratio':[0.25,0.5,0.75],\
-#                                 }}
+
 
 Classifier['SVR']={'model':sklearn.svm.SVR(),\
                   'parameters':{
@@ -479,32 +353,6 @@ Classifier['SVR']={'model':sklearn.svm.SVR(),\
                     'model__kernel': ['rbf'],\
                     # 'gamma': ['auto'],\
                                 }}
-
-# Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
-#                   'parameters':{'fit_intercept':[True],\
-#                                 }}
-###############################################################################
-    
-    
-# Classifier['XGBoost']={'model':xgboost.sklearn.XGBRegressor(),\
-#                   'parameters':{'fit_intercept':[True,False],\
-#                                 }}    
-    
-# Classifier['SVR']={'model':sklearn.svm.SVR(),\
-#                   'parameters':{'C':[50],\
-#                     'kernel': ['rbf'],\
-#                                 }}    
-    
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#               'parameters':{'alpha':[0.1, 0.5, 1],\
-#                             'l1_ratio': [0.1, 0.5, 1]}} #Just a initial value will be changed by parameter tuning
-    
-#                                                    # l1_ratio = 1 is the lasso penalty
-
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#               'parameters':{'alpha':[0.5],\
-#                             'l1_ratio': [0.5]}} #Just a initial value will be changed by parameter tuning
-#                                                   # l1_ratio = 1 is the lasso penalty
 
 
 

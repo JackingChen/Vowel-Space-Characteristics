@@ -430,8 +430,3 @@ for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
     print('generated at', outDfPath, \
           "Syncrony_measure_of_variance_phonation_{knn_weights}_{knn_neighbors}_{Reorder_type}_{dataset_role}.pkl".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type))
     print("\n\n\n\n")
-    # df_syncrony_measurement=df_syncrony_measurement_phonation_all_denan
-    # lst=[]
-    # for col in df_syncrony_measurement.columns:
-    #     if df_syncrony_measurement[col].isnull().values.any():
-    #         lst.append(col)

@@ -219,6 +219,8 @@ def Get_aligned_sequences(ref, hype, error_info):
         if element=="e" or element=="s":
             utt_human_ali=utt_human_ali.append(ref.iloc[human_ali_idx])
             utt_hype_ali=utt_hype_ali.append(hype.iloc[hype_ali_idx])
+            # utt_human_ali = pd.concat([utt_human_ali, pd.DataFrame(ref.iloc[human_ali_idx])], ignore_index=True)
+            # utt_hype_ali = pd.concat([utt_hype_ali, pd.DataFrame(hype.iloc[hype_ali_idx])], ignore_index=True)
             human_ali_idx+=1
             hype_ali_idx+=1
         elif element=="i":
@@ -267,6 +269,10 @@ def Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb_cmp,Align_Ori
             utt_hype['utt']=keys
         Formant_people_symb_total['cmp'][people]=Formant_people_symb_total['cmp'][people].append(utt_human)
         Formant_people_symb_total['ori'][people]=Formant_people_symb_total['ori'][people].append(utt_hype)
+        # Formant_people_symb_total['cmp'][people] = \
+        #     pd.concat([Formant_people_symb_total['cmp'][people], pd.DataFrame(utt_human)], ignore_index=True)
+        # Formant_people_symb_total['ori'][people] = \
+        #     pd.concat([Formant_people_symb_total['ori'][people], pd.DataFrame(utt_hype)], ignore_index=True)
     return Formant_people_symb_total
 
 def Gather_info_certainphones(Formant_people_symb_total,PhoneMapp_dict,PhoneOfInterest,):
@@ -440,6 +446,7 @@ Info_name_sex_TD=df_labels_TD[['name','sex','age_year']].copy()
 Info_name_sex_TD.loc[Info_name_sex_TD['sex']==1,'sex']='male'
 Info_name_sex_TD.loc[Info_name_sex_TD['sex']==2,'sex']='female'
 
+# Info_name_sex = pd.concat([Info_name_sex, pd.DataFrame(Info_name_sex_TD)], ignore_index=True)
 Info_name_sex=Info_name_sex.append(Info_name_sex_TD)
 from addict import  Dict
 ''' codings of filename '''

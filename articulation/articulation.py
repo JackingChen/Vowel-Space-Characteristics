@@ -277,7 +277,7 @@ class Articulation:
                 u=df_vowel[df_vowel['vowel']=='u:'][self.Inspect_features].mean()
                 i=df_vowel[df_vowel['vowel']=='i:'][self.Inspect_features].mean()
             
-                numerator=u[1] + a[1] + i[0] + u[0]
+                numerator=u[1] + a[1] + i[0] + u[0]  #normalization term: omega in TASLP 
                 demominator=i[1] + a[0]
 
                 
@@ -299,9 +299,6 @@ class Articulation:
                     for index, row in rows.iterrows():
                         x, mc = row.values.reshape(groups_num,1), class_feature_means[c].values.reshape(groups_num,1)
                         class_variance=((x - mc)).dot(((x - mc)).T).astype(float)
-                        # class_variance=((x - mc) / mc).dot(((x - mc) / mc).T).astype(float)
-                        # class_variance=((x - mc) / numerator).dot(((x - mc) / numerator).T).astype(float)
-                        # class_variance=( x  / mc).dot(( x / mc).T).astype(float)
                         s += class_variance
                         
                     within_class_scatter_matrix += s
@@ -317,9 +314,6 @@ class Articulation:
                     mc, m = class_feature_means[c].values.reshape(groups_num,1), feature_means[self.Inspect_features].values.reshape(groups_num,1)
                     
                     between_class_variance = n * ( (mc - m)).dot(((mc - m)).T)
-                    # between_class_variance = n * ( (mc - m) / m).dot(((mc - m) / m).T)
-                    # between_class_variance = n * ( (mc - m) / numerator ).dot(((mc - m) / numerator ).T)
-                    # between_class_variance = n * ( mc/ m).dot((mc / m).T)
                     
                     between_class_scatter_matrix += between_class_variance
                 between_class_scatter_matrix_norm = between_class_scatter_matrix / n_samples / numerator**2

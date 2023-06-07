@@ -96,3 +96,6 @@ def multi_find(s, r):
     return(_complete)
 
 
+def debug_print(*args, **kwargs):
+    print("DEBUG", *args, **kwargs)
+

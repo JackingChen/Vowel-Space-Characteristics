@@ -22,6 +22,7 @@ label_path=base_dir+'ADOS_label20220525.xlsx'
 label_raw=pd.read_excel(label_path)
 Labelfile_TD='/media/jack/workspace/DisVoice/data/ADOS_TD_Label20220219.xlsx'
 df_labels_TD=pd.read_excel(Labelfile_TD)
+# label_raw = pd.concat([label_raw, pd.DataFrame(df_labels_TD)], ignore_index=True)
 label_raw=label_raw.append(df_labels_TD)
 #double check label and feature
 #check_df=pd.DataFrame([],columns=['label','feature'])
