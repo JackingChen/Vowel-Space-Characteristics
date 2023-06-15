@@ -1,311 +1,11 @@
-
-# -*- coding: utf-8 -*-
-"""
-Created on Jul 21 2017
-
-@author: J. C. Vasquez-Correa
-"""
-
-from scipy.io.wavfile import read
-import os
-import sys
-import numpy as np
-import matplotlib.pyplot as plt
-plt.rcParams["font.family"] = "Times New Roman"
-import matplotlib.mlab as mlab
-import math
-import pysptk
-try:
-    from .articulation_functions import extractTrans, V_UV
-except: 
-    from articulation_functions import extractTrans, V_UV
-import uuid
-import pandas as pd
-import torch
-from tqdm import tqdm
-path_app = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(path_app+'/../')
-import praat.praat_functions as praat_functions
-# from script_mananger import script_manager
-from scipy import stats
-from utils_jack import dynamic2statict_artic, save_dict_kaldimat, get_dict, f_classif
-import re
-from itertools import combinations
-from addict import Dict
-from scipy.spatial import ConvexHull, convex_hull_plot_2d
-import sklearn
-from sklearn.neighbors import KernelDensity
-from sklearn import preprocessing
-from scipy.stats import pearsonr , spearmanr, kendalltau
-import scipy
-
-def cosAngle(a, b, c):
-    # angles between line segments (Python) from https://manivannan-ai.medium.com/find-the-angle-between-three-points-from-2d-using-python-348c513e2cd
-    cosine_angle = np.dot((b-a), (b-c)) / (np.linalg.norm((b-a)) * np.linalg.norm((b-c)))
-    angle = np.arccos(cosine_angle)
-    return np.degrees(angle)
-
-class Extract_F1F2:
-
-    """Extract the articulation features from an audio file
-    
-    >>> articulation=Articulation()
-    >>> file_audio="../audios/001_ddk1_PCGITA.wav"
-    >>> features1=articulation.extract_features_file(file_audio, static=True, plots=True, fmt="npy")
-    >>> features2=articulation.extract_features_file(file_audio, static=True, plots=True, fmt="dataframe")
-    >>> features3=articulation.extract_features_file(file_audio, static=False, plots=True, fmt="torch")
-    >>> articulation.extract_features_file(file_audio, static=False, plots=False, fmt="kaldi", kaldi_file="./test")
-    
-    >>> path_audio="../audios/"
-    >>> features1=articulation.extract_features_path(path_audio, static=True, plots=False, fmt="npy")
-    >>> features2=articulation.extract_features_path(path_audio, static=True, plots=False, fmt="csv")
-    >>> features3=articulation.extract_features_path(path_audio, static=False, plots=True, fmt="torch")
-    >>> articulation.extract_features_path(path_audio, static=False, plots=False, fmt="kaldi", kaldi_file="./test.ark")
-    """
-    
-    def __init__(self,maxf0=400, minf0=75):
-        self.pitch_method="praat"
-        self.sizeframe=0.04
-        self.step=0.02
-        self.nB=22
-        self.nMFCC=12
-        self.minf0=75
-        self.maxf0=400
-        self.voice_bias=-0.2
-        self.len_thr_miliseconds=270.0
-        self.PATH = os.path.dirname(os.path.abspath(__file__))
-        
-    def extract_features_file(self,audio, static=True, plots=False, fmt="npy", kaldi_file=""):
-        fs, data_audio=read(audio)
-        #normalize raw wavform
-        data_audio=data_audio-np.mean(data_audio)
-        data_audio=data_audio/float(np.max(np.abs(data_audio)))
-        size_frameS=self.sizeframe*float(fs)
-        size_stepS=self.step*float(fs)
-        overlap=size_stepS/size_frameS
-    
-        if self.pitch_method == 'praat':
-            name_audio=audio.split('/')
-            temp_uuid='articulation'+name_audio[-1][0:-4]
-            if not os.path.exists(self.PATH+'/../tempfiles/'):
-                os.makedirs(self.PATH+'/../tempfiles/')
-            temp_filename_vuv=self.PATH+'/../tempfiles/tempVUV'+temp_uuid+'.txt'
-            temp_filename_f0=self.PATH+'/../tempfiles/tempF0'+temp_uuid+'.txt'
-            praat_functions.praat_vuv(audio, temp_filename_f0, temp_filename_vuv, time_stepF0=self.step, minf0=self.minf0, maxf0=self.maxf0)
-            F0,_=praat_functions.decodeF0(temp_filename_f0,len(data_audio)/float(fs),self.step)
-            segmentsFull,segmentsOn,segmentsOff=praat_functions.read_textgrid_trans(temp_filename_vuv,data_audio,fs,self.sizeframe)
-            os.remove(temp_filename_vuv)
-            os.remove(temp_filename_f0)
-        elif self.pitch_method == 'rapt':
-            data_audiof=np.asarray(data_audio*(2**15), dtype=np.float32)
-            F0=pysptk.sptk.rapt(data_audiof, fs, int(size_stepS), min=self.minf0, max=self.maxf0, voice_bias=self.voice_bias, otype='f0')
-
-            segmentsOn=V_UV(F0, data_audio, fs, 'onset')
-            segmentsOff=V_UV(F0, data_audio, fs, 'offset')
-            
-            
-        name_audio=audio.split('/')
-        temp_uuid='artic'+name_audio[-1][0:-4]
-        if not os.path.exists(self.PATH+'/../tempfiles/'):
-            os.makedirs(self.PATH+'/../tempfiles/')
-        temp_filename=self.PATH+'/../tempfiles/tempFormants'+temp_uuid+'.txt'
-        praat_functions.praat_formants(audio, temp_filename,self.sizeframe,self.step)
-        [F1, F2]=praat_functions.decodeFormants(temp_filename)
-
-        os.remove(temp_filename)
-        
-        return [F1, F2]
-
-class Normalizer:
-    def __init__(self):
-        self.mean = None
-        self.std = None
-    def _func_proposed(self,val,omega):
-        return np.float64(val) / omega
-
-    def _func1(self,val):
-        return 1127 *  math.log(np.float64(val) / 700 + 1)
-    def func1(self,val):  #為了解決lambda function不能被serialize的問題
-        return self._func1(val)
-    def _func2(self,val):
-        return 21.4 *  math.log(0.00437*np.float64(val)+ 1)
-    def func2(self,val):
-        return self._func2(val)
-    def _func3(self,val):
-        return 26.81 *  (np.float64(val) / (1960 + np.float64(val))) - 0.53
-    def func3(self,val):
-        return self._func3(val)
-    def _func4(self,val, sex):
-        if sex == 1:
-            return 26.81 *  (np.float64(val) / (1960 + np.float64(val))) - 0.53
-        elif sex == 2:
-            return (26.81 *  (np.float64(val) / (1960 + np.float64(val))) - 0.53) - 1
-        else:
-            raise ValueError()
-    def func4(self,val, sex):
-        return self._func4(val,sex)
-    def _func7(self,val, epsilon=1e-7):
-        if val ==0:  #epsilon是拿來處理log 0 = 無限大的問題
-            val=epsilon
-        return math.log(np.float64(val))   
-    def func7(self,val):
-        return self._func7(val) 
-    def _func10(self,val, Fmax):
-        return np.float64(val) /  Fmax if Fmax != 0 else val
-    def func10(self,val, Fmax):
-        return self._func10(val, Fmax)
-    def _func11(self,val, Fmax, Fmin):
-        return 999 * (np.float64(val) - Fmin)/(Fmax - Fmin)
-    def func11(self,val, Fmax, Fmin):
-        return self._func11(val, Fmax, Fmin)
-    def _func13(self,val, centroid):
-        return np.float64(val) / centroid
-    def func13(self,val, centroid):
-        return self._func13(val, centroid)
-    def _func14(self,val, centroid):
-        return np.float64(val) / centroid
-    def func14(self,val, centroid):
-        return self._func14(val, centroid)
-    def _func15(self,val, mu, rho):
-        return (np.float64(val) - mu)/ rho
-    def func15(self,val, mu, rho):
-        return self._func15(val, mu, rho)
-    def _func16(self,val, logmu, epsilon=1e-7):
-        if val ==0:  #epsilon是拿來處理log 0 = 無限大的問題
-            val=epsilon
-        return math.log(np.float64(val)) - logmu
-    def func16(self,val, logmu):
-        return self._func16(val, logmu)
-    def _func17(self,val, logmu, epsilon=1e-7):
-        if val < epsilon:  #epsilon是拿來處理log 0 = 無限大的問題
-            val=epsilon
-        return math.log(np.float64(val)) - logmu
-    def func17(self,val, logmu):
-        return self._func17(val, logmu)
-    def apply_function(self, df, func, column=['F1','F2']):
-        new_df = pd.DataFrame()
-        if func.__name__=='func10':
-            for col in df.columns:
-                if col not in  column:
-                    new_df[col] = df[col]
-                else:
-                    F_max = df[col].max()
-                    new_df[col] = df[col].apply(func, args=(F_max,))
-        elif func.__name__=='func11':
-            for col in df.columns:
-                if col not in  column:
-                    new_df[col] = df[col]
-                else:
-                    F_max = df[col].max()
-                    F_min = df[col].min()
-                    new_df[col] = df[col].apply(func, args=(F_max,F_min, ))
-        elif func.__name__=='func13':
-            try:
-                from .HYPERPARAM import phonewoprosody
-            except:
-                from HYPERPARAM import phonewoprosody
-            PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
-            PhoneOfInterest=sorted(list(PhoneMapp_dict.keys()))
-            
-            F12_val_dict2={k:[] for k in PhoneOfInterest}
-            for k in PhoneOfInterest:
-                v=df[df['vowel']==k]
-                F12_val_dict2[k]=np.mean(v[column],axis=0)
-            u=F12_val_dict2['u:'] # Get the averaged middle point formant values of the phone
-            a=F12_val_dict2['A:'] # Get the averaged middle point formant values of the phone
-            i=F12_val_dict2['i:'] # Get the averaged middle point formant values of the phone
-            FormantIdx_map={'F1':0,'F2':1}
-            for col in df.columns:
-                if col not in  column:
-                    new_df[col] = df[col]
-                else:
-                    F1_min=min(u['F1'],a['F1'],i['F1'])
-                    F1_max=max(u['F1'],a['F1'],i['F1'])
-                    F2_max=max(u['F2'],a['F2'],i['F2'])
-                    if col=="F1":
-                        centroid=(F1_min+F1_max+i[FormantIdx_map["F1"]])/3
-                    elif col=="F2":
-                        centroid=(F2_max+i[FormantIdx_map["F1"]])/2
-                    new_df[col] = df[col].apply(func, args=(centroid,))
-        elif func.__name__=='func14':
-            try:
-                from .HYPERPARAM import phonewoprosody
-            except:
-                from HYPERPARAM import phonewoprosody
-            PhoneMapp_dict=phonewoprosody.PhoneMapp_dict
-            PhoneOfInterest=sorted(list(PhoneMapp_dict.keys()))
-            
-            F12_val_dict2={k:[] for k in PhoneOfInterest}
-            for k in PhoneOfInterest:
-                v=df[df['vowel']==k]
-                F12_val_dict2[k]=np.mean(v[column],axis=0)
-            u=F12_val_dict2['u:'] # Get the averaged middle point formant values of the phone
-            a=F12_val_dict2['A:'] # Get the averaged middle point formant values of the phone
-            i=F12_val_dict2['i:'] # Get the averaged middle point formant values of the phone
-            FormantIdx_map={'F1':0,'F2':1}
-            for col in df.columns:
-                if col not in  column:
-                    new_df[col] = df[col]
-                else:
-                    F1_min=min(u['F1'],a['F1'],i['F1'])
-                    F1_max=max(u['F1'],a['F1'],i['F1'])
-                    F2_min=min(u['F2'],a['F2'],i['F2'])
-                    F2_max=max(u['F2'],a['F2'],i['F2'])
-                    if col=="F1":
-                        centroid=(F1_min+F1_max+F1_min)/3
-                    elif col=="F2":
-                        centroid=(F2_max+F2_min)/2
-                    new_df[col] = df[col].apply(func, args=(centroid,))
-        elif func.__name__=='func15':
-            for col in df.columns:
-                if col not in  column:
-                    new_df[col] = df[col]
-                else:
-                    mu, rho = df[col].mean(), df[col].std()
-                    new_df[col] = df[col].apply(func, args=(mu,rho,))
-        elif func.__name__=='func16':
-            for col in df.columns:
-                if col not in  column:
-                    new_df[col] = df[col]
-                else:
-                    logmu = np.log1p(df[col]).mean()
-                    new_df[col] = df[col].apply(func, args=(logmu,))
-        elif func.__name__=='func17':
-            logmu = np.log1p(df[column]).mean().mean()
-            new_df[column] = df[column].applymap(lambda x: func(x, logmu))
-            # 将未指定的列复制到新的DataFrame中
-            for col in df.columns:
-                if col not in  column:
-                    new_df[col] = df[col]
-        else:
-            new_df[column] = df[column].applymap(func)
-            # 将未指定的列复制到新的DataFrame中
-            for col in df.columns:
-                if col not in  column:
-                    new_df[col] = df[col]
-        return new_df
-
-
 class Articulation:
-    def __init__(self, Stat_med_str_VSA='mean', Inspect_features=['F1','F2'],Normalize_way='proposed'):
+    def __init__(self, Stat_med_str_VSA='mean', Inspect_features=['F1','F2']):
+        
+
         self.Stat_med_str_VSA=Stat_med_str_VSA
         self.Inspect_features=Inspect_features
         self.normalizer=Normalizer()
         self.N=3
-        self.Normalize_way=Normalize_way
-        self._Init_NormalizeFunc()
-    def _Init_NormalizeFunc(self):
-        self.Normalize_Functions={}
-        self.Normalize_Functions['func1']=self.normalizer.func1
-        self.Normalize_Functions['func2']=self.normalizer.func2
-        self.Normalize_Functions['func3']=self.normalizer.func3
-        self.Normalize_Functions['func7']=self.normalizer.func7
-        self.Normalize_Functions['func10']=self.normalizer.func10
-        self.Normalize_Functions['func13']=self.normalizer.func13
-        self.Normalize_Functions['func14']=self.normalizer.func14
-        self.Normalize_Functions['func15']=self.normalizer.func15
-        self.Normalize_Functions['func16']=self.normalizer.func16
-        self.Normalize_Functions['func17']=self.normalizer.func17
     def _updateN(self,N):
         self.N=N
     def calculate_features(self,Vowels_AUI,Label,PhoneOfInterest,label_choose_lst=['ADOS_C'],\
@@ -325,6 +25,12 @@ class Articulation:
         for people in Vowels_AUI.keys(): #update 2021/05/27 fixed 
             RESULT_dict={}
             F12_raw_dict=Vowels_AUI[people]
+            # F12_val_dict={k:[] for k in PhoneOfInterest}
+            # for k,v in F12_raw_dict.items():
+            #     if self.Stat_med_str_VSA == 'mode':
+            #         F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v,axis=0)[0].ravel()
+            #     else:
+            #         F12_val_dict[k]=Statistic_method[self.Stat_med_str_VSA](v[self.Inspect_features],axis=0)
             RESULT_dict['u_num'], RESULT_dict['a_num'], RESULT_dict['i_num']=\
                 len(Vowels_AUI[people]['u:']),len(Vowels_AUI[people]['A:']),len(Vowels_AUI[people]['i:'])
             
@@ -333,7 +39,11 @@ class Articulation:
             RESULT_dict['sex']=Label.label_raw['sex'][Label.label_raw['name']==people].values[0]
             RESULT_dict['age']=Label.label_raw['age_year'][Label.label_raw['name']==people].values[0]
             RESULT_dict['Module']=Label.label_raw['Module'][Label.label_raw['name']==people].values[0]
-
+            
+            # u=F12_val_dict['u:'] # Get the averaged middle point formant values of the phone
+            # a=F12_val_dict['A:'] # Get the averaged middle point formant values of the phone
+            # i=F12_val_dict['i:'] # Get the averaged middle point formant values of the phone
+        
             # Handle the case when the sample is not enough to calculate LOC
             if RESULT_dict['u_num']<self.N or RESULT_dict['a_num']<self.N or RESULT_dict['i_num']<self.N:
                 u_num= RESULT_dict['u_num'] if type(RESULT_dict['u_num'])==int else 0
@@ -349,11 +59,27 @@ class Articulation:
                     df_RESULT_list[label_choose]=RESULT_dict[label_choose][0]
                 df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
                 continue
+            
+            # numerator=u[1] + a[1] + i[0] + u[0]
+            # demominator=i[1] + a[0]
+            # RESULT_dict['FCR']=np.float(numerator/demominator)
+            # RESULT_dict['FCR+AUINum']=RESULT_dict['FCR'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            # RESULT_dict['FCR*AUINum']=RESULT_dict['FCR'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            
+            # RESULT_dict['VSA1']=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
+            # RESULT_dict['VSA1+AUINum']=RESULT_dict['VSA1'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            # RESULT_dict['VSA1*AUINum']=RESULT_dict['VSA1'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
             # =============================================================================
             ''' F-statistics, between class variance Valid Formant measure '''
             
             # =============================================================================
             F12_raw_dict=Vowels_AUI[people]
+            # numerator2=F12_raw_dict['u:']['F2'].sum() + F12_raw_dict['A:']['F2'].sum() + F12_raw_dict['i:']['F1'].sum() + F12_raw_dict['u:']['F1'].sum()
+            # demominator2=F12_raw_dict['i:']['F2'].sum() + F12_raw_dict['A:']['F1'].sum()
+            # RESULT_dict['FCR2']=np.float(numerator2/demominator2)
+            # u=F12_raw_dict['u:'] # Get the list of F1 F2 of a certain phone
+            # a=F12_raw_dict['A:'] # Get the list of F1 F2 of a certain phone
+            # i=F12_raw_dict['i:'] # Get the list of F1 F2 of a certain phone
             def Get_DfVowels(F12_raw_dict,Inspect_features=['F1','F2']):
                 df_vowel = pd.DataFrame()
                 for keys in F12_raw_dict.keys():
@@ -678,6 +404,7 @@ class Articulation:
                                         10 - 50 are better choices")
                 df_vowel=self.KDE_Filtering(df_vowel,THRESHOLD=KDE_THRESHOLD,scale_factor=100)
             
+            
             # =============================================================================
             F12_val_dict2={k:[] for k in PhoneOfInterest}
             for k in PhoneOfInterest:
@@ -695,21 +422,31 @@ class Articulation:
             numerator=u[1] + a[1] + i[0] + u[0] #normalization term: omega in TASLP 
             demominator=i[1] + a[0]
             RESULT_dict['FCR2']=np.float64(numerator/demominator)
+            # RESULT_dict['FCR2_sum']=np.float((u_sum[1] + a_sum[1] + i_sum[0] + u_sum[0])/(i_sum[1] + a_sum[0]))
+            # RESULT_dict['FCR2+AUINum']=RESULT_dict['FCR2'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            # RESULT_dict['FCR2*AUINum']=RESULT_dict['FCR2'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            # RESULT_dict['FCR2_uF2']=np.float(u[1]/demominator)
+            # RESULT_dict['FCR2_aF2']=np.float(a[1]/demominator)
+            # RESULT_dict['FCR2_iF1']=np.float(i[0]/demominator)
+            # RESULT_dict['FCR2_uF1']=np.float(u[0]/demominator)
+            # RESULT_dict['aF2']=np.float(a[1])
+            # RESULT_dict['aF1+iF2']=np.float(demominator)
+            # RESULT_dict['VAI_aF2']=np.float(demominator/a[1])
             RESULT_dict['VSA2']=np.abs((i[0]*(a[1]-u[1]) + a[0]*(u[1]-i[1]) + u[0]*(i[1]-a[1]) )/2)
+            # RESULT_dict['VSA2+AUINum']=RESULT_dict['VSA2'] + (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
+            # RESULT_dict['VSA2*AUINum']=RESULT_dict['VSA2'] * (RESULT_dict['u_num']+ RESULT_dict['a_num']+ RESULT_dict['i_num'])
             # =============================================================================
+            
             
             cluster_str=','.join(sorted(F12_raw_dict.keys()))
             #Level of clustering features using three vowel clusters
             # =============================================================================
             # Normalization
-            if self.Normalize_way!=None:
-                self.Normalize_Functions['proposed']=lambda x: self.normalizer._func_proposed(x, omega=numerator)
-                self.Normalize_Functions['func4']=lambda x: self.normalizer._func4(x, sex=RESULT_dict['sex'])
-                func_in=self.Normalize_Functions[self.Normalize_way]
-                df_vowel_norm=self.normalizer.apply_function(df=df_vowel,\
-                            func=func_in,\
-                            column=self.Inspect_features)
-                df_vowel=df_vowel_norm
+            func_in=lambda x: self.normalizer._func_proposed(x, omega=numerator)
+            df_vowel_norm=self.normalizer.apply_function(df=df_vowel,\
+                          func=func_in,\
+                          column=self.Inspect_features)
+            df_vowel=df_vowel_norm
             # =============================================================================
             RESULT_dict=Store_FeatVals(RESULT_dict,df_vowel,self.Inspect_features, cluster_str=cluster_str)    
             #Baseline feature ConvexHulls
@@ -720,12 +457,28 @@ class Articulation:
             
             #Calculate relative angles
             absolute_ang, relative_ang = Calculate_relative_angles(df_vowel, additional_infos=False)
+            # [RESULT_dict['absAng_a'], RESULT_dict['absAng_u'], RESULT_dict['absAng_i']]=absolute_ang
+            # [RESULT_dict['ang_ai'], RESULT_dict['ang_iu'], RESULT_dict['ang_ua']]=relative_ang
+            # RESULT_dict['Angles']=RESULT_dict['ang_ai']*RESULT_dict['ang_iu']*RESULT_dict['ang_ua']
             
             [RESULT_dict['dcov_12'], RESULT_dict['dcorr_12'], RESULT_dict['dvar_1'], RESULT_dict['dvar_2']],\
                 [RESULT_dict['dcor_a'],RESULT_dict['dcor_u'],RESULT_dict['dcor_i']], RESULT_dict['pear_12'],\
                     RESULT_dict['spear_12'],RESULT_dict['kendall_12']=Calculate_distanceCorr(df_vowel)
-            RESULT_dict['pointDistsTotal']=Calculate_pointDistsTotal(df_vowel)            
-
+            RESULT_dict['pointDistsTotal']=Calculate_pointDistsTotal(df_vowel)
+            # RESULT_dict['repulsive_force']=Calculate_pair_distrib_dist(df_vowel, vowelCol_name='vowel')
+            
+            
+            ''' Get partial between/within class variances, (A:, i:) (A:, u:) (i:, u:)'''
+            # comb2 = combinations(F12_raw_dict.keys(), 2)
+            # comb3 = combinations(F12_raw_dict.keys(), 3)
+            # cluster_vars=list(comb2) + list(comb3)
+            # cluster_vars=list(comb3)
+            # for cluster_lsts in cluster_vars:
+            #     F12_tmp={cluster:F12_raw_dict[cluster] for cluster in cluster_lsts}
+            #     df_vowel=Get_DfVowels(F12_tmp,self.Inspect_features)
+            #     cluster_str=','.join(sorted(F12_tmp.keys()))
+            #     RESULT_dict=Store_FeatVals(RESULT_dict,df_vowel,self.Inspect_features, cluster_str=cluster_str)  
+            
             
             ''' End of feature calculation '''
             # =============================================================================

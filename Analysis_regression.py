@@ -337,37 +337,65 @@ for exp_str in FeatureLabelMatch_manual:
 
 '''
 # =============================================================================
-if args.Mergefeatures:
-    Merg_filepath={}
-    Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/Formant_AUI_tVSAFCRFvals_KID_FromASD_DOCKID.pkl'
-    Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_FromASD_DOCKID.pkl'
-    Merg_filepath['dynamic_feature_LOC']='Features/artuculation_AUI/Interaction/Formants/Syncrony_measure_of_variance_DKIndividual_ASD_DOCKID.pkl'
-    Merg_filepath['dynamic_feature_phonation']='Features/artuculation_AUI/Interaction/Phonation/Syncrony_measure_of_variance_phonation_ASD_DOCKID.pkl'
-    
-    merge_out_path='Features/RegressionMerged_dfs/'
-    if not os.path.exists(merge_out_path):
-        os.makedirs(merge_out_path)
-    
-    df_infos_dict=Dict()
-    for keys, paths in Merg_filepath.items():
-        df_infos_dict[keys]=pickle.load(open(paths,"rb")).sort_index()
-    
-    Merged_df_dict=Dict()
-    comb1 = list(combinations(list(Merg_filepath.keys()), 1))
-    comb2 = list(combinations(list(Merg_filepath.keys()), 2))
-    for c in comb1:
-        e1=c[0]
-        Merged_df_dict[e1]=df_infos_dict[e1]
-        OutPklpath=merge_out_path+ e1 + ".pkl"
-        pickle.dump(Merged_df_dict[e1],open(OutPklpath,"wb"))
+
+def MERGEFEATURES():
+    # =============================================================================
+    '''
+
+        Feature merging function
         
+        Ths slice of code provide user to manually make functions to combine df_XXX_infos
+
+    '''
+    # =============================================================================
+    # dataset_role='ASD_DOCKID'
+    for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
+        Merg_filepath={}
+        Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/Formant_AUI_tVSAFCRFvals_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
+        # Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
+        Merg_filepath['dynamic_feature_LOC']='Features/artuculation_AUI/Interaction/Formants/Syncrony_measure_of_variance_DKIndividual_{dataset_role}.pkl'.format(dataset_role=dataset_role)
+        Merg_filepath['dynamic_feature_phonation']='Features/artuculation_AUI/Interaction/Phonation/Syncrony_measure_of_variance_phonation_{dataset_role}.pkl'.format(dataset_role=dataset_role)
         
-    for c in comb2:
-        e1, e2=c
+        merge_out_path='Features/ClassificationMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/{dataset_role}/'.format(
+            knn_weights=knn_weights,
+            knn_neighbors=knn_neighbors,
+            Reorder_type=Reorder_type,
+            dataset_role=dataset_role
+            )
+        if not os.path.exists(merge_out_path):
+            os.makedirs(merge_out_path)
+        
+        df_infos_dict=Dict()
+        for keys, paths in Merg_filepath.items():
+            df_infos_dict[keys]=pickle.load(open(paths,"rb")).sort_index()
+        
+        Merged_df_dict=Dict()
+        comb1 = list(combinations(list(Merg_filepath.keys()), 1))
+        comb2 = list(combinations(list(Merg_filepath.keys()), 2))
+        for c in comb1:
+            e1=c[0]
+            Merged_df_dict[e1]=df_infos_dict[e1]
+            OutPklpath=merge_out_path+ e1 + ".pkl"
+            pickle.dump(Merged_df_dict[e1],open(OutPklpath,"wb"))
+            
+            
+        for c in comb2:
+            e1, e2=c
+            Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+            
+            OutPklpath=merge_out_path+'+'.join(c)+".pkl"
+            pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+        # Condition for : Columns_comb3 = All possible LOC feature combination + phonation_proximity_col
+        c = ('static_feautre_LOC', 'dynamic_feature_LOC', 'dynamic_feature_phonation')
+        e1, e2, e3=c
+        
         Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
-        
+        Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],df_infos_dict[e3])
+        # Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],Utt_featuresCombinded_dict[role])
         OutPklpath=merge_out_path+'+'.join(c)+".pkl"
         pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+if args.Mergefeatures:
+    MERGEFEATURES()
         
     
     

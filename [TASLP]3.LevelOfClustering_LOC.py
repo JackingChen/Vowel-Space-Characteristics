@@ -40,7 +40,7 @@ from itertools import combinations
 from statsmodels.formula.api import ols
 from statsmodels.multivariate.manova import MANOVA
 from scipy import stats
-from scipy.stats import spearmanr,pearsonr 
+from scipy.stats import spearmanr,pearsonr, kendalltau
 import statistics 
 import os, glob, sys
 import statsmodels.api as sm
@@ -64,6 +64,19 @@ from scipy import special, stats
 from utils_jack  import Info_name_sex
 import warnings
 import math
+
+
+# 這邊是為了開發 Articulation 準備要用的lib
+from scipy.spatial import ConvexHull, convex_hull_plot_2d
+import scipy
+import sklearn
+from sklearn import preprocessing
+import articulation.HYPERPARAM.FeatureSelect as FeatSel
+def cosAngle(a, b, c):
+    # angles between line segments (Python) from https://manivannan-ai.medium.com/find-the-angle-between-three-points-from-2d-using-python-348c513e2cd
+    cosine_angle = np.dot((b-a), (b-c)) / (np.linalg.norm((b-a)) * np.linalg.norm((b-c)))
+    angle = np.arccos(cosine_angle)
+    return np.degrees(angle)
 
 def Add_label(df_formant_statistic,Label,label_choose='ADOS_cate_C'):
     for people in df_formant_statistic.index:
@@ -184,6 +197,8 @@ def get_args():
                             help='DOC_FromTD_DOCKID |KID_FromTD_DOCKID | DOC_FromASD_DOCKID | KID_FromASD_DOCKID')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
+    parser.add_argument('--Normalize_way', default='proposed',
+                            help='')
 
     args = parser.parse_args()
     return args
@@ -210,6 +225,8 @@ label_choose_lst=args.label_choose_lst # labels are too biased
 role=args.dataset_role
 Stat_med_str=args.Stat_med_str_VSA
 outpklpath=args.inpklpath+"/Session_formants_people_vowel_feat/"
+if args.Normalize_way=='None':
+    args.Normalize_way=None
 if not os.path.exists(outpklpath):
     os.makedirs(outpklpath)
 
@@ -298,63 +315,27 @@ additional_columns=['ADOS_cate_C','dia_num']
 
 label_generate_choose_lst=['ADOS_C'] + additional_columns
 
-class Normalizer:
-    def __init__(self):
-        self.mean = None
-        self.std = None
-    
-    def _func1(self, x):
-        """
-            x should be dataFrame
-        """
-        norm_x = 1127 * x.applymap(lambda val: math.log(float(val) / 700 + 1))
-        return norm_x
-    
-    def transform(self, data):
-        return (data - self.mean) / self.std
-    
-    def fit_transform(self, data):
-        self.fit(data)
-        return self.transform(data)
-
 # 年齡性別的data存在變數:Info_name_sex
-# _func1: 
-normalizer=Normalizer()
-Vowels_AUI_norm=Dict()
-for people in Vowels_AUI.keys():
-    for phone in Vowels_AUI[people].keys():
-        df_Vwls=Vowels_AUI[people][phone]
-        df_Vwls=df_Vwls[args.Inspect_features]
-        df_Vwls_norm=normalizer._func1(df_Vwls)
-        Vowels_AUI_norm[people][phone]=df_Vwls_norm
 
-#               F1           F2
-# text                         
-# A:    626.063374  2211.949605
-# A:    897.777810  1526.367364
-# A:    741.677195  1871.745522
-# A:1   326.671436  1068.048559
-# A:3   880.188256  1674.493077
-# A:3   857.329737  1737.416894
-# A:3   721.434689  1665.090699
-# A:3   444.509805  1476.154364
-# A:4   396.851885  1754.904178
-# A:4   788.004335  1781.307778
-# A:4   722.525178  1797.408315
-# A:5   825.557645  1418.863323
-# A:5   682.699067  1790.946459
-aaa=ccc
 # =============================================================================
-import copy
 
-Vowels_AUI = copy.deepcopy(Vowels_AUI_norm)
 
-=copy.
-
-articulation=Articulation(Stat_med_str_VSA='mean')
+articulation=Articulation(Stat_med_str_VSA='mean',Normalize_way=args.Normalize_way)
 # df_formant_statistic=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst, FILTERING_method='KDE', KDE_THRESHOLD=40)
 df_formant_statistic, SCATTER_matrixBookeep_dict=articulation.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_generate_choose_lst, FILTERING_method='KDE', KDE_THRESHOLD=40,RETURN_scatter_matrix=True)
 pickle.dump(SCATTER_matrixBookeep_dict,open(outpklpath+"/SCATTER_matrixBookeep_dict_{}.pkl".format(role),"wb"))
+
+
+# =============================================================================
+# Inspect_columns=FeatSel.Vowel_dispersion+FeatSel.formant_dependency
+# tolerance=1e-5
+# df_formant_statistic.unit_check(df_formant_statistic,df_formant_statistic,Inspect_columns,tolerance=tolerance)
+
+# =============================================================================
+
+
+
+
 
 # For pseudo acoustic features generation
 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
@@ -395,6 +376,19 @@ df_formant_statistic_77=criterion_filter(df_formant_statistic,\
 pickle.dump(df_formant_statistic_77,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
 if role == 'KID_FromTD_DOCKID' or role ==  'DOC_FromTD_DOCKID':
     pickle.dump(df_formant_statistic,open(outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role),"wb"))
+
+import shutil
+if not args.Normalize_way:
+    args.Normalize_way="None"
+
+
+outFeatpath=f"Features/artuculation_AUI/Vowels/Formants/{args.Normalize_way}/"
+if not os.path.exists(outFeatpath):
+    os.makedirs(outFeatpath)
+Picklepath=outpklpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role)
+Picklepath_Features=outFeatpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role)
+print("Features generated at ", outFeatpath+"Formant_AUI_tVSAFCRFvals_{}.pkl".format(role))
+shutil.copy(Picklepath, Picklepath_Features)
 
 
 

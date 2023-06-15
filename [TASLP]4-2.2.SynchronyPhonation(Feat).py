@@ -7,6 +7,7 @@ Created on Wed Aug  4 12:21:17 2021
 """
 
 '''
+這個腳本是源自舊版本中的[Debug]4-1.CalculatePhonationCoordinationFeatures_GenerateDfscript.py
         This script is a inherited from Analyze_DOCKID_syncrony_formant.py
         1. Data prepare area
             a. Filter out data using by 1.5*IQR
@@ -38,7 +39,7 @@ from scipy.stats import spearmanr,pearsonr
 import statistics 
 import os, glob, sys
 import statsmodels.api as sm
-from varname import nameof
+# from varname import nameof
 from tqdm import tqdm
 import re
 from multiprocessing import Pool, current_process
@@ -59,7 +60,7 @@ from phonation.phonation import  Phonation
 from SlidingWindow import slidingwindow as SW
 
 
-required_path_app = '/homes/ssd1/jackchen/DisVoice/articulation'  # for WER module imported in metric
+required_path_app = '/media/jack/workspace/DisVoice/articulation'  # for WER module imported in metric
 sys.path.append(required_path_app)
 from HYPERPARAM import phonewoprosody, Label
 from HYPERPARAM.PeopleSelect import SellectP_define
@@ -83,9 +84,9 @@ def get_args():
     parser = argparse.ArgumentParser(
         description="Select utterances with entropy values that are close to disribution of target domain data",
         )
-    parser.add_argument('--inpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--inpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--outpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--reFilter', default=False, type=bool,
                             help='')
@@ -94,6 +95,8 @@ def get_args():
     parser.add_argument('--label_choose_lst', default=['ADOS_C'],
                             help=['ADOS_C','dia_num'])
     parser.add_argument('--MinPhoneNum', default=1,
+                            help='path of the base directory')
+    parser.add_argument('--timeseriesLen', default=0,
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
@@ -107,7 +110,7 @@ def get_args():
                             help='')
     parser.add_argument('--knn_weights', default='uniform',
                             help='path of the base directory')
-    parser.add_argument('--knn_neighbors', default=3,  type=int,
+    parser.add_argument('--knn_neighbors', default=2,  type=int,
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
@@ -162,6 +165,34 @@ args = get_args()
 #             df_person_segment_feature_dict[people][role]=df_person_segment_feature
 
 #     return df_person_segment_feature_dict, Vowels_AUI_info_dict, MissingSegment_bag
+def criterion_filter(df_formant_statistic,N=10,\
+                     constrain_sex=-1, constrain_module=-1,constrain_agemax=-1,constrain_ADOScate=-1,constrain_agemin=-1,\
+                     evictNamelst=[],feature_type='Session_formant'):
+    if feature_type == 'Session_formant':
+        filter_bool=np.logical_and(df_formant_statistic['u_num']>N,df_formant_statistic['a_num']>N)
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['i_num']>N)
+    elif feature_type == 'Syncrony_formant':
+        filter_bool=df_formant_statistic['timeSeries_len']>N
+    else:
+        filter_bool=pd.Series([True]*len(df_formant_statistic),index=df_formant_statistic.index)
+    if constrain_sex != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['sex']==constrain_sex)
+    if constrain_module != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['Module']==constrain_module)
+    if constrain_agemax != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['age']<=constrain_agemax)
+    if constrain_agemin != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['age']>=constrain_agemin)
+    if constrain_ADOScate != -1:
+        filter_bool=np.logical_and(filter_bool,df_formant_statistic['ADOS_cate_C']==constrain_ADOScate)
+        
+    if len(evictNamelst)>0:
+        for name in evictNamelst:
+            filter_bool.loc[name]=False
+    # get rid of nan values
+    filter_bool=np.logical_and(filter_bool,~df_formant_statistic.isna().T.any())
+    return df_formant_statistic[filter_bool]
+
 
 def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_dict, People_data_distrib,\
                               PhoneMapp_dict, PhoneOfInterest ,df_general_info,\
@@ -224,7 +255,7 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
     return df_person_segment_feature_dict, Vowels_AUI_info_dict, MissingSegment_bag
 
 def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule,\
-                                         outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+                                         outpath='/media/jack/workspace/DisVoice/articulation/Pickles',\
                                          prefix='Phonation_utt_symb',\
                                          suffix='KID_FromASD_DOCKID'):
     pool = Pool(int(os.cpu_count()))
@@ -420,6 +451,13 @@ for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
     df_syncrony_measurement_phonation_all=df_syncrony_measurement_phonation_all.loc[:,~df_syncrony_measurement_phonation_all.columns.duplicated()]
     df_syncrony_measurement_phonation_all_denan=df_syncrony_measurement_phonation_all.dropna(subset=[c for c in df_syncrony_measurement_phonation_all.columns if c not in label_generate_choose_lst+['timeSeries_len[A:,i:,u:]', 'timeSeries_len']])
     
+    # timeSeries_len_columns=[col  for col in df_syncrony_measurement_phonation_all_denan.columns if 'timeSeries_len' in col]
+    # df_syncrony_measurement_phonation_all_denan['timeSeries_len']=df_syncrony_measurement_phonation_all_denan[timeSeries_len_columns].min(axis=1)
+    
+    # feat_type='Syncrony_formant'
+    # N=args.timeseriesLen
+    # df_syncrony_measurement_phonation_all_denan=criterion_filter(df_syncrony_measurement_phonation_all_denan,N=N,evictNamelst=[],feature_type=feat_type)
+    
     outDfPath='Features/artuculation_AUI/Interaction/Syncrony_Knnparameters/'
     if not os.path.exists(outDfPath):
         os.makedirs(outDfPath)
@@ -430,3 +468,13 @@ for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
     print('generated at', outDfPath, \
           "Syncrony_measure_of_variance_phonation_{knn_weights}_{knn_neighbors}_{Reorder_type}_{dataset_role}.pkl".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type))
     print("\n\n\n\n")
+    
+    # 複製到Features/資料夾下
+    import shutil
+    outFeatpath="Features/artuculation_AUI/Interaction/Phonation/"
+    if not os.path.exists(outFeatpath):
+        os.makedirs(outFeatpath)
+    Picklepath=outDfPath+"Syncrony_measure_of_variance_phonation_{knn_weights}_{knn_neighbors}_{Reorder_type}_{dataset_role}.pkl".format(\
+                                knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type)
+    Picklepath_Features=outFeatpath+"Syncrony_measure_of_variance_phonation_{dataset_role}.pkl".format(dataset_role=dataset_role)
+    shutil.copy(Picklepath, Picklepath_Features)

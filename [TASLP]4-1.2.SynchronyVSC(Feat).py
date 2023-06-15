@@ -7,6 +7,7 @@ Created on Wed Aug  4 12:21:17 2021
 """
 
 '''
+這個腳本是源自舊版本中的[Debug]4-1.CalculatePhonationCoordinationFeatures_GenerateDfscript.py
         1. Data prepare area
             a. Filter out data using by 1.5*IQR
         2-1. Personal timeseries generation (Details in TBME2021)
@@ -37,7 +38,7 @@ from scipy.stats import spearmanr,pearsonr
 import statistics 
 import os, glob, sys
 import statsmodels.api as sm
-from varname import nameof
+# from varname import nameof
 from tqdm import tqdm
 import re
 from multiprocessing import Pool, current_process
@@ -45,6 +46,7 @@ from articulation.articulation import Articulation
 import articulation.Multiprocess as Multiprocess
 from datetime import datetime as dt
 import pathlib
+import articulation.HYPERPARAM.FeatureSelect as FeatSel
 
 from scipy import special, stats
 import warnings
@@ -61,11 +63,11 @@ def get_args():
     parser = argparse.ArgumentParser(
         description="Select utterances with entropy values that are close to disribution of target domain data",
         )
-    parser.add_argument('--inpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--inpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--outpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--dfFormantStatisticpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--dfFormantStatisticpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--reFilter', default=False, type=bool,
                             help='')
@@ -89,8 +91,8 @@ def get_args():
                             help='')
     parser.add_argument('--basic_columns', default=['u_num', 'a_num', 'i_num', 'ADOS_C', 'dia_num', 'sex', 'age', 'Module','ADOS_cate_C', 'u_num+i_num+a_num'],
                             help='')
-    parser.add_argument('--knn_weights', default='uniform',
-                            help='path of the base directory')
+    parser.add_argument('--knn_weights', default='distance',
+                            help='[distance, uniform]')
     parser.add_argument('--knn_neighbors', default=2,  type=int,
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
@@ -142,51 +144,6 @@ def Add_label(df_formant_statistic,Label,label_choose='ADOS_cate_C'):
         df_formant_statistic.loc[people,label_choose]=Label.label_raw.loc[bool_ind,label_choose].values
     return df_formant_statistic
 
-# def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_dict, People_data_distrib,\
-#                               PhoneMapp_dict, PhoneOfInterest ,\
-#                               Inspect_roles ,Inspect_features, In_Segments_order,\
-#                               Feature_calculator, vowel_min_num=3):
-#     Eval_med=Evaluation_method()
-    
-#     Segments_order=In_Segments_order
-#     Vowels_AUI_info_dict=Dict()
-#     df_person_segment_feature_dict=Dict()
-#     MissingSegment_bag=[]
-#     for people in keys_people:
-#         Formants_segment_role_utt_dict=Formants_people_segment_role_utt_dict[people]
-#         if len(In_Segments_order) ==0 :
-#             Segments_order=sorted(list(Formants_segment_role_utt_dict.keys()))
-            
-#         for role in Inspect_roles:
-#             df_person_segment_feature=pd.DataFrame([])
-#             for segment in Segments_order:
-#                 Formants_utt_symb_SegmentRole=Formants_segment_role_utt_dict[segment][role]
-#                 if len(Formants_utt_symb_SegmentRole)==0:
-#                     MissingSegment_bag.append([people,role,segment])
-                
-#                 AUI_info_filled = Fill_n_Create_AUIInfo(Formants_utt_symb_SegmentRole, People_data_distrib[role], Inspect_features ,PhoneMapp_dict, PhoneOfInterest ,people, vowel_min_num)
-    
-#                 Vowels_AUI=Get_Vowels_AUI(AUI_info_filled, Inspect_features,VUIsource="From__Formant_people_information")
-#                 Vowels_AUI_info_dict[people][segment][role]=Vowels_AUI #bookeeping
-                
-                
-#                 df_formant_statistic=Feature_calculator.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_choose_lst)
-#                 # add ADOS_cate_C to df_formant_statistic
-#                 for i in range(len(df_formant_statistic)):
-#                     name=df_formant_statistic.iloc[i].name
-#                     df_formant_statistic.loc[name,'ADOS_cate_C']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate_C'].values
-#                 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
-#                                                 df_formant_statistic['i_num'] +\
-#                                                 df_formant_statistic['a_num']
-#                 if len(PhoneOfInterest) >= 3:
-#                     df_formant_statistic=Eval_med._Postprocess_dfformantstatistic(df_formant_statistic)
-#                 assert len(df_formant_statistic.columns) > 10 #check if df_formant_statistic is empty DF
-#                 if len(df_person_segment_feature) == 0:
-#                     df_person_segment_feature=pd.DataFrame([],columns=df_formant_statistic.columns)
-#                 df_person_segment_feature.loc[segment]=df_formant_statistic.loc[people]
-#             df_person_segment_feature_dict[people][role]=df_person_segment_feature
-
-#     return df_person_segment_feature_dict, Vowels_AUI_info_dict, MissingSegment_bag
 def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_dict, People_data_distrib,\
                               PhoneMapp_dict, PhoneOfInterest ,df_general_info,\
                               Inspect_roles ,Inspect_features, In_Segments_order,\
@@ -243,7 +200,7 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
 
 
 def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule,\
-                               outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+                               outpath='/media/jack/workspace/DisVoice/articulation/Pickles',\
                                prefix='Formants_utt_symb',\
                                suffix='KID_FromASD_DOCKID'):
     pool = Pool(int(os.cpu_count()))
@@ -356,6 +313,12 @@ if not os.path.exists(Result_path):
     os.makedirs(Result_path)
 #%%
 # =============================================================================
+# 中間第二步生成
+# `"df_person_segment_feature_{Reorder_type}_dict_{0}_{1}.pkl".format(dataset_role, 'formant',Reorder_type=Reorder_type)`
+# 的code請在[TASLP]4.Calculate_coordinationindexes.py執行，code都在那裡
+# =============================================================================
+#%%
+# =============================================================================
 '''
 
     3. Calculate syncrony features based on feature timeseries
@@ -409,49 +372,28 @@ for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
     PhoneOfInterest_str=''
     MinNumTimeSeries=knn_neighbors+1
 
-    
-    # df_syncrony_measurement_cmp=syncrony.calculate_features_continuous(df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
-    #                             args.Inspect_roles, Label,\
-    #                             knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-    #                             MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,plot=False)
     if Reorder_type == 'DKIndividual':
         df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
                                 args.Inspect_roles, Label,\
                                 knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                                MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,Knn_aggressive_mode=True)
+                                MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
     elif Reorder_type == 'DKcriteria':
         df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKcriteria_dict,features,PhoneOfInterest_str,\
                                 args.Inspect_roles, Label,\
                                 knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                                MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,Knn_aggressive_mode=True)
+                                MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
+    
+      
+    
+    pickle.dump(df_syncrony_measurement,open(outpklpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type),"wb"))
     
     
-    # df_syncrony_measurement=syncrony.calculate_features_continuous(df_person_segment_feature_DKcriteria_dict,features,PhoneOfInterest_str,\
-    #                         args.Inspect_roles, Label,\
-    #                         knn_weights="uniform",knn_neighbors=knn_neighbors,\
-    #                         MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst,plot=False)
-        
-    # df_syncrony_measurement=syncrony.calculate_features(df_person_segment_feature_dict, df_person_half_feature_dict,\
-    #                                 FilteredFeatures,PhoneOfInterest_str,\
-    #                                 args.Inspect_roles, Label,\
-    #                                 MinNumTimeSeries=2, label_choose_lst=['ADOS_C'])
+    # 複製到Features/資料夾下
+    import shutil
+    outFeatpath="Features/artuculation_AUI/Interaction/Formants/{args.Normalize_way}"
+    if not os.path.exists(outFeatpath):
+        os.makedirs(outFeatpath)
+    Picklepath=outpklpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type)
+    Picklepath_Features=outFeatpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type)
+    shutil.copy(Picklepath, Picklepath_Features)
     
-    # timeSeries_len_columns=[col  for col in df_syncrony_measurement.columns if 'timeSeries_len' in col]
-    # df_syncrony_measurement['timeSeries_len']=df_syncrony_measurement[timeSeries_len_columns].min(axis=1)
-        
-    
-    # feat_type='Syncrony_formant'
-    # N=2
-    # if dataset_role == 'ASD_DOCKID':
-    #     df_syncrony_measurement=criterion_filter(df_syncrony_measurement,N=N,evictNamelst=[],feature_type=feat_type)
-        
-    
-    outDfPath='Features/artuculation_AUI/Interaction/Syncrony_Knnparameters/'
-    if not os.path.exists(outDfPath):
-        os.makedirs(outDfPath)
-    pickle.dump(df_syncrony_measurement,open(outDfPath+"Syncrony_measure_of_variance_{knn_weights}_{knn_neighbors}_{Reorder_type}_{dataset_role}.pkl".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type),"wb"))
-    
-    print("df_syncrony_measurement")
-    print(df_syncrony_measurement)
-    print('generated at', outDfPath)
-    print("\n\n\n\n")

@@ -314,8 +314,66 @@ label_choose=['ADOS_C']
                     # ['TD_normal vs ASDMild_agesexmatch >> FeatCoor','ASDTD'],
                     # ]
 
-df_formant_statistics_CtxPhone_collect_dict=Dict()
+def MERGEFEATURES():
+    # =============================================================================
+    '''
 
+        Feature merging function
+        
+        Ths slice of code provide user to manually make functions to combine df_XXX_infos
+
+    '''
+    # =============================================================================
+    # dataset_role='ASD_DOCKID'
+    for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
+        Merg_filepath={}
+        Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/Formant_AUI_tVSAFCRFvals_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
+        # Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
+        Merg_filepath['dynamic_feature_LOC']='Features/artuculation_AUI/Interaction/Formants/Syncrony_measure_of_variance_DKIndividual_{dataset_role}.pkl'.format(dataset_role=dataset_role)
+        Merg_filepath['dynamic_feature_phonation']='Features/artuculation_AUI/Interaction/Phonation/Syncrony_measure_of_variance_phonation_{dataset_role}.pkl'.format(dataset_role=dataset_role)
+        
+        merge_out_path='Features/ClassificationMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/{dataset_role}/'.format(
+            knn_weights=knn_weights,
+            knn_neighbors=knn_neighbors,
+            Reorder_type=Reorder_type,
+            dataset_role=dataset_role
+            )
+        if not os.path.exists(merge_out_path):
+            os.makedirs(merge_out_path)
+        
+        df_infos_dict=Dict()
+        for keys, paths in Merg_filepath.items():
+            df_infos_dict[keys]=pickle.load(open(paths,"rb")).sort_index()
+        
+        Merged_df_dict=Dict()
+        comb1 = list(combinations(list(Merg_filepath.keys()), 1))
+        comb2 = list(combinations(list(Merg_filepath.keys()), 2))
+        for c in comb1:
+            e1=c[0]
+            Merged_df_dict[e1]=df_infos_dict[e1]
+            OutPklpath=merge_out_path+ e1 + ".pkl"
+            pickle.dump(Merged_df_dict[e1],open(OutPklpath,"wb"))
+            
+            
+        for c in comb2:
+            e1, e2=c
+            Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+            
+            OutPklpath=merge_out_path+'+'.join(c)+".pkl"
+            pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+        # Condition for : Columns_comb3 = All possible LOC feature combination + phonation_proximity_col
+        c = ('static_feautre_LOC', 'dynamic_feature_LOC', 'dynamic_feature_phonation')
+        e1, e2, e3=c
+        
+        Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+        Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],df_infos_dict[e3])
+        # Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],Utt_featuresCombinded_dict[role])
+        OutPklpath=merge_out_path+'+'.join(c)+".pkl"
+        pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+if args.Mergefeatures:
+    MERGEFEATURES()
+
+df_formant_statistics_CtxPhone_collect_dict=Dict()
 # =============================================================================
 
 class ADOSdataset():
@@ -415,7 +473,7 @@ class ADOSdataset():
 
         if self.FeatureComb_mode in ['feat_comb3','feat_comb5','feat_comb6','feat_comb7','Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']:
             DfCombFilenames=['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl']
-        if self.FeatureComb_mode == 'Comb_dynPhonation':
+        elif self.FeatureComb_mode == 'Comb_dynPhonation':
             DfCombFilenames=['dynamic_feature_phonation.pkl']
         elif self.FeatureComb_mode == 'baselineFeats':
              DfCombFilenames=['{}.pkl'.format(Dataname) for Dataname in ModuledFeatureCombination.keys()]
@@ -644,9 +702,9 @@ Best_param_dict=Dict()
 sellect_people_define=SellectP_define()
 
 # ''' 要手動執行一次從Incorrect2Correct_indexes和Correct2Incorrect_indexes決定哪些indexes 需要算shap value 再在這邊指定哪些fold需要停下來算SHAP value '''
-SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
+# SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
 # SHAP_inspect_idxs_manual=[15] # None means calculate SHAP value of all people
-# SHAP_inspect_idxs_manual=[] # empty list means we do not execute shap function
+SHAP_inspect_idxs_manual=[] # empty list means we do not execute shap function
 # SHAP_inspect_idxs_manual=sorted(list(set([14, 21]+[]+[24, 28, 30, 31, 39, 41, 45]+[22, 23, 27, 47, 58]+[6, 13, 19, 23, 24, 25]+[28, 35, 38, 45])))
 
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
@@ -689,7 +747,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             # the normal classifiers' predictions are based on decision_function values
             ##################################################################
             calibrated_bestEst=CalibratedClassifierCV(
-                base_estimator=Gclf_manual.best_estimator_,
+                Gclf_manual.best_estimator_,
                 cv="prefit"
                 )
             calibrated_bestEst.fit(X_train,y_train)

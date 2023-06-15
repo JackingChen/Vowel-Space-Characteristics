@@ -7,6 +7,7 @@ Created on Wed Aug  4 12:21:17 2021
 """
 
 '''
+這個腳本是源自舊版本中的[Debug]4-1.CalculatePhonationCoordinationFeatures.py
         This script is a inherited from Analyze_DOCKID_syncrony_formant.py
         1. Data prepare area
             a. Filter out data using by 1.5*IQR
@@ -38,7 +39,7 @@ from scipy.stats import spearmanr,pearsonr
 import statistics 
 import os, glob, sys
 import statsmodels.api as sm
-from varname import nameof
+# from varname import nameof
 from tqdm import tqdm
 import re
 from multiprocessing import Pool, current_process
@@ -59,7 +60,7 @@ from phonation.phonation import  Phonation
 from SlidingWindow import slidingwindow as SW
 
 
-required_path_app = '/homes/ssd1/jackchen/DisVoice/articulation'  # for WER module imported in metric
+required_path_app = '/media/jack/workspace/DisVoice/articulation'  # for WER module imported in metric
 sys.path.append(required_path_app)
 from HYPERPARAM import phonewoprosody, Label
 from HYPERPARAM.PeopleSelect import SellectP_define
@@ -83,9 +84,9 @@ def get_args():
     parser = argparse.ArgumentParser(
         description="Select utterances with entropy values that are close to disribution of target domain data",
         )
-    parser.add_argument('--inpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--inpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
                         help='path of the base directory')
-    parser.add_argument('--outpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--outpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--reFilter', default=False, type=bool,
                             help='')
@@ -97,7 +98,7 @@ def get_args():
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='TD_DOCKID',
+    parser.add_argument('--dataset_role', default='ASD_DOCKID',
                             help='[TD_DOCKID | ASD_DOCKID_emotion | kid_TD | kid88]')
     parser.add_argument('--Inspect_roles', default=['D','K'],
                             help='')
@@ -105,7 +106,7 @@ def get_args():
                             help='')
     parser.add_argument('--basic_columns', default=['u_num', 'a_num', 'i_num', 'ADOS_C', 'dia_num', 'sex', 'age', 'Module','ADOS_cate', 'u_num+i_num+a_num'],
                             help='')
-    parser.add_argument('--Reorder_type', default='DKcriteria',
+    parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
     args = parser.parse_args()
     return args
@@ -228,7 +229,7 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
     return df_person_segment_feature_dict, Vowels_AUI_info_dict, MissingSegment_bag
 
 # def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule,\
-#                                          outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+#                                          outpath='/media/jack/workspace/DisVoice/articulation/Pickles',\
 #                                          prefix='Phonation_utt_symb',\
 #                                          suffix='KID_FromASD_DOCKID'):
 #     pool = Pool(int(os.cpu_count()))
@@ -252,7 +253,7 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
 
 # This is modified from other script
 def Process_IQRFiltering_Phonation_Multi(Formants_utt_symb, limit_people_rule,\
-                               outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+                               outpath='/media/jack/workspace/DisVoice/articulation/Pickles',\
                                prefix='Phonation_utt_symb',\
                                suffix='KID_FromASD_DOCKID'):
     pool = Pool(int(os.cpu_count()))
@@ -385,8 +386,11 @@ if not os.path.exists(outpklpath):
 Phonation_utt_symb=pickle.load(open(pklpath+"/Phonation_utt_symb_{role}.pkl".format(role=dataset_role),'rb'))
 
 ''' Get general timestamps '''
-ASD_info_path='/mnt/nas/jackchen/Segments_info_ADOS_ASD.txt'
-TD_info_path='/mnt/nas/jackchen/Segments_info_ADOS_TD.txt'
+ASD_info_path='/media/jack/workspace/DisVoice/data/Segments_info_ADOS_ASD.txt'
+TD_info_path='/media/jack/workspace/DisVoice/data/Segments_info_ADOS_TD.txt'
+# Backup segments info path = /homes/ssd1/jackchen/gop_prediction
+# ASD_info_path='/homes/ssd1/jackchen/gop_prediction/Segments_info_ADOS_ASD.txt'
+# TD_info_path='/homes/ssd1/jackchen/gop_prediction/Segments_info_ADOS_TD.txt'
 General_info_col=['utt','st','ed','txt','spk']
 if dataset_role == 'TD_DOCKID':
     df_general_info=pd.read_csv(TD_info_path, sep='\t',header=None)
@@ -413,7 +417,7 @@ for role in Phonation_utt_symb_Top.keys():
     prefix,suffix = 'Phonation_utt_symb_Top', '{dataset}_{role}'.format(dataset=dataset_role,role=role)
     # date_now='{0}-{1}-{2} {3}'.format(dt.now().year,dt.now().month,dt.now().day,dt.now().hour)
     date_now='{0}-{1}-{2}'.format(dt.now().year,dt.now().month,dt.now().day)
-    outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
+    outpath='/media/jack/workspace/DisVoice/articulation/Pickles'
     filepath=outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix)
     if os.path.exists(filepath) and args.reFilter==False:
         fname = pathlib.Path(filepath)
@@ -697,7 +701,7 @@ df_POI_person_segment_DKIndividual_feature_dict=Dict()
 
 for PhoneOfInterest_str in Phonation_POI_people_segment_DKcriteria_utt_dict.keys():
     Phonation_people_segment_DKcriteria_role_utt_dict=Phonation_POI_people_segment_DKcriteria_utt_dict[PhoneOfInterest_str].segment
-    Phonation_people_half_DKcriteria_role_utt_dict=Phonation_POI_people_segment_DKcriteria_utt_dict[PhoneOfInterest_str].half
+    # Phonation_people_half_DKcriteria_role_utt_dict=Phonation_POI_people_segment_DKcriteria_utt_dict[PhoneOfInterest_str].half
     
     Phonation_people_segment_DKIndividual_utt_dict=Phonation_POI_people_segment_DKIndividual_utt_dict[PhoneOfInterest_str].segment
     
@@ -958,676 +962,3 @@ df_syncrony_measurement_phonation_all=df_syncrony_measurement_phonation_all.loc[
 df_syncrony_measurement_phonation_all_denan=df_syncrony_measurement_phonation_all.dropna(subset=[c for c in df_syncrony_measurement_phonation_all.columns if c not in label_generate_choose_lst])
 pickle.dump(df_syncrony_measurement_phonation_all_denan,open(outpklpath+"Syncrony_measure_of_variance_phonation_{}.pkl".format(dataset_role),"wb"))
 
-    
-df_syncrony_measurement=df_syncrony_measurement_phonation_all_denan
-lst=[]
-for col in df_syncrony_measurement.columns:
-    if df_syncrony_measurement[col].isnull().values.any():
-        lst.append(col)
-
-# =============================================================================
-'''
-
-    Correlation analysis
-
-'''
-# =============================================================================
-
-label_correlation_choose_lst=label_generate_choose_lst
-additional_columns=label_correlation_choose_lst+['timeSeries_len']
-
-columns=list(set(df_syncrony_measurement.columns) - set(additional_columns)) # Exclude added labels
-
-# columns=list(set(columns) - set([co for co in columns if "Syncrony" in co or "Proximity" in co or "Convergence" in co]))
-
-
-Eval_med=Evaluation_method()
-Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_syncrony_measurement,MinNumTimeSeries-1,columns,constrain_sex=-1, constrain_module=-1,feature_type='Syncrony_formant')
-#%%
-# =============================================================================
-'''
-
-    Analysis area
-
-'''
-import seaborn as sns
-from pylab import text
-dfFormantStatisticpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles'
-feat='Syncrony_measure_of_variance_phonation'
-
-def Add_label(df_formant_statistic,Label,label_choose='ADOS_S'):
-    for people in df_formant_statistic.index:
-        bool_ind=Label.label_raw['name']==people
-        df_formant_statistic.loc[people,label_choose]=Label.label_raw.loc[bool_ind,label_choose].values
-    return df_formant_statistic
-
-# =============================================================================
-df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='ASD_DOCKID')
-df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
-df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='TD_DOCKID')
-if not os.path.exists(df_formant_statistic_ASDTD_path) or not os.path.exists(df_formant_statistic77_path):
-    raise FileExistsError
-df_feature_TD=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))
-
-
-# ADD label
-df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_CSS')
-df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_C')
-df_feature_ASD=Add_label(df_feature_ASD,Label,label_choose='ADOS_cate_S')
-# create different ASD cohort
-filter_Minimal_TCSS=df_feature_ASD['ADOS_cate_CSS']==0
-filter_low_TCSS=df_feature_ASD['ADOS_cate_CSS']==1
-filter_moderate_TCSS=df_feature_ASD['ADOS_cate_CSS']==2
-filter_high_TCSS=df_feature_ASD['ADOS_cate_CSS']==3
-
-filter_Notautism_TC=df_feature_ASD['ADOS_cate_C']==0
-filter_ASD_TC=df_feature_ASD['ADOS_cate_C']==1
-filter_Autism_TC=df_feature_ASD['ADOS_cate_C']==2
-
-filter_Notautism_TS=df_feature_ASD['ADOS_cate_S']==0
-filter_ASD_TS=df_feature_ASD['ADOS_cate_S']==1
-filter_Autism_TS=df_feature_ASD['ADOS_cate_S']==2
-
-df_feature_Minimal_CSS=df_feature_ASD[filter_Minimal_TCSS]
-df_feature_low_CSS=df_feature_ASD[filter_low_TCSS]
-df_feature_moderate_CSS=df_feature_ASD[filter_moderate_TCSS]
-df_feature_high_CSS=df_feature_ASD[filter_high_TCSS]
-df_feature_lowMinimal_CSS=df_feature_ASD[filter_low_TCSS | filter_Minimal_TCSS]
-df_feature_moderatehigh_CSS=df_feature_ASD[filter_moderate_TCSS | filter_high_TCSS]
-
-df_feature_Notautism_TC=df_feature_ASD[filter_Notautism_TC]
-df_feature_ASD_TC=df_feature_ASD[filter_ASD_TC]
-df_feature_NotautismandASD_TC=df_feature_ASD[filter_Notautism_TC | filter_ASD_TC]
-df_feature_Autism_TC=df_feature_ASD[filter_Autism_TC]
-
-df_feature_Notautism_TS=df_feature_ASD[filter_Notautism_TS]
-df_feature_ASD_TS=df_feature_ASD[filter_ASD_TS]
-df_feature_NotautismandASD_TS=df_feature_ASD[filter_Notautism_TS | filter_ASD_TS]
-df_feature_Autism_TS=df_feature_ASD[filter_Autism_TS]
-
-
-
-# sellect_people_define=SellectP_define()
-# SevereASD_age_sex_match=sellect_people_define.SevereASD_age_sex_match_ver2
-# MildASD_age_sex_match=sellect_people_define.MildASD_age_sex_match_ver2
-# TD_normal_ver2=sellect_people_define.TD_normal_ver2
-
-# df_formant_statistic_agesexmatch_ASDSevere=df_feature_ASD.copy().loc[SevereASD_age_sex_match]
-# df_formant_statistic_agesexmatch_ASDMild=df_feature_ASD.copy().loc[MildASD_age_sex_match]
-# df_formant_statistic_TD_normal=df_feature_TD.copy().loc[TD_normal_ver2]
-
-TopTop_data_lst=[]
-# TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDSevere','df_formant_statistic_TD_normal'])
-# TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_TD_normal'])
-# TopTop_data_lst.append(['df_formant_statistic_agesexmatch_ASDMild','df_formant_statistic_agesexmatch_ASDSevere'])
-''' Notice, ASD should be on the left '''
-
-TopTop_data_lst.append(['df_feature_ASD','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_high_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_moderatehigh_CSS','df_feature_TD'])
-
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_moderate_CSS'])
-TopTop_data_lst.append(['df_feature_moderate_CSS','df_feature_high_CSS'])
-TopTop_data_lst.append(['df_feature_low_CSS','df_feature_high_CSS'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_moderate_CSS'])
-TopTop_data_lst.append(['df_feature_lowMinimal_CSS','df_feature_high_CSS'])
-
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TC','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_Autism_TC','df_feature_TD'])
-
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_ASD_TC'])
-TopTop_data_lst.append(['df_feature_ASD_TC','df_feature_Autism_TC'])
-TopTop_data_lst.append(['df_feature_Notautism_TC','df_feature_Autism_TC'])
-
-
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_NotautismandASD_TS','df_feature_TD'])
-TopTop_data_lst.append(['df_feature_Autism_TS','df_feature_TD'])
-
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_ASD_TS'])
-TopTop_data_lst.append(['df_feature_ASD_TS','df_feature_Autism_TS'])
-TopTop_data_lst.append(['df_feature_Notautism_TS','df_feature_Autism_TS'])
-
-Convergence_cols=[c for c in df_syncrony_measurement_phonation_all.columns if 'Convergence' in c]
-Proximity_cols=[c for c in df_syncrony_measurement_phonation_all.columns if 'Proximity' in c]
-Syncrony_cols=[c for c in df_syncrony_measurement_phonation_all.columns if 'Syncrony' in c]
-Trend_D_cols=[c for c in df_syncrony_measurement_phonation_all.columns if 'Trend' in c and '_d' in c]
-Trend_K_cols=[c for c in df_syncrony_measurement_phonation_all.columns if 'Trend' in c and '_k' in c]
-# self_specify_cols=Proximity_cols + Convergence_cols + Syncrony_cols
-# self_specify_cols=Trend_D_cols + Trend_K_cols
-self_specify_cols=FeatSel.Phonation_Trend_D_cols + FeatSel.Phonation_Trend_K_cols + FeatSel.Phonation_Proximity_cols + FeatSel.Phonation_Convergence_cols + FeatSel.Phonation_Syncrony_cols
-Parameters=df_syncrony_measurement_phonation_all.columns
-if len(self_specify_cols) > 0:
-    inspect_cols=self_specify_cols
-else:
-    inspect_cols=Parameters
-
-plot=False
-Record_dict=Dict()
-All_cmp_dict=Dict()
-for Top_data_lst in TopTop_data_lst:
-    Record_dict[' vs '.join(Top_data_lst)]=pd.DataFrame(index=inspect_cols)
-    All_cmp_dict[' vs '.join(Top_data_lst)]=pd.DataFrame(index=inspect_cols)
-    import warnings
-    warnings.filterwarnings("ignore")
-    for columns in inspect_cols:
-        # =============================================================================
-        if plot:
-            fig, ax = plt.subplots()
-        # =============================================================================
-        data=[]
-        dataname=[]
-        for dstr in Top_data_lst:
-            dataname.append(dstr)
-            data.append(vars()[dstr])
-        # =============================================================================
-        if plot:
-            for i,d in enumerate(data):
-                # ax = sns.distplot(d[columns], ax=ax, kde=False)
-                ax = sns.distplot(d[columns], ax=ax, label=Top_data_lst)
-                title='{0}'.format('Inspecting feature ' + columns)
-                plt.title( title )
-            fig.legend(labels=dataname)  
-        # =============================================================================
-        for tests in [stats.mannwhitneyu, stats.ttest_ind]:
-            test_results=tests(vars()[Top_data_lst[0]][columns],vars()[Top_data_lst[1]][columns])
-            p_val=test_results[1]
-
-            if tests == stats.mannwhitneyu:
-                mean_difference=vars()[Top_data_lst[0]][columns].median() - vars()[Top_data_lst[1]][columns].median()
-                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+' - '.join(Top_data_lst)]=mean_difference
-                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+'p']=p_val
-            elif tests == stats.ttest_ind:
-                mean_difference=vars()[Top_data_lst[0]][columns].mean() - vars()[Top_data_lst[1]][columns].mean()
-                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+' - '.join(Top_data_lst)]=mean_difference
-                All_cmp_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+'p']=p_val
-            if p_val < 0.05:
-                print('Testing Feature: ',columns)
-                print(mean_difference , np.round(test_results[1],6))
-                if tests == stats.mannwhitneyu:
-                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+' - '.join(Top_data_lst)]=mean_difference
-                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'UTest'+'p']=p_val
-                if tests == stats.ttest_ind:
-                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+' - '.join(Top_data_lst)]=mean_difference
-                    Record_dict[' vs '.join(Top_data_lst)].loc[columns,'TTest'+'p']=p_val
-        # =============================================================================
-        if plot:
-            addtext='{0}/({1})'.format(np.round(mean_difference,3),np.round(p_val,3))
-            text(0.9, 0.9, addtext, ha='center', va='center', transform=ax.transAxes)
-            addtextvariable='{0} vs {1}'.format(Top_data_lst[0],Top_data_lst[1])
-            text(0.9, 0.6, addtextvariable, ha='center', va='center', transform=ax.transAxes)
-        # =============================================================================
-    warnings.simplefilter('always')
-
-# Record_certainCol_dict={}
-# df_CertainCol=pd.DataFrame()
-# for test_name, values in Record_dict.items():
-#     df_proximity=values.loc[values.index.str.startswith("Proximity"),:].iloc[:,0]
-#     df_proximity.columns=[test_name]
-#     df_CertainCol=pd.concat([df_CertainCol,df_proximity],axis=1)
-# df_CertainCol=df_CertainCol.T
-
-
-# Record_certainCol_dict={}
-df_CertainCol_U=pd.DataFrame()
-df_CertainCol_T=pd.DataFrame()
-for test_name, values in Record_dict.items():
-    data_T=values.loc[values.index.str.startswith("Proximity"),values.columns.str.startswith("TTest")]
-    data_U=values.loc[values.index.str.startswith("Proximity"),values.columns.str.startswith("UTest")]
-    # Utest results
-    if len(data_U.columns) == 2:
-        df_feat=data_U.iloc[:,0]
-        df_feat.columns=[test_name]
-    elif len(data_U.columns) == 0:
-        df_feat=data_U
-        df_feat[test_name]=np.nan
-    df_CertainCol_U=pd.concat([df_CertainCol_U,df_feat],axis=1)
-    
-    # Ttest results
-    if len(data_T.columns) == 2:
-        df_feat=data_T.iloc[:,0]
-        df_feat.columns=[test_name]
-    elif len(data_T.columns) == 0:
-        df_feat=data_T
-        df_feat[test_name]=np.nan
-
-    df_CertainCol_T=pd.concat([df_CertainCol_T,df_feat],axis=1)
-df_CertainCol_U=df_CertainCol_U.T
-df_CertainCol_T=df_CertainCol_T.T
-
-
-#Clear Record_dict
-Record_cleaned_dict={}
-for keys, values in Record_dict.items():
-    Record_cleaned_dict[keys]=values.dropna(thresh=2,axis=0)
-# =============================================================================
-'''
-
-    Classification area
-
-'''
-# =============================================================================
-lab_chos_lst=['ASDTD']
-# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','dcorr_12']
-
-
-# C_variable=np.array(np.arange(0.1,1.1,0.2))
-epsilon=np.array(np.arange(0.1,1.5,0.1) )
-# epsilon=np.array(np.arange(0.01,0.15,0.02))
-# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.1)))
-# C_variable=np.array([0.001,0.01,10.0,50,100])
-Classifier={}
-loo=LeaveOneOut()
-# CV_settings=loo
-CV_settings=10
-pca = PCA(n_components=1)
-
-C_variable=np.array(np.arange(0.1,1.5,0.1))
-# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.2))  )
-# C_variable=np.array([0.01, 0.1,0.5,1.0, 5.0])
-n_estimator=[ 32, 50, 64, 100 ,128, 256]
-# =============================================================================
-Classifier={}
-Classifier['SVC']={'model':sklearn.svm.SVC(),\
-                  'parameters':{'model__random_state':[1],\
-                      'model__C':C_variable,\
-                    'model__kernel': ['rbf'],\
-                      # 'model__gamma':['auto'],\
-                    'model__probability':[True],\
-                                }}
-Classifier['DT']={'model':DecisionTreeClassifier(),\
-                  'parameters':{'model__random_state':[1],\
-                                'model__criterion':['gini','entropy'],
-                                'model__splitter':['splitter','random'],\
-                                }}
-
-    
-clf=Classifier['SVC']
-
-
-
-Comb=Dict()
-Comb['Trend_D_cols']=New_Trend_D_cols
-Comb['Trend_K_cols']=New_Trend_K_cols
-# Comb['Proximity_cols']=Proximity_cols
-Comb['New_Proximity_cols']=New_Proximity_cols
-Comb['Convergence_cols']=New_Convergence_cols
-Comb['Syncrony_cols']=New_Syncrony_cols
-
-combinations_lsts=[ Comb[k] for k in Comb.keys()]
-combinations_keylsts=[ k for k in Comb.keys()]
-
-
-Top_RESULT_dict=Dict()
-for Top_data_lst in TopTop_data_lst:
-    print(Top_data_lst[0], ' vs ', Top_data_lst[1])
-    if len(Top_data_lst) == 2:
-        df_asdTmp, df_tdTmp=vars()[Top_data_lst[0]].copy(), vars()[Top_data_lst[1]].copy()
-        df_asdTmp["ASDTD"]=1
-        df_tdTmp["ASDTD"]=2
-        df_ASDcmpVombineTD=pd.concat([df_asdTmp,df_tdTmp],axis=0)
-    elif len(Top_data_lst) == 3:
-        df_adTmp, df_asdTmp, df_nonasdTmp=vars()[Top_data_lst[0]].copy(), vars()[Top_data_lst[1]].copy(), vars()[Top_data_lst[2]].copy()
-        df_adTmp["ASDTD"]=1
-        df_asdTmp["ASDTD"]=2
-        df_nonasdTmp["ASDTD"]=3
-        df_ASDcmpVombineTD=pd.concat([df_asdTmp,df_tdTmp,df_nonasdTmp],axis=0)
-
-    RESULT_dict=Dict()
-    for key,feature_chos_tup in zip(combinations_keylsts,combinations_lsts):
-        feature_chos_lst=list(feature_chos_tup)
-        for feature_chooses in [feature_chos_lst]:
-            pipe = Pipeline(steps=[('scalar',StandardScaler()),("model", clf['model'])])
-            # pipe = Pipeline(steps=[ ("pca", pca), ("model", clf['model'])])
-            p_grid=clf['parameters']
-    
-            Gclf = GridSearchCV(pipe, param_grid=p_grid, scoring='recall_macro', cv=CV_settings, refit=True, n_jobs=-1)
-            
-            features=Dict()
-            # 1. 要多一個columns 是ASDTD
-            features.X=df_ASDcmpVombineTD[feature_chooses]
-            features.y=df_ASDcmpVombineTD[lab_chos_lst]
-            # StandardScaler().fit_transform(features.X)
-            
-            # 2. 改成算UAR, AUC
-            # CVscore=cross_val_score(Gclf, features.X, features.y.values.ravel(), cv=CV_settings,scoring='recall_macro')
-            CVpredict=cross_val_predict(Gclf, features.X, features.y.values.ravel(), cv=CV_settings)  
-            n,p=features.X.shape
-            UAR=recall_score(features.y, CVpredict, average='macro')
-            AUC=roc_auc_score(features.y, CVpredict)
-            f1Score=f1_score(features.y, CVpredict, average='macro')
-            
-            # feature_keys='+'.join(feature_chooses)
-            feature_keys=key
-            print('Feature {0}, UAR {1}, AUC {2} ,f1Score {3}'.format(feature_keys, UAR, AUC,f1Score))
-            RESULT_dict[feature_keys]=[UAR,AUC,f1Score]
-    
-    
-    df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index')
-    df_RESULT_list.columns=['UAR','AUC','f1Score']
-    print(df_RESULT_list)
-    
-    Expiment_str=' vs '.join(Top_data_lst)
-    Top_RESULT_dict[Expiment_str]=df_RESULT_list
-
-
-Result_UAR_summary={}
-Inspect_metric='UAR'
-for Expiment_str, values in Top_RESULT_dict.items():
-    Result_UAR_summary[Expiment_str]=values[Inspect_metric]
-    
-
-
-df_Result_UAR_summary_list=pd.DataFrame.from_dict(Result_UAR_summary,orient='index')
-del Gclf
-
-#%%
-# =============================================================================
-'''
-
-    Regression task
-
-
-'''
-# =============================================================================
-from sklearn.model_selection import GridSearchCV, cross_val_score, cross_val_predict
-import sklearn
-from sklearn.linear_model import ElasticNet
-from sklearn.model_selection import LeaveOneOut
-from sklearn.metrics import r2_score
-from sklearn.decomposition import PCA
-from sklearn.pipeline import Pipeline
-''' cross validation prediction '''
-# feature_chos_lst=['between_covariance_norm(A:,i:,u:)',
-# 'sam_wilks_lin_norm(A:,i:,u:)',
-# 'hotelling_lin_norm(A:,i:,u:)',
-# 'pillai_lin_norm(A:,i:,u:)']
-
-# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)']
-# feature_chos_lst_top=['between_variance_norm(A:,i:,u:)']
-
-# feature_chos_lst_top=['roys_root_lin_norm(A:,i:,u:)', 'Angles']
-# feature_chos_lst_top=['Between_Within_Det_ratio_norm(A:,i:,u:)']
-# feature_chos_lst=['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ai']
-# feature_chos_lst=['between_covariance_norm(A:,i:,u:)', 'pillai_lin_norm(A:,i:,u:)','ang_ua']
-# feature_chos_lst=['pillai_lin_norm(A:,i:,u:)']
-# feature_chos_lst=['ang_ai']
-# feature_chos_lst=['ang_ua']
-# feature_chos_lst=['FCR2']
-# feature_chos_lst=['FCR2','ang_ai']
-# feature_chos_lst=['FCR2','ang_ua']
-# feature_chos_lst=['FCR2','ang_ai','ang_ua']
-# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)','dcorr_12']
-# feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','localabsoluteJitter_mean(A:,i:,u:)']
-feature_chos_lst_top=['between_covariance_norm(A:,i:,u:)','dcorr_12']
-# baseline_lst=['FCR2']
-
-
-# C_variable=np.array([0.001,0.01, 0.1,0.5,1.0,10.0,50,100])
-C_variable=np.array([0.001,0.01, 0.1,0.5,1.0,10.0,50,100])
-Classifier={}
-loo=LeaveOneOut()
-# CV_settings=loo
-CV_settings=10
-pca = PCA(n_components=1)
-
-# =============================================================================
-Classifier['SVR']={'model':sklearn.svm.SVR(),\
-                  'parameters':{'C':C_variable,\
-                    # 'kernel': ['rbf','sigmoid'],\
-                    'kernel': ['rbf'],\
-                    'gamma': ['scale'],\
-                    # 'gamma': ['auto'],\
-                    # 'gamma': ['scale','auto'],\
-                                }}
-Classifier['EN']={'model':ElasticNet(random_state=0),\
-                  'parameters':{'alpha':np.arange(0,1,0.25),\
-                                'l1_ratio': np.arange(0,1,0.25),\
-                                'max_iter':[2000]}} #Just a initial value will be changed by parameter tuning
-                                                    # l1_ratio = 1 is the lasso penalty
-
-Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
-                  'parameters':{'fit_intercept':[True],\
-                                }}
-
-    
-clf=Classifier['SVR']
-# comb2 = combinations(feature_chos_lst_top, 2)
-# comb3 = combinations(feature_chos_lst_top, 3)
-# comb4 = combinations(feature_chos_lst_top, 4)
-# combinations_lsts=list(comb2) + list(comb3)+ list(comb4)
-combinations_lsts=[feature_chos_lst_top]
-lab_chos_lst=['ADOS_C']
-
-
-combinations_lsts=[ Comb[k] for k in Comb.keys()]
-combinations_keylsts=[ k for k in Comb.keys()]
-
-RESULT_dict=Dict()
-for k ,feature_chos_tup in zip(combinations_keylsts,combinations_lsts):
-    feature_chos_lst=list(feature_chos_tup)
-    for feature_chooses in [feature_chos_lst]:
-        # pipe = Pipeline(steps=[("model", clf['model'])])
-        pipe = Pipeline(steps=[('scalar',StandardScaler()),("model", clf['model'])])
-        # pipe = Pipeline(steps=[ ("pca", pca), ("model", clf['model'])])
-        param_grid = {
-        # "pca__n_components": [3],
-        "model__C": C_variable,
-        # "model__l1_ratio": np.arange(0,1,0.25),
-        # "model__alpha": np.arange(0,1,0.25),
-        # "model__max_iter": [2000],
-        }
-        Gclf = GridSearchCV(pipe, param_grid=param_grid, scoring='neg_mean_squared_error', cv=CV_settings, refit=True, n_jobs=-1)
-        
-        features=Dict()
-        # features.X=df_formant_statistic[feature_chooses]
-        # features.y=df_formant_statistic[lab_chos_lst]
-        
-        # features.X=df_formant_statistic_added[feature_chooses]
-        # features.y=df_formant_statistic_added[lab_chos_lst]
-        
-        features.X=df_feature_ASD[feature_chooses]
-        features.y=df_feature_ASD[lab_chos_lst]
-        
-        
-        # Score=cross_val_score(Gclf, features.X, features.y, cv=10)
-        CVpredict=cross_val_predict(Gclf, features.X, features.y.values.ravel(), cv=CV_settings)  
-        r2=r2_score(features.y,CVpredict )
-        n,p=features.X.shape
-        r2_adj=1-(1-r2)*(n-1)/(n-p-1)
-        MSE=sklearn.metrics.mean_squared_error(features.y.values.ravel(),CVpredict)
-        pearson_result, pearson_p=pearsonr(features.y.values.ravel(),CVpredict )
-        spear_result, spearman_p=spearmanr(features.y.values.ravel(),CVpredict )
-        
-        
-        feature_keys='+'.join(feature_chooses)
-        print('Feature {0}, MSE {1}, pearson_result {2} ,spear_result {3}'.format(feature_keys, MSE, pearson_result,spear_result))
-        RESULT_dict[feature_keys]=[MSE,pearson_result,spear_result]
-
-
-df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index')
-df_RESULT_list.columns=['MSE','pearson_result','spear_result']
-del Gclf
-
-# Direct correlation
-
-
-Eval_med=Evaluation_method()
-Correlation_column_check=[ c for combcol in  combinations_lsts for c in combcol]
-Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_choose_lst,df_feature_ASD,MinNumTimeSeries-1,Correlation_column_check,constrain_sex=-1, constrain_module=-1,feature_type='Syncrony_formant')
-
-
-
-
-
-
-
-
-#%%
-# =============================================================================
-'''
-
-    Plot area
-
-'''
-# =============================================================================
-from sklearn import neighbors
-df_POI_person_segment_DKIndividual_feature_dict_TD=pickle.load(open(outpklpath+"df_POI_person_segment_DKIndividual_feature_dict_{0}_{1}.pkl".format('TD_DOCKID', 'phonation'),"rb"))
-df_POI_person_segment_DKIndividual_feature_dict_ASD=pickle.load(open(outpklpath+"df_POI_person_segment_DKIndividual_feature_dict_{0}_{1}.pkl".format('ASD_DOCKID', 'phonation'),"rb"))
-
-st_col_str='IPU_st'  #It is related to global info
-ed_col_str='IPU_ed'  #It is related to global info
-Inspect_roles=args.Inspect_roles
-df_person_segment_feature_DKIndividual_dict=df_POI_person_segment_DKIndividual_feature_dict_ASD['A:,i:,u:']['segment']
-p_1=Inspect_roles[0]
-p_2=Inspect_roles[1]
-df_syncrony_measurement=pd.DataFrame()
-col = 'meanF0_mean(A:,i:,u:)'
-Colormap_role_dict=Dict()
-Colormap_role_dict['D']='orange'
-Colormap_role_dict['K']='blue'
-knn_weights='distance'
-# knn_weights='uniform'
-knn_neighbors=4
-functionDK_people=Dict()
-for people in df_person_segment_feature_DKIndividual_dict.keys():
-    if len(df_person_segment_feature_DKIndividual_dict[people][p_1])<MinNumTimeSeries or len(df_person_segment_feature_DKIndividual_dict[people][p_2])<MinNumTimeSeries:
-        continue
-    df_person_segment_feature_role_dict=df_person_segment_feature_DKIndividual_dict[people]
-    
-    RESULT_dict={}
-    # kNN fitting
-    Totalendtime=min([df_person_segment_feature_role_dict[role][ed_col_str].values[-1]  for role in Inspect_roles])
-    Mintimeserieslen=min([len(df_person_segment_feature_role_dict[role])  for role in Inspect_roles])
-    T = np.linspace(0, Totalendtime, int(Totalendtime))[:, np.newaxis]
-    
-    RESULT_dict['timeSeries_len[{}]'.format(PhoneOfInterest_str)]=Mintimeserieslen
-    for label_choose in label_choose_lst:
-        RESULT_dict[label_choose]=Label.label_raw[Label.label_raw['name']==people][label_choose].values[0]
-    functionDK={}
-    for role_choose in Inspect_roles:
-        df_dynVals=df_person_segment_feature_role_dict[role_choose][col]
-        # remove outlier that is falls over 3 times of the std
-        df_dynVals_deleteOutlier=df_dynVals[(np.abs(stats.zscore(df_dynVals)) < 3)]
-        df_stidx=df_person_segment_feature_role_dict[role_choose][st_col_str]
-        df_edidx=df_person_segment_feature_role_dict[role_choose][ed_col_str]
-        
-        
-        Mid_positions=[]
-        for x_1 , x_2, y in zip(df_stidx.values ,df_edidx.values,df_dynVals_deleteOutlier.values):            
-            # ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,0.5,color=Colormap_role_dict[role_choose]))
-            start_time=x_1
-            end_time=x_2
-            mid_time=(start_time+end_time)/2
-            Mid_positions.append(mid_time)    
-        
-        recWidth=df_dynVals_deleteOutlier.min()
-        # add an totally overlapped rectangle but it will show the label
-        # ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],label=role_choose))
-        knn = neighbors.KNeighborsRegressor(knn_neighbors, weights=knn_weights)
-        X, y=np.array(Mid_positions).reshape(-1,1), df_dynVals_deleteOutlier
-        try:
-            y_ = knn.fit(X, y.values).predict(T)
-        except ValueError:
-            print("Problem people happen at ", people, role_choose)
-            print("df_dynVals", df_dynVals)
-            print("==================================================")
-            print("df_dynVals_deleteOutlier", df_dynVals_deleteOutlier)
-            raise ValueError
-        functionDK[role_choose]=y_
-        # plt.plot(y_,color=Colormap_role_dict[role_choose],alpha=0.5)
-    # ax.autoscale()
-    # plt.title(col)
-    # plt.legend()
-    # plt.show()
-    # fig.clf()
-    functionDK_people[people]=functionDK
-    
-    proximity=-np.abs(np.mean(functionDK['D'] - functionDK['K']))
-    D_t=-np.abs(functionDK['D']-functionDK['K'])
-
-    time=T.reshape(-1)
-    Convergence=pearsonr(D_t,time)[0]
-    Trend_D=pearsonr(functionDK['D'],time)[0]
-    Trend_K=pearsonr(functionDK['K'],time)[0]
-    delta=[-15, -10, -5, 0, 5, 10, 15]        
-    syncron_lst=[]
-    for d in delta:
-        if d < 0: #ex_ d=-15
-            f_d_shifted=functionDK['D'][-d:]
-            f_k_shifted=functionDK['K'][:d]
-        elif d > 0: #ex_ d=15
-            f_d_shifted=functionDK['D'][:-d]
-            f_k_shifted=functionDK['K'][d:]
-        else: #d=0
-            f_d_shifted=functionDK['D']
-            f_k_shifted=functionDK['K']
-        syncron_candidate=pearsonr(f_d_shifted,f_k_shifted)[0]
-        
-        syncron_lst.append(syncron_candidate)
-    syncrony=syncron_lst[np.argmax(np.abs(syncron_lst))]
-    
-    RESULT_dict['Proximity[{}]'.format(col)]=proximity
-    RESULT_dict['Trend[{}]_d'.format(col)]=Trend_D
-    RESULT_dict['Trend[{}]_k'.format(col)]=Trend_K
-    RESULT_dict['Convergence[{}]'.format(col)]=Convergence
-    RESULT_dict['Syncrony[{}]'.format(col)]=syncrony
-    
-    df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index').T
-    df_RESULT_list.index=[people]
-    df_syncrony_measurement=df_syncrony_measurement.append(df_RESULT_list)
-    
-# score_column='Proximity[{}]'.format(col)
-score_column='Proximity[{0}]{suffix}'.format(col,suffix='')
-score_df=df_syncrony_measurement
-score_cols=[score_column]
-
-# =============================================================================
-'''
-    
-    Plot function
-
-'''
-# =============================================================================
-for people in list(score_df.sort_values(by=score_column).index):
-    df_person_segment_feature_role_dict=df_person_segment_feature_DKIndividual_dict[people]
-    fig, ax = plt.subplots()
-    for role_choose in args.Inspect_roles:
-        df_dynVals=df_person_segment_feature_role_dict[role_choose][col]
-        # remove outlier that is falls over 3 times of the std
-        df_dynVals_deleteOutlier=df_dynVals[(np.abs(stats.zscore(df_dynVals)) < 3)]
-        df_stidx=df_person_segment_feature_role_dict[role_choose][st_col_str]
-        df_edidx=df_person_segment_feature_role_dict[role_choose][ed_col_str]
-        # recWidth=df_dynVals_deleteOutlier.min()/100
-        recWidth=0.05
-        for x_1 , x_2, y in zip(df_stidx.values ,df_edidx.values,df_dynVals_deleteOutlier.values):            
-            ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],alpha=0.5))
-        
-        # add an totally overlapped rectangle but it will show the label
-        ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],label=role_choose,alpha=0.5))
-        
-        
-        plt.plot(functionDK_people[people][role_choose],color=Colormap_role_dict[role_choose])
-    ax.autoscale()
-    plt.title(col)
-    plt.legend()
-    
-    score=score_df.loc[people,score_cols]
-    info_arr=["{}: {}".format(idx,v) for idx, v in zip(score.index.values,np.round(score.values,3))]
-    addtext='\n'.join(info_arr)
-    x0, xmax = plt.xlim()
-    y0, ymax = plt.ylim()
-    data_width = xmax - x0
-    data_height = ymax - y0
-    # text(x0/0.1 + data_width * 0.004, -data_height * 0.002, addtext, ha='center', va='center')
-    text(0, -0.1,addtext, ha='center', va='center', transform=ax.transAxes)
-    
-    plt.show()
-    fig.clf()
-                
