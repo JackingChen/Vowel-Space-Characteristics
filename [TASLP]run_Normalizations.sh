@@ -55,15 +55,16 @@ if [[ $stage -le 1 ]]; then
 fi
 
 if [[ $stage -le 2 ]]; then
-    run_python_script "[TASLP]4-1.1.SynchronyVSC(Full).py"  "--Normalize_way" "$normalize_way"
+    run_python_script "[TASLP]4-1.1.SynchronyVSC(Full).py"  "--Normalize_way" "$normalize_way" "--dataset_role" "ASD_DOCKID"
+    run_python_script "[TASLP]4-1.1.SynchronyVSC(Full).py"  "--Normalize_way" "$normalize_way" "--dataset_role" "TD_DOCKID"
 fi
 
 if [[ $stage -le 3 ]]; then
-    run_python_script "[TASLP]4-2.1.SynchronyPhonation(proprocess).py"
+    # run_python_script "[TASLP]4-2.1.SynchronyPhonation(proprocess).py"
     pass
 fi
 if [[ $stage -le 4 ]]; then
-    run_python_script "[TASLP]4-2.2.SynchronyPhonation(Feat).py"
+    # run_python_script "[TASLP]4-2.2.SynchronyPhonation(Feat).py"
     pass
 fi
 if [[ $stage -le 5 ]]; then

@@ -31,7 +31,7 @@ def get_args():
     parser = argparse.ArgumentParser(
         description="Select utterances with entropy values that are close to disribution of target domain data",
         )
-    parser.add_argument('--inpklpath', default='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',
+    parser.add_argument('--inpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
                         help='path of the base directory')
     parser.add_argument('--label_choose_lst', default=['ADOS_C'],
                             help=['ADOS_C','dia_num'])
@@ -41,8 +41,13 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--knn_neighbors', default=2,  type=int,
                             help='path of the base directory')
+    parser.add_argument('--Inspect_roles', default=['D','K'],
+                            help='')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
+    parser.add_argument('--Normalize_way', default='func15',
+                            help='')
+    
     args = parser.parse_args()
     return args
 
@@ -56,6 +61,10 @@ knn_neighbors=args.knn_neighbors
 Reorder_type=args.Reorder_type
 # Randseed=args.Randseed
 outpklpath=args.inpklpath+"/Session_formants_people_vowel_feat/"
+
+if args.Normalize_way=='None':
+    args.Normalize_way=None
+
 # =============================================================================
 '''
 
@@ -86,10 +95,10 @@ def Add_label(df_formant_statistic,Label,label_choose='ADOS_S'):
 # =============================================================================
     
 # df_formant_statistic77_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromASD_DOCKID')
-df_formant_statistic77_path=dfFormantStatisticpath+'/Features/ClassificationMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
+df_formant_statistic77_path=dfFormantStatisticpath+f'/Features/ClassificationMerged_dfs/{args.Normalize_way}/ASD_DOCKID/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'
 df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
 # df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Session_formants_people_vowel_feat/{name}_{role}.pkl'.format(name=feat,role='KID_FromTD_DOCKID')
-df_formant_statistic_ASDTD_path=dfFormantStatisticpath+'/Features/ClassificationMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/TD_DOCKID/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
+df_formant_statistic_ASDTD_path=dfFormantStatisticpath+f'/Features/ClassificationMerged_dfs/{args.Normalize_way}/TD_DOCKID/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'
 if not os.path.exists(df_formant_statistic_ASDTD_path) or not os.path.exists(df_formant_statistic77_path):
     raise FileExistsError
 df_feature_TD=pickle.load(open(df_formant_statistic_ASDTD_path,'rb'))
@@ -182,64 +191,20 @@ y_str='between_variance_norm(A:,i:,u:)'
 x_PprNme_str=Swap2PaperName(x_str,PprNmeMp).replace("[$","[").replace("$]","]")
 y_PprNme_str=Swap2PaperName(y_str,PprNmeMp).replace("[$","[").replace("$]","]")
 
-
 # =============================================================================
-'''
-    這是TASLP Fig.6 discussion 在講  prevent classification error的圖
-
-'''
+# 這邊檢查feature值
+Inspect_columns=[
+'Proximity[between_covariance_norm(A:,i:,u:)]',
+'Proximity[between_variance_norm(A:,i:,u:)]',
+'Proximity[within_covariance_norm(A:,i:,u:)]',
+'Proximity[within_variance_norm(A:,i:,u:)]',
+'Proximity[total_covariance_norm(A:,i:,u:)]',
+]
 # =============================================================================
-# g = sns.scatterplot(data=df_ModerateTask_postprocess,x=x_PprNme_str,y=y_PprNme_str,hue='Selected')
-g = sns.scatterplot(data=df_ModerateTask_postprocess_PprNme,x=x_PprNme_str,y=y_PprNme_str,hue='Selected')
-g.axhline(0.027,color='g', linestyle='--')
-g.axvline(-0.1,color='g', linestyle='--')
-
-import matplotlib.patches as patches
-# Create a Rectangle patch
-
-
-
-# Add the patch to the Axes
-rect = patches.Rectangle((-0.81, 0.027), 0.71, 0.0175, linewidth=3, edgecolor='r', facecolor='none', zorder=30)
-ax=plt.gca()
-ax.add_patch(rect)
-
-x_ticks=list(np.arange(-0.8,0.8,0.4))
-
-
-y_ticks=list(np.arange(0,0.05,0.01))
-
-extraxticks=[-0.1]
-# plt.xticks(list(plt.xticks()[0]) + extraxticks)
-plt.xticks(x_ticks+extraxticks)
-extrayticks=[0.027]
-# plt.yticks(list(plt.yticks()[0]) + extrayticks)
-plt.yticks(y_ticks + extrayticks)
-
-# sns.set(rc={'figure.figsize':(8,6)})
-# from matplotlib import rcParams
-# # figure size in inches
-# rcParams['figure.figsize'] = 11.7,8.27
-# g.figure.set_size_inches(11.7,8.27)
-
-g.figure.set_size_inches(5,2)
-
-# for idx in df_ModerateTask_Q1Q3.index:
-#     plt.text(df_ModerateTask_Q1Q3.loc[idx,x_str],df_ModerateTask_Q1Q3.loc[idx,y_str],idx, fontdict=dict(color='black', alpha=0.5, size=16))
-plt.savefig("images/Prevent_risk.png",dpi=300, bbox_inches='tight')
-import matplotlib
-print("Font family", matplotlib.rcParams['font.family']) #用來查目前是用什麼font family
-# Plot moderate special samples
-# x_str='Trend[dcorr_12]_d'
-# y_str='Trend[pear_12]_d'
-# g = sns.scatterplot(data=df_HighTask_postprocess,x=x_str,y=y_str,hue='Selected')
-# for idx in df_HighTask_Q1Q3.index:
-#     plt.text(df_HighTask_Q1Q3.loc[idx,x_str],df_HighTask_Q1Q3.loc[idx,y_str],idx, fontdict=dict(color='black', alpha=0.5, size=16))
-# g.axhline(-0.4,color='g')
-# g.axvline(-0.4,color='g')
-
-
-
+Inspectdf_feature_lowMinimal_CSS=df_feature_lowMinimal_CSS[Inspect_columns]
+Inspectdf_feature_moderatehigh_CSS=df_feature_moderatehigh_CSS[Inspect_columns]
+Inspectdf_feature_high_CSS=df_feature_high_CSS[Inspect_columns]
+Inspectdf_feature_TD=df_feature_TD[Inspect_columns]
 
 #%%
 # =============================================================================
@@ -344,15 +309,7 @@ self_specify_cols=[
 
 
 FeatureSet_lst=[
-    'DEP_columns',
-    # 'Phonation_Trend_D_cols',
-    'LOCDEP_Trend_D_cols',
-    'LOCDEP_Syncrony_cols',
-    'LOC_columns',
-    # 'Phonation_Syncrony_cols',
-  # 'Phonation_Proximity_cols',
-    # 'Phonation_Trend_D_cols',
-    # 'Phonation_Trend_K_cols'
+    'LOCDEP_Proximity_cols',
   ]
 self_specify_cols=[]
 for FSL in FeatureSet_lst:
@@ -533,7 +490,7 @@ df_feature_staticLOCDEP=pickle.load(open('articulation/Pickles/Session_formants_
 df_feature_dynamicLOCDEP=pickle.load(open('articulation/Pickles/Session_formants_people_vowel_feat/Syncrony_measure_of_variance_DKIndividual_ASD_DOCKID.pkl','rb'))
 df_feature_dynamicLOCDEP=Add_label(df_feature_ASD,Label,label_choose='ADOS_C')
 df_feature_dynamicLOCDEP=Add_label(df_feature_ASD,Label,label_choose='ADOS_S')
-df_feature_dynamicPhonation=pickle.load(open('articulation/Pickles/Session_formants_people_vowel_feat/Syncrony_measure_of_variance_phonation_DKIndividual_ASD_DOCKID.pkl','rb'))
+# df_feature_dynamicPhonation=pickle.load(open('articulation/Pickles/Session_formants_people_vowel_feat/Syncrony_measure_of_variance_phonation_DKIndividual_ASD_DOCKID.pkl','rb'))
 
 N=0
 Eval_med=Evaluation_method()
@@ -571,57 +528,39 @@ for Label_choose in label_correlation_choose_lst:
 
 
 
-dynamic_cols_sel='' #This means do not specify any columns
-# Record_certainCol_dict={}
-df_Regression_T=pd.DataFrame()
-for label_corr_str in  label_correlation_choose_lst:
+# =============================================================================
+# 看哪個feature跟label有correlation
+# =============================================================================
+# dynamic_cols_sel='' #This means do not specify any columns
+# # Record_certainCol_dict={}
+# df_Regression_T=pd.DataFrame()
+# for label_corr_str in  label_correlation_choose_lst:
     
-    Correlation_result_lst=[
-    Aaad_Correlation_staticLOCDEP[label_corr_str],
-    Aaad_Correlation_dynamicLOCDEP[label_corr_str],
-    Aaad_Correlation_dynamicPhonation[label_corr_str],
-    ]
-    InfoCorr_all=pd.concat(Correlation_result_lst,axis=0)
-    # for test_name, values in All_cmp_dict.items():
-    values=InfoCorr_all
-    # ASD_group_name=test_name.split(" vs ")[0].replace('df_feature_','')
-    # 先只看pearson的值
-    data_P=values.loc[values.index.str.startswith(dynamic_cols_sel),values.columns.str.startswith("pearson")]
-    for idx in data_P.index:
-        # for col in data_P.columns:
-        # Fill in direction: ASD < TD or ASD >= TD
-        df_Regression_T.loc[idx,data_P.columns[0]]=data_P.loc[idx,data_P.columns[0]]
+#     Correlation_result_lst=[
+#     Aaad_Correlation_staticLOCDEP[label_corr_str],
+#     Aaad_Correlation_dynamicLOCDEP[label_corr_str],
+#     Aaad_Correlation_dynamicPhonation[label_corr_str],
+#     ]
+#     InfoCorr_all=pd.concat(Correlation_result_lst,axis=0)
+#     # for test_name, values in All_cmp_dict.items():
+#     values=InfoCorr_all
+#     # ASD_group_name=test_name.split(" vs ")[0].replace('df_feature_','')
+#     # 先只看pearson的值
+#     data_P=values.loc[values.index.str.startswith(dynamic_cols_sel),values.columns.str.startswith("pearson")]
+#     for idx in data_P.index:
+#         # for col in data_P.columns:
+#         # Fill in direction: ASD < TD or ASD >= TD
+#         df_Regression_T.loc[idx,data_P.columns[0]]=data_P.loc[idx,data_P.columns[0]]
 
-        if data_P.loc[idx,data_P.columns[1]]>0.05:
-            df_Regression_T.loc[idx,data_P.columns[1]]='n.s.'
-        else:
-            df_Regression_T.loc[idx,data_P.columns[1]]=data_P.loc[idx,data_P.columns[1]]
-# idx = df_Regression_T["pearson_p"].apply(lambda x: type(x) == np.float64)
-Significant_idxs = df_Regression_T["pearson_p"].apply(lambda x: type(x) != str)
-df_Regression_significant_T=df_Regression_T.loc[Significant_idxs]
-
-
-# =============================================================================
-'''
-
-    Inspect values
-
-'''
-# =============================================================================
-filter_col = [col for col in df_feature_ASD.columns if col.startswith('Syncrony')]
-
-Syncrony_corr=[ 
- 'Syncrony[hotelling_lin_norm(A:,i:,u:)]',
- 'Syncrony[within_covariance_norm(A:,i:,u:)]',
- 'Syncrony[within_variance_norm(A:,i:,u:)]',
- 'Syncrony[Between_Within_Det_ratio_norm(A:,i:,u:)]',
- 'Syncrony[pear_12]',
- 'Syncrony[spear_12]',
- 'Syncrony[kendall_12]',
- 'Syncrony[dcorr_12]',]
+#         if data_P.loc[idx,data_P.columns[1]]>0.05:
+#             df_Regression_T.loc[idx,data_P.columns[1]]='n.s.'
+#         else:
+#             df_Regression_T.loc[idx,data_P.columns[1]]=data_P.loc[idx,data_P.columns[1]]
+# # idx = df_Regression_T["pearson_p"].apply(lambda x: type(x) == np.float64)
+# Significant_idxs = df_Regression_T["pearson_p"].apply(lambda x: type(x) != str)
+# df_Regression_significant_T=df_Regression_T.loc[Significant_idxs]
 
 
-df_feature_ASD_syncorny=df_feature_ASD[Syncrony_corr]
 
 #%%
 # =============================================================================
@@ -630,126 +569,178 @@ df_feature_ASD_syncorny=df_feature_ASD[Syncrony_corr]
     Plot area
 
 '''
-# =============================================================================
+from sklearn import neighbors
+from Syncrony import Syncrony
+PhoneOfInterest_str='A:,i:,u:'
+features=[
+    'between_covariance_norm(A:,i:,u:)',
+     'between_variance_norm(A:,i:,u:)',
+     'within_covariance_norm(A:,i:,u:)',
+     'within_variance_norm(A:,i:,u:)',
+     'total_covariance_norm(A:,i:,u:)',
+    ]
+# col從features裡面選
+col='between_covariance_norm(A:,i:,u:)'
+Inspect_people=list(df_feature_lowMinimal_CSS.index) #df_feature_lowMinimal_CSS, df_feature_moderate_CSS, df_feature_high_CSS
 
-df_POI_person_segment_DKIndividual_feature_dict_TD=pickle.load(open(outpklpath+"df_POI_person_segment_DKIndividual_feature_dict_{0}_{1}.pkl".format('TD_DOCKID', 'phonation'),"rb"))
-df_POI_person_segment_DKIndividual_feature_dict_ASD=pickle.load(open(outpklpath+"df_POI_person_segment_DKIndividual_feature_dict_{0}_{1}.pkl".format('ASD_DOCKID', 'phonation'),"rb"))
-
-st_col_str='IPU_st'  #It is related to global info
-ed_col_str='IPU_ed'  #It is related to global info
-Inspect_roles=args.Inspect_roles
-df_person_segment_feature_DKIndividual_dict=df_POI_person_segment_DKIndividual_feature_dict_ASD['A:,i:,u:']['segment']
-p_1=Inspect_roles[0]
-p_2=Inspect_roles[1]
-df_syncrony_measurement=pd.DataFrame()
-col = 'meanF0_mean(A:,i:,u:)'
 Colormap_role_dict=Dict()
 Colormap_role_dict['D']='orange'
 Colormap_role_dict['K']='blue'
-knn_weights='distance'
-# knn_weights='uniform'
-knn_neighbors=2
+df_person_segment_feature_DKIndividual_Topdict={}
+# =============================================================================
+
+df_person_segment_feature_DKIndividual_dict_TD=pickle.load(open(outpklpath+"df_person_segment_feature_DKIndividual_dict_{0}_{1}.pkl".format('TD_DOCKID', 'formant'),"rb"))
+df_person_segment_feature_DKIndividual_dict_ASD=pickle.load(open(outpklpath+"df_person_segment_feature_DKIndividual_dict_{0}_{1}.pkl".format('ASD_DOCKID', 'formant'),"rb"))
+
+df_person_segment_feature_DKIndividual_Topdict['TD']=df_person_segment_feature_DKIndividual_dict_TD
+df_person_segment_feature_DKIndividual_Topdict['ASD']=df_person_segment_feature_DKIndividual_dict_ASD
+
+def DrawFuncDK(segment_info_Topdict,Inspect_people,participant='TD'):
+    # =============================================================================
+    # 畫function_DK
+    # 生出df_syncrony_measurement_dict
+    # =============================================================================
+    
+    syncrony=Syncrony()
+    PhoneOfInterest_str=''
+    MinNumTimeSeries=knn_neighbors+1
+    Inspect_roles=args.Inspect_roles
+    
+    segment_info_dict=segment_info_Topdict[participant]
+    df_basic_additional_info=syncrony._Add_additional_info(segment_info_dict,Label,label_choose_lst,\
+                                                  Inspect_roles, MinNumTimeSeries=MinNumTimeSeries,PhoneOfInterest_str=PhoneOfInterest_str)
+    df_syncrony_measurement_dict=Dict()
+    Knn_aggressive_mode=True
+
+    Col_continuous_function_DK=syncrony.KNNFitting(segment_info_dict,\
+                col, args.Inspect_roles,\
+                knn_weights=knn_weights,knn_neighbors=knn_neighbors,MinNumTimeSeries=MinNumTimeSeries,\
+                st_col_str='IPU_st', ed_col_str='IPU_ed', aggressive_mode=Knn_aggressive_mode)
+
+
+    df_syncrony_measurement_col=syncrony._calculate_features_col(Col_continuous_function_DK,col)
+    if df_syncrony_measurement_col.isna().any().any():
+        print("The columns with Nan is ", col)
+        
+    df_syncrony_measurement_dict[col]=df_syncrony_measurement_col
+    # =============================================================================
+    # 換名字
+    # =============================================================================
+    score_column='Proximity[{}]'.format(col)
+    # score_column='Trend[{0}]{suffix}'.format(col,suffix='_k')
+    score_df=df_syncrony_measurement_col
+    score_cols=[score_column]
+    functionDK_people=Col_continuous_function_DK
+    st_col_str='IPU_st'
+    ed_col_str='IPU_ed'
+    #%%
+    # =============================================================================
+    '''
+        
+        Plot function
+        畫出來
+
+    '''
+    # Inputs: 
+    # score_df
+    # segment_info_dict
+    # args.Inspect_roles
+    # =============================================================================
+    for people in list(score_df.sort_values(by=score_column).index):
+        if len(Inspect_people) !=0:
+            if people not in Inspect_people:
+                continue
+        df_person_segment_feature_role_dict=segment_info_dict[people]
+        fig, ax = plt.subplots()
+        for role_choose in args.Inspect_roles:
+            df_dynVals=df_person_segment_feature_role_dict[role_choose][col]
+            # remove outlier that is falls over 3 times of the std
+            df_dynVals_deleteOutlier=df_dynVals[(np.abs(stats.zscore(df_dynVals)) < 3)]
+            df_stidx=df_person_segment_feature_role_dict[role_choose][st_col_str]
+            df_edidx=df_person_segment_feature_role_dict[role_choose][ed_col_str]
+            recWidth=df_dynVals_deleteOutlier.min()/100
+            # recWidth=0.0005
+            for x_1 , x_2, y in zip(df_stidx.values ,df_edidx.values,df_dynVals_deleteOutlier.values):            
+                ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],alpha=0.5))
+            
+            # add an totally overlapped rectangle but it will show the label
+            ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],label=role_choose,alpha=0.5))
+            
+            
+            plt.plot(functionDK_people[people][role_choose],color=Colormap_role_dict[role_choose])
+        ax.autoscale()
+        plt.title(f"{participant}--{col}")
+        plt.legend()
+        
+        score=score_df.loc[people,score_cols]
+        print("\n".join(["{}, {}: {}".format(people, idx,v) for idx, v in zip(score.index.values,np.round(score.values,3))]))
+        info_arr=["{}: {}".format(idx,v) for idx, v in zip(score.index.values,np.round(score.values,3))]
+        addtext='\n'.join(info_arr)
+        x0, xmax = plt.xlim()
+        y0, ymax = plt.ylim()
+        data_width = xmax - x0
+        data_height = ymax - y0
+        # text(x0/0.1 + data_width * 0.004, -data_height * 0.002, addtext, ha='center', va='center')
+        text(0, -0.1,addtext, ha='center', va='center', transform=ax.transAxes)
+        
+        plt.show()
+        fig.clf()
+
+
+DrawFuncDK(segment_info_Topdict=df_person_segment_feature_DKIndividual_Topdict,
+           Inspect_people=Inspect_people,
+           participant='ASD')
+DrawFuncDK(segment_info_Topdict=df_person_segment_feature_DKIndividual_Topdict,
+           Inspect_people=[],
+           participant='TD')
+
+aaa=ccc
+# =============================================================================
+# 畫function_DK
+# 生出df_syncrony_measurement_dict
+# =============================================================================
+syncrony=Syncrony()
+PhoneOfInterest_str=''
 MinNumTimeSeries=knn_neighbors+1
-PhoneOfInterest_str = 'A:,i:,u:'
-functionDK_people=Dict()
-for people in df_person_segment_feature_DKIndividual_dict.keys():
-    if len(df_person_segment_feature_DKIndividual_dict[people][p_1])<MinNumTimeSeries or len(df_person_segment_feature_DKIndividual_dict[people][p_2])<MinNumTimeSeries:
-        continue
-    df_person_segment_feature_role_dict=df_person_segment_feature_DKIndividual_dict[people]
-    
-    RESULT_dict={}
-    # kNN fitting
-    Totalendtime=min([df_person_segment_feature_role_dict[role][ed_col_str].values[-1]  for role in Inspect_roles])
-    Mintimeserieslen=min([len(df_person_segment_feature_role_dict[role])  for role in Inspect_roles])
-    T = np.linspace(0, Totalendtime, int(Totalendtime))[:, np.newaxis]
-    
-    RESULT_dict['timeSeries_len[{}]'.format(PhoneOfInterest_str)]=Mintimeserieslen
-    for label_choose in label_choose_lst:
-        RESULT_dict[label_choose]=Label.label_raw[Label.label_raw['name']==people][label_choose].values[0]
-    functionDK={}
-    for role_choose in Inspect_roles:
-        df_dynVals=df_person_segment_feature_role_dict[role_choose][col]
-        # remove outlier that is falls over 3 times of the std
-        df_dynVals_deleteOutlier=df_dynVals[(np.abs(stats.zscore(df_dynVals)) < 3)]
-        df_stidx=df_person_segment_feature_role_dict[role_choose][st_col_str]
-        df_edidx=df_person_segment_feature_role_dict[role_choose][ed_col_str]
-        
-        
-        Mid_positions=[]
-        for x_1 , x_2, y in zip(df_stidx.values ,df_edidx.values,df_dynVals_deleteOutlier.values):            
-            # ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,0.5,color=Colormap_role_dict[role_choose]))
-            start_time=x_1
-            end_time=x_2
-            mid_time=(start_time+end_time)/2
-            Mid_positions.append(mid_time)    
-        
-        recWidth=df_dynVals_deleteOutlier.min()
-        # add an totally overlapped rectangle but it will show the label
-        # ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],label=role_choose))
-        knn = neighbors.KNeighborsRegressor(knn_neighbors, weights=knn_weights)
-        X, y=np.array(Mid_positions).reshape(-1,1), df_dynVals_deleteOutlier
-        try:
-            y_ = knn.fit(X, y.values).predict(T)
-        except ValueError:
-            print("Problem people happen at ", people, role_choose)
-            print("df_dynVals", df_dynVals)
-            print("==================================================")
-            print("df_dynVals_deleteOutlier", df_dynVals_deleteOutlier)
-            raise ValueError
-        functionDK[role_choose]=y_
-        # plt.plot(y_,color=Colormap_role_dict[role_choose],alpha=0.5)
-    # ax.autoscale()
-    # plt.title(col)
-    # plt.legend()
-    # plt.show()
-    # fig.clf()
-    functionDK_people[people]=functionDK
-    
-    proximity=-np.abs(np.mean(functionDK['D'] - functionDK['K']))
-    D_t=-np.abs(functionDK['D']-functionDK['K'])
+Inspect_roles=args.Inspect_roles
+df_basic_additional_info=syncrony._Add_additional_info(df_person_segment_feature_DKIndividual_dict,Label,label_choose_lst,\
+                                              Inspect_roles, MinNumTimeSeries=MinNumTimeSeries,PhoneOfInterest_str=PhoneOfInterest_str)
+df_syncrony_measurement_dict=Dict()
+Knn_aggressive_mode=True
 
-    time=T.reshape(-1)
-    Convergence=pearsonr(D_t,time)[0]
-    Trend_D=pearsonr(functionDK['D'],time)[0]
-    Trend_K=pearsonr(functionDK['K'],time)[0]
-    delta=[-15, -10, -5, 0, 5, 10, 15]        
-    syncron_lst=[]
-    for d in delta:
-        if d < 0: #ex_ d=-15
-            f_d_shifted=functionDK['D'][-d:]
-            f_k_shifted=functionDK['K'][:d]
-        elif d > 0: #ex_ d=15
-            f_d_shifted=functionDK['D'][:-d]
-            f_k_shifted=functionDK['K'][d:]
-        else: #d=0
-            f_d_shifted=functionDK['D']
-            f_k_shifted=functionDK['K']
-        syncron_candidate=pearsonr(f_d_shifted,f_k_shifted)[0]
-        
-        syncron_lst.append(syncron_candidate)
-    syncrony=syncron_lst[np.argmax(np.abs(syncron_lst))]
+Col_continuous_function_DK=syncrony.KNNFitting(df_person_segment_feature_DKIndividual_dict,\
+            col, args.Inspect_roles,\
+            knn_weights=knn_weights,knn_neighbors=knn_neighbors,MinNumTimeSeries=MinNumTimeSeries,\
+            st_col_str='IPU_st', ed_col_str='IPU_ed', aggressive_mode=Knn_aggressive_mode)
+
+
+df_syncrony_measurement_col=syncrony._calculate_features_col(Col_continuous_function_DK,col)
+if df_syncrony_measurement_col.isna().any().any():
+    print("The columns with Nan is ", col)
     
-    RESULT_dict['Proximity[{}]'.format(col)]=proximity
-    RESULT_dict['Trend[{}]_d'.format(col)]=Trend_D
-    RESULT_dict['Trend[{}]_k'.format(col)]=Trend_K
-    RESULT_dict['Convergence[{}]'.format(col)]=Convergence
-    RESULT_dict['Syncrony[{}]'.format(col)]=syncrony
-    
-    df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index').T
-    df_RESULT_list.index=[people]
-    df_syncrony_measurement=df_syncrony_measurement.append(df_RESULT_list)
-    
-# score_column='Proximity[{}]'.format(col)
-score_column='Proximity[{0}]{suffix}'.format(col,suffix='')
-score_df=df_syncrony_measurement
+df_syncrony_measurement_dict[col]=df_syncrony_measurement_col
+# =============================================================================
+# 換名字
+# =============================================================================
+score_column='Proximity[{}]'.format(col)
+# score_column='Trend[{0}]{suffix}'.format(col,suffix='_k')
+score_df=df_syncrony_measurement_col
 score_cols=[score_column]
-
+functionDK_people=Col_continuous_function_DK
+st_col_str='IPU_st'
+ed_col_str='IPU_ed'
+#%%
 # =============================================================================
 '''
     
     Plot function
+    畫出來
 
 '''
+# Inputs: 
+# score_df
+# df_person_segment_feature_DKIndividual_dict
+# args.Inspect_roles
 # =============================================================================
 for people in list(score_df.sort_values(by=score_column).index):
     df_person_segment_feature_role_dict=df_person_segment_feature_DKIndividual_dict[people]
@@ -760,8 +751,8 @@ for people in list(score_df.sort_values(by=score_column).index):
         df_dynVals_deleteOutlier=df_dynVals[(np.abs(stats.zscore(df_dynVals)) < 3)]
         df_stidx=df_person_segment_feature_role_dict[role_choose][st_col_str]
         df_edidx=df_person_segment_feature_role_dict[role_choose][ed_col_str]
-        # recWidth=df_dynVals_deleteOutlier.min()/100
-        recWidth=0.05
+        recWidth=df_dynVals_deleteOutlier.min()/100
+        # recWidth=0.0005
         for x_1 , x_2, y in zip(df_stidx.values ,df_edidx.values,df_dynVals_deleteOutlier.values):            
             ax.add_patch(plt.Rectangle((x_1,y),x_2-x_1,recWidth,color=Colormap_role_dict[role_choose],alpha=0.5))
         
@@ -786,3 +777,6 @@ for people in list(score_df.sort_values(by=score_column).index):
     
     plt.show()
     fig.clf()
+
+aaa=ccc
+                
