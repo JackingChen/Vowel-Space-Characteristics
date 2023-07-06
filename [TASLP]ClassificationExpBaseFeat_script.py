@@ -100,7 +100,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--Normalize_way', default='proposed',
+    parser.add_argument('--Normalize_way', default='func15',
                             help='')
     parser.add_argument('--FeatureComb_mode', default='baselineFeats',
                             help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
@@ -677,7 +677,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         df_best_result_AUC.to_excel(writer_clf,sheet_name="AUC")
         df_best_result_f1.to_excel(writer_clf,sheet_name="f1")
 
-writer_clf.save()
+writer_clf.close()
 
 # =============================================================================
 '''

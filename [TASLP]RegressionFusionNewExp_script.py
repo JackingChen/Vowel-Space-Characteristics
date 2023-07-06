@@ -162,7 +162,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--Normalize_way', default='func15',
+    parser.add_argument('--Normalize_way', default='None',
                             help='')
     parser.add_argument('--FeatureComb_mode', default='Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation',
                             help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
@@ -364,21 +364,10 @@ featuresOfInterest=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
 #         FeatureLabelMatch_manual.append('{0}-{1}'.format(key_layer1,key_layer2))
 
 # XXX 2. 如果要手動設定實驗的話用這一區
-# FeatureLabelMatch_manual=[
-#     # Rule: {layer1}-{layer2}
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Syncrony_cols',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-DEP_columns',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Trend_D_cols',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Syncrony_cols',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Trend_K_cols',
-#     ]
-FeatureLabelMatch_manual=[
-'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols',
-]
+FeatureLabelMatch_manual=FeatSel.Norm_top10_sugession_dict[args.Normalize_way]
+
+
+
 
 
 # =============================================================================
@@ -400,6 +389,9 @@ for exp_str in FeatureLabelMatch_manual:
     # load features from file
     data=ados_ds.featurepath +'/'+ Merge_feature_path+'{}.pkl'.format(Layer1Feat)
     
+    if Layer2Feat in PprNmeMp.Inverse_Paper_name_map.keys():
+        featurename=PprNmeMp.Inverse_Paper_name_map[Layer2Feat]
+        Layer2Feat=Layer2Feat.replace(Layer2Feat,featurename)
 
     feat_col_ = featuresOfInterest[Layer1Feat][Layer2Feat] # ex: ['MSB_f1']
     for lab_ in label_choose:
@@ -416,15 +408,12 @@ for exp_str in FeatureLabelMatch_manual:
     
 
 
-
 # =============================================================================
 # Model parameters
 # =============================================================================
 
 epsilon=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
-# C_variable=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
-C_variable=np.array([1])
-# epsilon=np.array([0.001,0.01,0.1,1,5,10.0,25])
+
 n_estimator=[2, 4, 8, 16, 32, 64]
 
 
@@ -440,30 +429,8 @@ Classifier['SVR']={'model':sklearn.svm.SVR(),\
                     'model__epsilon': epsilon,\
                     # 'model__C':C_variable,\
                     'model__kernel': ['rbf'],\
-                    # 'model__gamma': ['scale'],\
+                    # 'gamma': ['auto'],\
                                 }}
-
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#                   'parameters':{'model__alpha':epsilon,\
-#                                 'model__l1_ratio': [0.5]}} #Just a initial value will be changed by parameter tuning
-    
-    
-# from sklearn.neural_network import MLPRegressor
-# Classifier['MLP']={'model':MLPRegressor(),\
-#                   'parameters':{'model__random_state':[1],\
-#                                 'model__hidden_layer_sizes':[(40,),(60,),(80,),(100)],\
-#                                 'model__activation':['relu'],\
-#                                 'model__solver':['adam'],\
-#                                 'model__early_stopping':[True],\
-#                                 # 'max_iter':[1000],\
-#                                 # 'penalty':['elasticnet'],\
-#                                 # 'l1_ratio':[0.25,0.5,0.75],\
-#                                 }}
-
-
-# Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
-#                   'parameters':{'model__fit_intercept':[True],\
-#                                 }}
 
 
 
@@ -519,7 +486,6 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         Labels = Session_level_all.X[feature_keys]
         print("=====================Cross validation start==================")
         pipe = Pipeline(steps=[('scalar',StandardScaler()),("model", clf['model'])])
-        # pipe = Pipeline(steps=[("model", clf['model'])])
         p_grid=clf['parameters']
         Gclf = GridSearchCV(estimator=pipe, param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
         Gclf_manual = GridSearchCV(estimator=pipe, param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
@@ -667,6 +633,9 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         df_best_result_f1.to_excel(writer_clf,sheet_name="f1")
 
 # TASLP table.5 fusion的部份
+Result_path="./Suggested_Regression_rslts"
+if not os.path.exists(Result_path):
+    os.makedirs(Result_path)
 writer_clf.save()
 print(df_best_result_allThreeClassifiers)
 df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+f"TASLPTABLE-RegressFusion_Norm[{args.Normalize_way}].xlsx")

@@ -110,7 +110,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--Normalize_way', default='proposed',
+    parser.add_argument('--Normalize_way', default='func15',
                             help='')
     parser.add_argument('--FeatureComb_mode', default='baselineFeats',
                             help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation, Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation_Add_UttLvl_feature]')
@@ -500,6 +500,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             r2=r2_score(features.y,CVpredict )
             n,p=features.X.shape
             r2_adj=1-(1-r2)*(n-1)/(n-p-1)
+            MAE=sklearn.metrics.mean_absolute_error(features.y.values.ravel(),CVpredict)
             MSE=sklearn.metrics.mean_squared_error(features.y.values.ravel(),CVpredict)
             pearson_result, pearson_p=pearsonr(features.y,CVpredict )
             spear_result, spearman_p=spearmanr(features.y,CVpredict )
@@ -557,8 +558,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
             df_best_result_spear.loc[feature_keys,label_keys]='{0}/{1}'.format(np.round(spear_result,3),np.round(spearman_p,6))
             df_best_result_spear.loc[feature_keys,'de-zero_num']=len(features.X)
             # df_best_cross_score.loc[feature_keys,label_keys]=Score.mean()
-            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (MSE/pear/spear/CCC)'.format(label_keys,clf_keys)]\
-                        ='{0}/{1}/{2}/{3}'.format(np.round(MSE,3),np.round(pearson_result,3),np.round(spear_result,3),np.round(CCC,3))
+            df_best_result_allThreeClassifiers.loc[feature_keys,'{0}/{1} (MAE/pear/spear/CCC)'.format(label_keys,clf_keys)]\
+                        ='{0}/{1}/{2}/{3}'.format(np.round(MAE,3),np.round(pearson_result,3),np.round(spear_result,3),np.round(CCC,3))
 
         elif features.feattype == 'classification':
             df_best_result_UAR.loc[feature_keys,label_keys]='{0}'.format(UAR)
@@ -579,7 +580,8 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         df_best_result_AUC.to_excel(writer_clf,sheet_name="AUC")
         df_best_result_f1.to_excel(writer_clf,sheet_name="f1")
 
-writer_clf.save()
+writer_clf.close()
+#%%
 # =============================================================================
 '''
 
@@ -598,10 +600,10 @@ writer_clf.save()
 # nameOfFile=os.path.basename(file).replace(".xlsx","")
 df_result_file=df_best_result_allThreeClassifiers
 
-Regress_column_name='ADOS_C/SVR (MSE/pear/spear)'
+Regress_column_name='ADOS_C/SVR (MAE/pear/spear)'
 # df_result_file[Regress_column_name]
 
-columns_sel=['MSE','pear','spear','CCC']
+columns_sel=['MAE','pear','spear','CCC']
 
 
 df_result_dicts=Dict()

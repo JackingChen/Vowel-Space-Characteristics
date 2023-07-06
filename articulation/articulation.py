@@ -806,8 +806,8 @@ class Articulation:
             df_vowel_calibrated_tmp=df_calibrated.drop(columns=['x_to_scale','y_to_scale'])
             df_vowel_calibrated_tmp['vowel']=phone
             df_vowel_output=df_vowel_calibrated_tmp.copy()
-            df_vowel_calibrated=df_vowel_calibrated.append(df_vowel_output)
-            
+            # df_vowel_calibrated=df_vowel_calibrated.append(df_vowel_output)
+            df_vowel_calibrated = pd.concat([df_vowel_calibrated,df_vowel_output], ignore_index=True)
             
             # Data prepare for plotting 
             # df_calibrated_tocombine=df_calibrated.copy()

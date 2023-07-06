@@ -100,10 +100,11 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--Normalize_way', default='func10',
+    parser.add_argument('--Normalize_way', default='func15',
                             help='')
     parser.add_argument('--FeatureComb_mode', default='Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation',
-                            help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
+                            help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7,feat_comb9,\
+                                baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation,Comb_staticLOCDEP_dynamicLOCDEP]')
     parser.add_argument('--ADDUtt_feature', default=False,
                             help='')
     parser.add_argument('--exclude_people', default=['2015_12_07_02_003','2017_03_18_01_196_1'],
@@ -268,6 +269,7 @@ class ADOSdataset():
             self.File_root_path='Features/ClassificationMerged_dfs/{Normalize_way}/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type,Normalize_way=args.Normalize_way)
             self.Merge_feature_path=self.File_root_path+'{dataset_role}/*.pkl'.format(dataset_role='ASD_DOCKID')
         
+        ##########3!!!!!!!!!!Add Combination  要改的地方
         self.Top_ModuleColumn_mapping_dict={}
         self.Top_ModuleColumn_mapping_dict['Add_UttLvl_feature']=FeatSel.Columns_comb2.copy()
         self.Top_ModuleColumn_mapping_dict['feat_comb']=FeatSel.Columns_comb.copy()
@@ -277,6 +279,7 @@ class ADOSdataset():
         self.Top_ModuleColumn_mapping_dict['feat_comb7']=FeatSel.Columns_comb7.copy()
         self.Top_ModuleColumn_mapping_dict['Comb_dynPhonation']=FeatSel.Comb_dynPhonation.copy()
         self.Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']=FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation.copy()
+        self.Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP']=FeatSel.Comb_staticLOCDEP_dynamicLOCDEP.copy()
         
         self.Top_ModuleColumn_mapping_dict['baselineFeats']=FeatSel.Baseline_comb.copy()
         
@@ -344,9 +347,11 @@ class ADOSdataset():
         Features_comb=Dict()
         IterateFilesFullPaths = glob.glob(self.Merge_feature_path)
         
-
-        if self.FeatureComb_mode in ['feat_comb3','feat_comb5','feat_comb6','feat_comb7','Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']:
+        ##########3!!!!!!!!!!Add Combination  要改的地方
+        if self.FeatureComb_mode in ['feat_comb3','feat_comb5','feat_comb6','feat_comb7','feat_comb9','Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']:
             DfCombFilenames=['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl']
+        elif self.FeatureComb_mode in ['Comb_staticLOCDEP_dynamicLOCDEP']:
+            DfCombFilenames=['static_feautre_LOC+dynamic_feature_LOC.pkl']
         elif self.FeatureComb_mode == 'Comb_dynPhonation':
             DfCombFilenames=['dynamic_feature_phonation.pkl']
         elif self.FeatureComb_mode == 'baselineFeats':
@@ -458,6 +463,7 @@ for k in ados_ds.Features_comb_multi.keys():
 #     if Feat_comb_str in FeatSel.Columns_comb3['static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation'].keys():
 #         FeatureLabelMatch.append([k,'ASDTD'])
 
+##########3!!!!!!!!!!Add Combination  要改的地方
 Top_ModuleColumn_mapping_dict={}
 Top_ModuleColumn_mapping_dict['Add_UttLvl_feature']={ e2_str:FeatSel.Columns_comb2[e_str][e2_str] for e_str in FeatSel.Columns_comb2.keys() for e2_str in FeatSel.Columns_comb2[e_str].keys()}
 Top_ModuleColumn_mapping_dict['feat_comb3']=ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb3[e_str][e2_str] for e_str in FeatSel.Columns_comb3.keys() for e2_str in FeatSel.Columns_comb3[e_str].keys()}
@@ -468,11 +474,11 @@ Top_ModuleColumn_mapping_dict['Comb_dynPhonation']=ModuleColumn_mapping={ e2_str
 Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']=ModuleColumn_mapping={ e2_str:FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation[e_str][e2_str] for e_str in FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation.keys() for e2_str in FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation[e_str].keys()}
 Top_ModuleColumn_mapping_dict['baselineFeats']=ModuleColumn_mapping={ e2_str:FeatSel.Baseline_comb[e_str][e2_str] for e_str in FeatSel.Baseline_comb.keys() for e2_str in FeatSel.Baseline_comb[e_str].keys()}
 Top_ModuleColumn_mapping_dict['feat_comb']=ModuleColumn_mapping={ e2_str:FeatSel.Columns_comb[e_str][e2_str] for e_str in FeatSel.Columns_comb.keys() for e2_str in FeatSel.Columns_comb[e_str].keys()}
-
+Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP']=ModuleColumn_mapping={ e2_str:FeatSel.Comb_staticLOCDEP_dynamicLOCDEP[e_str][e2_str] for e_str in FeatSel.Comb_staticLOCDEP_dynamicLOCDEP.keys() for e2_str in FeatSel.Comb_staticLOCDEP_dynamicLOCDEP[e_str].keys()}
 
 ModuleColumn_mapping=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
 
-    
+
 for exp_str,lab_ in FeatureLabelMatch:
     ModuleColumn_str=exp_str.split(" >> ")[-1]
     
@@ -677,7 +683,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         df_best_result_AUC.to_excel(writer_clf,sheet_name="AUC")
         df_best_result_f1.to_excel(writer_clf,sheet_name="f1")
 
-writer_clf.save()
+writer_clf.close()
 
 # =============================================================================
 '''
@@ -710,32 +716,32 @@ for Inspect_metric in df_result_file.columns:
 df_ManagedResult_classification=CriteriaSiftedResult.T
 
 
-Index_arrangement_lst=[
-    'Proximity[P]',
-    'Convergence[P]',
-    'Syncrony[P]',
-    'GC[P]\\textsubscript{inv}',
-    'GC[P]\\textsubscript{part}',
-    'Proximity[VSC]',
-    'Convergence[VSC]',
-    'Syncrony[VSC]',
-    'GC[VSC]\\textsubscript{inv}',
-    'GC[VSC]\\textsubscript{part}',
-    'Inter-Vowel Dispersion',
-    'Intra-Vowel Dispersion',
-    'formant dependency',
-    ]
+# Index_arrangement_lst=[
+#     'Proximity[P]',
+#     'Convergence[P]',
+#     'Syncrony[P]',
+#     'GC[P]\\textsubscript{inv}',
+#     'GC[P]\\textsubscript{part}',
+#     'Proximity[VSC]',
+#     'Convergence[VSC]',
+#     'Syncrony[VSC]',
+#     'GC[VSC]\\textsubscript{inv}',
+#     'GC[VSC]\\textsubscript{part}',
+#     'Inter-Vowel Dispersion',
+#     'Intra-Vowel Dispersion',
+#     'formant dependency',
+#     ]
 
 
 #TASLP TABLE3的baseline features
-df_ManagedResult_classification=df_ManagedResult_classification.loc[Index_arrangement_lst]
+# df_ManagedResult_classification=df_ManagedResult_classification.loc[Index_arrangement_lst]
 df_ManagedResult_classification=df_ManagedResult_classification.reindex(columns=['TD vs df_feature_lowMinimal_CSS:ASDTD/SVC','TD vs df_feature_lowMinimal_CSS:f1',\
        'TD vs df_feature_moderate_CSS:ASDTD/SVC','TD vs df_feature_moderate_CSS:f1',\
        'TD vs df_feature_high_CSS:ASDTD/SVC','TD vs df_feature_high_CSS:f1'
     ])
 
-df_ManagedResult_classification.to_excel(Result_path+"/"+f"TASLPTABLE-ClassBaseFeat_Norm[{args.Normalize_way}].xlsx")
+df_ManagedResult_classification.to_excel(Result_path+"/"+f"TASLPTABLE-ClassBaseFeat_Norm[{args.Normalize_way}_Comb[{args.FeatureComb_mode}]].xlsx")
 print("df_best_result_allThreeClassifiers")
 print(df_ManagedResult_classification)
-print('generated at',Result_path+"/"+f"TASLPTABLE-ClassBaseFeat_Norm[{args.Normalize_way}].xlsx")
+print('generated at',Result_path+"/"+f"TASLPTABLE-ClassBaseFeat_Norm[{args.Normalize_way}_Comb[{args.FeatureComb_mode}]].xlsx")
 print("\n\n\n\n")

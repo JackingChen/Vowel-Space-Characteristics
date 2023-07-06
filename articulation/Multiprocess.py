@@ -376,7 +376,8 @@ class Multi:
             
             df_True=pd.DataFrame(np.array([True]*len(utt_hype_ali)))
             for keys, values in SymbRuleChecked_bookkeep.items():
-                df_True=np.logical_and(values,df_True)
+                df_True=np.logical_and(values.values,df_True)
+            df_True.index=values.index
             
             Formants_utt_symb_limited[utt]=utt_hype_ali[df_True[0].values]
             Formants_utt_symb_cmp_limited[utt]=utt_human_ali[df_True[0].values]

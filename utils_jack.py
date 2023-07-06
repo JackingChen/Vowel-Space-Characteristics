@@ -209,6 +209,27 @@ def f_classif(X, y):
     return f, prob, msb, msw, ssbn
 
 
+# def Get_aligned_sequences_old(ref, hype, error_info):
+#     # 這是pandas在deprecated之前用的function
+#     # utilize error_info from WER function. WER function will generate alignment
+#     utt_human_ali=pd.DataFrame()
+#     utt_hype_ali=pd.DataFrame()
+#     human_ali_idx=0
+#     hype_ali_idx=0
+#     for j,element in enumerate(error_info):
+#         if element=="e" or element=="s":
+#             utt_human_ali=utt_human_ali.append(ref.iloc[human_ali_idx])
+#             utt_hype_ali=utt_hype_ali.append(hype.iloc[hype_ali_idx])
+#             # utt_human_ali = pd.concat([utt_human_ali, pd.DataFrame(ref.iloc[human_ali_idx])], ignore_index=True)
+#             # utt_hype_ali = pd.concat([utt_hype_ali, pd.DataFrame(hype.iloc[hype_ali_idx])], ignore_index=True)
+#             human_ali_idx+=1
+#             hype_ali_idx+=1
+#         elif element=="i":
+#             hype_ali_idx+=1
+#         elif element=="d":
+#             human_ali_idx+=1
+#     return utt_human_ali.reset_index(drop=True), utt_hype_ali.reset_index(drop=True)
+
 def Get_aligned_sequences(ref, hype, error_info):
     # utilize error_info from WER function. WER function will generate alignment
     utt_human_ali=pd.DataFrame()
@@ -217,10 +238,10 @@ def Get_aligned_sequences(ref, hype, error_info):
     hype_ali_idx=0
     for j,element in enumerate(error_info):
         if element=="e" or element=="s":
-            utt_human_ali=utt_human_ali.append(ref.iloc[human_ali_idx])
-            utt_hype_ali=utt_hype_ali.append(hype.iloc[hype_ali_idx])
-            # utt_human_ali = pd.concat([utt_human_ali, pd.DataFrame(ref.iloc[human_ali_idx])], ignore_index=True)
-            # utt_hype_ali = pd.concat([utt_hype_ali, pd.DataFrame(hype.iloc[hype_ali_idx])], ignore_index=True)
+            # utt_human_ali=utt_human_ali.append(ref.iloc[human_ali_idx])
+            # utt_hype_ali=utt_hype_ali.append(hype.iloc[hype_ali_idx])
+            utt_human_ali = pd.concat([utt_human_ali, ref.iloc[[human_ali_idx]]], ignore_index=True)
+            utt_hype_ali = pd.concat([utt_hype_ali, pd.DataFrame(hype.iloc[[hype_ali_idx]])], ignore_index=True)
             human_ali_idx+=1
             hype_ali_idx+=1
         elif element=="i":
@@ -229,6 +250,52 @@ def Get_aligned_sequences(ref, hype, error_info):
             human_ali_idx+=1
     return utt_human_ali.reset_index(drop=True), utt_hype_ali.reset_index(drop=True)
 
+# def Formant_utt2people_reshape_OLD(Formants_utt_symb,Formants_utt_symb_cmp,Align_OrinCmp=True):
+      # 這是pandas在deprecated之前用的function
+#     # =============================================================================
+#     #     Formant_people_symb_total['cmp'][people] = DF
+#     #     DF.loc[phone] = [F1, F2, end, start, text, utt]
+#     # =============================================================================
+#     Formant_people_symb_total=Dict()
+#     Formant_people_symb_total['ori']=Dict()
+#     Formant_people_symb_total['cmp']=Dict()
+#     for keys, values in Formants_utt_symb_cmp.items():
+#         people=keys[:keys.find(re.findall("_[K|D]",keys)[0])]
+#         if people not in Formant_people_symb_total['cmp'].keys():
+#             Formant_people_symb_total['cmp'][people]=pd.DataFrame()
+#         if people not in Formant_people_symb_total['ori'].keys():
+#             Formant_people_symb_total['ori'][people]=pd.DataFrame()
+        
+#         if Align_OrinCmp:
+#             # Align cmp, ori text sequences
+#             values['text']=values.index
+#             Formants_utt_symb[keys]['text']=Formants_utt_symb[keys].index
+#             r=values['text'].astype(str)
+#             h=Formants_utt_symb[keys]['text'].astype(str)
+            
+#             error_info, WER_value=WER(r,h)
+#             utt_human_ali, utt_hype_ali=Get_aligned_sequences(ref=values, hype=Formants_utt_symb[keys],error_info=error_info)
+#             utt_human_ali=utt_human_ali.sort_values(by='start')
+#             utt_hype_ali=utt_hype_ali.sort_values(by='start')
+#             utt_human_ali['utt']=keys
+#             utt_hype_ali['utt']=keys
+#             utt_human=utt_human_ali
+#             utt_hype=utt_hype_ali
+#         else:
+#             utt_human=Formants_utt_symb_cmp[keys]
+#             utt_human['text']=Formants_utt_symb_cmp[keys].index
+#             utt_hype=Formants_utt_symb[keys]
+#             utt_hype['text']=Formants_utt_symb[keys].index
+            
+#             utt_human['utt']=keys
+#             utt_hype['utt']=keys
+#         Formant_people_symb_total['cmp'][people]=Formant_people_symb_total['cmp'][people].append(utt_human)
+#         Formant_people_symb_total['ori'][people]=Formant_people_symb_total['ori'][people].append(utt_hype)
+#         # Formant_people_symb_total['cmp'][people] = \
+#         #     pd.concat([Formant_people_symb_total['cmp'][people], pd.DataFrame(utt_human)], ignore_index=True)
+#         # Formant_people_symb_total['ori'][people] = \
+#         #     pd.concat([Formant_people_symb_total['ori'][people], pd.DataFrame(utt_hype)], ignore_index=True)
+#     return Formant_people_symb_total
 def Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb_cmp,Align_OrinCmp=True):
     # =============================================================================
     #     Formant_people_symb_total['cmp'][people] = DF
@@ -267,13 +334,14 @@ def Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb_cmp,Align_Ori
             
             utt_human['utt']=keys
             utt_hype['utt']=keys
-        Formant_people_symb_total['cmp'][people]=Formant_people_symb_total['cmp'][people].append(utt_human)
-        Formant_people_symb_total['ori'][people]=Formant_people_symb_total['ori'][people].append(utt_hype)
-        # Formant_people_symb_total['cmp'][people] = \
-        #     pd.concat([Formant_people_symb_total['cmp'][people], pd.DataFrame(utt_human)], ignore_index=True)
-        # Formant_people_symb_total['ori'][people] = \
-        #     pd.concat([Formant_people_symb_total['ori'][people], pd.DataFrame(utt_hype)], ignore_index=True)
+        # Formant_people_symb_total['cmp'][people]=Formant_people_symb_total['cmp'][people].append(utt_human)
+        # Formant_people_symb_total['ori'][people]=Formant_people_symb_total['ori'][people].append(utt_hype)
+        Formant_people_symb_total['cmp'][people] = \
+            pd.concat([Formant_people_symb_total['cmp'][people], utt_human], ignore_index=True)
+        Formant_people_symb_total['ori'][people] = \
+            pd.concat([Formant_people_symb_total['ori'][people], utt_hype], ignore_index=True)
     return Formant_people_symb_total
+
 
 def Gather_info_certainphones(Formant_people_symb_total,PhoneMapp_dict,PhoneOfInterest,):
     # =============================================================================
@@ -349,7 +417,8 @@ def FilterUttDictsByCriterion(Formants_utt_symb,Formants_utt_symb_cmp,limit_peop
         
         df_True=pd.DataFrame(np.array([True]*len(utt_hype_ali)))
         for keys, values in SymbRuleChecked_bookkeep.items():
-            df_True=np.logical_and(values,df_True)
+            df_True=np.logical_and(values.values,df_True)
+        df_True.index=values.index
         
         Formants_utt_symb_limited[utt]=utt_hype_ali[df_True[0].values]
         Formants_utt_symb_cmp_limited[utt]=utt_human_ali[df_True[0].values]
@@ -446,8 +515,8 @@ Info_name_sex_TD=df_labels_TD[['name','sex','age_year']].copy()
 Info_name_sex_TD.loc[Info_name_sex_TD['sex']==1,'sex']='male'
 Info_name_sex_TD.loc[Info_name_sex_TD['sex']==2,'sex']='female'
 
-# Info_name_sex = pd.concat([Info_name_sex, pd.DataFrame(Info_name_sex_TD)], ignore_index=True)
-Info_name_sex=Info_name_sex.append(Info_name_sex_TD)
+Info_name_sex = pd.concat([Info_name_sex, pd.DataFrame(Info_name_sex_TD)], ignore_index=True)
+# Info_name_sex=Info_name_sex.append(Info_name_sex_TD)
 from addict import  Dict
 ''' codings of filename '''
 Namecode_dict=Dict()

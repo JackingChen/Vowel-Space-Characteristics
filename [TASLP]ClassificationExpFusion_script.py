@@ -193,7 +193,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--Normalize_way', default='func1',
+    parser.add_argument('--Normalize_way', default='func15',
                             help='func1 func2 func3 func4 func7 proposed')
     parser.add_argument('--FeatureComb_mode', default='Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation',
                             help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
@@ -570,24 +570,19 @@ ErrorFeat_bookeep=Dict()
 
 FeatureLabelMatch_manual=[
 
-    ['TD vs df_feature_lowMinimal_CSS >> LOC_columns+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols', 'ASDTD'],
-    ['TD vs df_feature_lowMinimal_CSS >> LOC_columns+Phonation_Trend_K_cols+Phonation_Syncrony_cols', 'ASDTD'],
-    ['TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Syncrony_cols', 'ASDTD'],
+    ['TD vs df_feature_lowMinimal_CSS >> LOC_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols+Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
+    ['TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_D_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
     ['TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_K_cols+Phonation_Syncrony_cols', 'ASDTD'],
-
-
-    ['TD vs df_feature_moderate_CSS >> LOCDEP_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
-    ['TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols', 'ASDTD'],
     
 
-    ['TD vs df_feature_lowMinimal_CSS >> Phonation_Trend_K_cols+Phonation_Syncrony_cols', 'ASDTD'],
-    ['TD vs df_feature_high_CSS >> DEP_columns+Phonation_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
-    ['TD vs df_feature_high_CSS >> Phonation_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
+    ['TD vs df_feature_moderate_CSS >> LOC_columns+LOCDEP_Trend_D_cols+LOCDEP_Trend_K_cols+Phonation_Proximity_cols', 'ASDTD'],
+    ['TD vs df_feature_moderate_CSS >> Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_moderate_CSS >> Phonation_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
+
     ['TD vs df_feature_high_CSS >> DEP_columns+Phonation_Proximity_cols', 'ASDTD'],
+    # ['TD vs df_feature_high_CSS >> Phonation_Proximity_cols+Phonation_Syncrony_cols', 'ASDTD'],
     ['TD vs df_feature_high_CSS >> Phonation_Proximity_cols', 'ASDTD'],
-
-
- ]
+]
     
 # FeatSel 掌管該出現的columns
 # ados_ds.Features_comb_multi 掌管load進來的data
@@ -879,7 +874,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         writer = pd.ExcelWriter(excel_file.format(clf_keys,feature_keys.replace(":","")), engine = 'xlsxwriter')
         for label_name in  Best_predict_optimize.keys():
             Best_predict_optimize[label_name].to_excel(writer,sheet_name=label_name.replace("/","_"))
-        writer.save()
+        writer.close()
                                 
         # ================================================      =============================
         if features.feattype == 'regression':
@@ -916,7 +911,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         df_best_result_AUC.to_excel(writer_clf,sheet_name="AUC")
         df_best_result_f1.to_excel(writer_clf,sheet_name="f1")
 
-writer_clf.save()
+writer_clf.close()
 
 
 

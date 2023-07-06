@@ -94,6 +94,8 @@ def get_args():
                             help='')
     parser.add_argument('--reFilter', default=False,
                             help='')
+    parser.add_argument('--Normalize_way', default='func15',
+                            help='func1 func2 func3 func4 func7 proposed')
     args = parser.parse_args()
     return args
 
@@ -712,10 +714,47 @@ Formants_utt_symb=pickle.load(open(args.Formants_utt_symb_path+"/Formants_utt_sy
 print("Loading Formants_utt_symb from ", args.Formants_utt_symb_path+"/Formants_utt_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,args.poolWindowSize,args.dataset_role))
 
 
+Formants_utt_symb,Formants_utt_symb_cmp,Align_OrinCmp= \
+    Formants_utt_symb,Formants_utt_symb, False
+    
+
+
+
 # 第一步：從Formants_utt_symb準備Vowel_AUI
 Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb,Formants_utt_symb,Align_OrinCmp=False)
 AUI_info=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
 limit_people_rule=GetValuelimit_IQR(AUI_info,PhoneMapp_dict,args.Inspect_features)
+
+
+def Process_IQRFiltering_Multi(Formants_utt_symb, limit_people_rule,\
+                               outpath='/homes/ssd1/jackchen/DisVoice/articulation/Pickles',\
+                               prefix='Formants_utt_symb',\
+                               suffix='KID_FromASD_DOCKID'):
+    pool = Pool(int(os.cpu_count()))
+    keys=[]
+    interval=20
+    for i in range(0,len(Formants_utt_symb.keys()),interval):
+        # print(list(combs_tup.keys())[i:i+interval])
+        keys.append(list(Formants_utt_symb.keys())[i:i+interval])
+    flat_keys=[item for sublist in keys for item in sublist]
+    assert len(flat_keys) == len(Formants_utt_symb.keys())
+    muti=Multiprocess.Multi()
+    final_results=pool.starmap(muti.FilterUttDictsByCriterion_map, [([Formants_utt_symb,Formants_utt_symb,file_block,limit_people_rule]) for file_block in tqdm(keys)])
+    
+    Formants_utt_symb_limited=Dict()
+    for load_file_tmp,_ in final_results:        
+        for utt, df_utt in load_file_tmp.items():
+            Formants_utt_symb_limited[utt]=df_utt
+    
+    pickle.dump(Formants_utt_symb_limited,open(outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix),"wb"))
+    print('Formants_utt_symb saved to ',outpath+"/[Analyzing]{0}_limited_{1}.pkl".format(prefix,suffix))
+
+
+keys=[]
+interval=20
+for i in range(0,len(Formants_utt_symb.keys()),interval):
+    # print(list(combs_tup.keys())[i:i+interval])
+    keys.append(list(Formants_utt_symb.keys())[i:i+interval])
 
 ''' multi processing start '''
 prefix,suffix = 'Formants_utt_symb', args.dataset_role
@@ -751,11 +790,18 @@ Vowels_AUI=Get_Vowels_AUI(AUI_info, args.Inspect_features,VUIsource="From__Forma
 
 # Get BCC, FCR, ... utterance level features
 dfFormantStatisticpath=os.getcwd()
-df_formant_statistic77_path=dfFormantStatisticpath+'/Features/ClassificationMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
+df_formant_statistic77_path=dfFormantStatisticpath+'/Features/ClassificationMerged_dfs/{Normalize_way}/{dataset_role}/static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation.pkl'.format(
+    knn_weights=knn_weights,
+    knn_neighbors=knn_neighbors,
+    Reorder_type=Reorder_type,
+    dataset_role='ASD_DOCKID',
+    Normalize_way=args.Normalize_way
+    )
 df_feature_ASD=pickle.load(open(df_formant_statistic77_path,'rb'))
 # 第二步：準備 df_vowel_calibrated 或 df_vowel
 # Play code for KDE filtering
-
+from articulation.articulation import Articulation
+articulation=Articulation() #使用Articulation的KDE_Filtering
 THRESHOLD=40
 # scale_factor=100
 N=2
@@ -773,8 +819,8 @@ for people in Vowels_AUI.keys():
         else:
             df_=F12_raw_dict[keys]
             df_['vowel']=keys
-            df_vowel=df_vowel.append(df_)
-    
+            # df_vowel=df_vowel.append(df_)
+            df_vowel=pd.concat([df_vowel,df_], ignore_index=True)
     len_a=len(np.where(df_vowel['vowel']=='A:')[0])
     len_u=len(np.where(df_vowel['vowel']=='u:')[0])
     len_i=len(np.where(df_vowel['vowel']=='i:')[0])
@@ -782,7 +828,8 @@ for people in Vowels_AUI.keys():
     
     if len_a<=N or len_u<=N or len_i<=N:
         continue
-    df_vowel_calibrated=KDE_Filtering(df_vowel,THRESHOLD=THRESHOLD,scale_factor=100)
+    
+    df_vowel_calibrated=articulation.KDE_Filtering(df_vowel,THRESHOLD=THRESHOLD,scale_factor=100)
     df_vowel_calibrated_dict[people]=df_vowel_calibrated
 
 

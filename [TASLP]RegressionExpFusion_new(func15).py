@@ -154,7 +154,7 @@ def get_args():
                         help='')
     parser.add_argument('--selectModelScoring', default='neg_mean_squared_error',
                         help='')
-    parser.add_argument('--Mergefeatures', default=True,
+    parser.add_argument('--Mergefeatures', default=False,
                         help='')
     parser.add_argument('--knn_weights', default='uniform',
                             help='path of the base directory')
@@ -162,6 +162,8 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
+    parser.add_argument('--Normalize_way', default='func15',
+                            help='')
     parser.add_argument('--FeatureComb_mode', default='Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation',
                             help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
     args = parser.parse_args()
@@ -263,71 +265,6 @@ ados_ds=ADOSdataset()
 ErrorFeat_bookeep=Dict()
 Session_level_all=Dict()
 
-# All_combination_keys=[key2 for key in All_combinations.keys() for key2 in sorted(All_combinations[key], key=len, reverse=True)]
-Top_ModuleColumn_mapping_dict={}
-Top_ModuleColumn_mapping_dict['Add_UttLvl_feature']=FeatSel.Columns_comb2.copy()
-Top_ModuleColumn_mapping_dict['feat_comb']=FeatSel.Columns_comb.copy()
-Top_ModuleColumn_mapping_dict['feat_comb3']=FeatSel.Columns_comb3.copy()
-Top_ModuleColumn_mapping_dict['feat_comb5']=FeatSel.Columns_comb5.copy()
-Top_ModuleColumn_mapping_dict['feat_comb6']=FeatSel.Columns_comb6.copy()
-Top_ModuleColumn_mapping_dict['feat_comb7']=FeatSel.Columns_comb7.copy()
-Top_ModuleColumn_mapping_dict['feat_comb8']=FeatSel.Columns_comb8.copy()
-Top_ModuleColumn_mapping_dict['Comb_dynPhonation']=FeatSel.Comb_dynPhonation.copy()
-Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']=FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation.copy()
-Top_ModuleColumn_mapping_dict['baselineFeats']=FeatSel.Baseline_comb.copy()
-
-featuresOfInterest=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
-
-# =============================================================================
-# 1. 如果要做全盤的實驗的話用這一區
-FeatureLabelMatch_manual=[]
-All_combinations=featuresOfInterest
-# All_combinations4=FeatSel.Columns_comb4.copy()
-for key_layer1 in All_combinations.keys():
-    for key_layer2 in All_combinations[key_layer1].keys():
-        
-        # if 'Utt_prosodyF0_VoiceQuality_energy' in key_layer2:
-        #     FeatureLabelMatch_manual.append('{0}-{1}'.format(key_layer1,key_layer2))
-        FeatureLabelMatch_manual.append('{0}-{1}'.format(key_layer1,key_layer2))
-
-# XXX 2. 如果要手動設定實驗的話用這一區
-# FeatureLabelMatch_manual=[
-#     # Rule: {layer1}-{layer2}
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Syncrony_cols',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-DEP_columns',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Trend_D_cols',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Syncrony_cols',
-#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Trend_K_cols',
-#     ]
-# =============================================================================
-
-
-if args.FeatureComb_mode == 'Add_UttLvl_feature':
-    Merge_feature_path='RegressionMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
-else:
-    Merge_feature_path='RegressionMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
-
-for exp_str in FeatureLabelMatch_manual:
-    Layer1Feat, Layer2Feat=exp_str.split("-")
-    
-    # load features from file
-    data=ados_ds.featurepath +'/'+ Merge_feature_path+'{}.pkl'.format(Layer1Feat)
-    
-
-    feat_col_ = featuresOfInterest[Layer1Feat][Layer2Feat] # ex: ['MSB_f1']
-    for lab_ in label_choose:
-        X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path=data,featuresOfInterest=feat_col_,filterbyNum=False)
-        Item_name="{feat}::{lab}".format(feat='-'.join([Layer1Feat]+[Layer2Feat]),lab=lab_)
-        Session_level_all[Item_name].X, \
-            Session_level_all[Item_name].y, \
-                Session_level_all[Item_name].feattype = X,y, featType
-    assert len(X.columns) >0
-    assert y.isna().any() !=True
-
 # =============================================================================
 '''
 
@@ -351,16 +288,17 @@ def MERGEFEATURES():
     # dataset_role='ASD_DOCKID'
     for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
         Merg_filepath={}
-        Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/Formant_AUI_tVSAFCRFvals_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
+        Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/{Normalize_way}/Formant_AUI_tVSAFCRFvals_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role,Normalize_way=args.Normalize_way)
         # Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
-        Merg_filepath['dynamic_feature_LOC']='Features/artuculation_AUI/Interaction/Formants/Syncrony_measure_of_variance_DKIndividual_{dataset_role}.pkl'.format(dataset_role=dataset_role)
+        Merg_filepath['dynamic_feature_LOC']='Features/artuculation_AUI/Interaction/Formants/{Normalize_way}/Syncrony_measure_of_variance_DKIndividual_{dataset_role}.pkl'.format(dataset_role=dataset_role,Normalize_way=args.Normalize_way)
         Merg_filepath['dynamic_feature_phonation']='Features/artuculation_AUI/Interaction/Phonation/Syncrony_measure_of_variance_phonation_{dataset_role}.pkl'.format(dataset_role=dataset_role)
         
-        merge_out_path='Features/ClassificationMerged_dfs/{knn_weights}_{knn_neighbors}_{Reorder_type}/{dataset_role}/'.format(
+        merge_out_path='Features/RegressionMerged_dfs/{Normalize_way}/{dataset_role}/'.format(
             knn_weights=knn_weights,
             knn_neighbors=knn_neighbors,
             Reorder_type=Reorder_type,
-            dataset_role=dataset_role
+            dataset_role=dataset_role,
+            Normalize_way=args.Normalize_way
             )
         if not os.path.exists(merge_out_path):
             os.makedirs(merge_out_path)
@@ -394,26 +332,103 @@ def MERGEFEATURES():
         # Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],Utt_featuresCombinded_dict[role])
         OutPklpath=merge_out_path+'+'.join(c)+".pkl"
         pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+        print("Generate Merged_df_dict['+'.join(c)] to", OutPklpath)
 if args.Mergefeatures:
     MERGEFEATURES()
+
+# All_combination_keys=[key2 for key in All_combinations.keys() for key2 in sorted(All_combinations[key], key=len, reverse=True)]
+Top_ModuleColumn_mapping_dict={}
+Top_ModuleColumn_mapping_dict['Add_UttLvl_feature']=FeatSel.Columns_comb2.copy()
+Top_ModuleColumn_mapping_dict['feat_comb']=FeatSel.Columns_comb.copy()
+Top_ModuleColumn_mapping_dict['feat_comb3']=FeatSel.Columns_comb3.copy()
+Top_ModuleColumn_mapping_dict['feat_comb5']=FeatSel.Columns_comb5.copy()
+Top_ModuleColumn_mapping_dict['feat_comb6']=FeatSel.Columns_comb6.copy()
+Top_ModuleColumn_mapping_dict['feat_comb7']=FeatSel.Columns_comb7.copy()
+Top_ModuleColumn_mapping_dict['feat_comb8']=FeatSel.Columns_comb8.copy()
+Top_ModuleColumn_mapping_dict['Comb_dynPhonation']=FeatSel.Comb_dynPhonation.copy()
+Top_ModuleColumn_mapping_dict['Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation']=FeatSel.Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation.copy()
+Top_ModuleColumn_mapping_dict['baselineFeats']=FeatSel.Baseline_comb.copy()
+
+featuresOfInterest=Top_ModuleColumn_mapping_dict[args.FeatureComb_mode]
+
+# =============================================================================
+# 1. 如果要做全盤的實驗的話用這一區
+# FeatureLabelMatch_manual=[]
+# All_combinations=featuresOfInterest
+# # All_combinations4=FeatSel.Columns_comb4.copy()
+# for key_layer1 in All_combinations.keys():
+#     for key_layer2 in All_combinations[key_layer1].keys():
         
+#         # if 'Utt_prosodyF0_VoiceQuality_energy' in key_layer2:
+#         #     FeatureLabelMatch_manual.append('{0}-{1}'.format(key_layer1,key_layer2))
+#         FeatureLabelMatch_manual.append('{0}-{1}'.format(key_layer1,key_layer2))
+
+# XXX 2. 如果要手動設定實驗的話用這一區
+# FeatureLabelMatch_manual=[
+#     # Rule: {layer1}-{layer2}
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Syncrony_cols',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-DEP_columns',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Trend_D_cols',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOCDEP_Syncrony_cols',
+#     'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Trend_K_cols',
+#     ]
+FeatureLabelMatch_manual=[
+'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols',
+'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Syncrony_cols',
+'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols',
+'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns',
+'static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-Phonation_Convergence_cols',
+]
+
+
+# =============================================================================
+
+if args.FeatureComb_mode == 'Add_UttLvl_feature':
+    Merge_feature_path='RegressionMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/ASD_DOCKID/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type)
+else:
+    Merge_feature_path='RegressionMerged_dfs/{Normalize_way}/{dataset_role}/'.format(
+            knn_weights=knn_weights,
+            knn_neighbors=knn_neighbors,
+            Reorder_type=Reorder_type,
+            dataset_role='ASD_DOCKID',
+            Normalize_way=args.Normalize_way
+            )
+
+for exp_str in FeatureLabelMatch_manual:
+    Layer1Feat, Layer2Feat=exp_str.split("-")
+    
+    # load features from file
+    data=ados_ds.featurepath +'/'+ Merge_feature_path+'{}.pkl'.format(Layer1Feat)
+    
+
+    feat_col_ = featuresOfInterest[Layer1Feat][Layer2Feat] # ex: ['MSB_f1']
+    for lab_ in label_choose:
+        X,y, featType=ados_ds.Get_FormantAUI_feat(label_choose=lab_,pickle_path=data,featuresOfInterest=feat_col_,filterbyNum=False)
+        Item_name="{feat}::{lab}".format(feat='-'.join([Layer1Feat]+[Layer2Feat]),lab=lab_)
+        Session_level_all[Item_name].X, \
+            Session_level_all[Item_name].y, \
+                Session_level_all[Item_name].feattype = X,y, featType
+    assert len(X.columns) >0
+    assert y.isna().any() !=True
+
+
     
     
+
 
 
 # =============================================================================
 # Model parameters
 # =============================================================================
-# C_variable=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
-# C_variable=np.array(np.arange(0.1,1.1,0.2))
-# C_variable=np.array([0.1,0.5,0.9])
-# epsilon=np.array(np.arange(0.1,1.5,0.1) )
-epsilon=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
 
+epsilon=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
 # C_variable=np.array([0.001,0.01,0.1,1,5,10.0,25,50,75,100])
-# epsilon=np.array([0.01, 0.1,0.5,1.0,10.0, 50.0, 100.0, 1000.0])
-# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.2))  )
-# C_variable=np.array([0.001,0.01,10.0,50,100] + list(np.arange(0.1,1.5,0.1))  )
+C_variable=np.array([1])
+# epsilon=np.array([0.001,0.01,0.1,1,5,10.0,25])
 n_estimator=[2, 4, 8, 16, 32, 64]
 
 
@@ -423,71 +438,36 @@ loo=LeaveOneOut()
 
 # CV_settings=loo
 CV_settings=10
-# CV_settings=2
-# skf = StratifiedKFold(n_splits=CV_settings)
-
-
-'''
-
-    Regressor
-
-'''
-###############################################################################
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#                   'parameters':{'model__alpha':np.arange(0,1,0.25),\
-#                                 'model__l1_ratio': np.arange(0,1,0.25)}} #Just a initial value will be changed by parameter tuning
-                                                    ## l1_ratio = 1 is the lasso penalty
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#                   'parameters':{'alpha':[0.25,],\
-#                                 'l1_ratio': [0.5]}} #Just a initial value will be changed by parameter tuning
-    
-    
-# from sklearn.neural_network import MLPRegressor
-# Classifier['MLP']={'model':MLPRegressor(),\
-#                   'parameters':{'random_state':[1],\
-#                                 'hidden_layer_sizes':[(40,),(60,),(80,),(100)],\
-#                                 'activation':['relu'],\
-#                                 'solver':['adam'],\
-#                                 'early_stopping':[True],\
-#                                 # 'max_iter':[1000],\
-#                                 # 'penalty':['elasticnet'],\
-#                                 # 'l1_ratio':[0.25,0.5,0.75],\
-#                                 }}
 
 Classifier['SVR']={'model':sklearn.svm.SVR(),\
                   'parameters':{
                     'model__epsilon': epsilon,\
                     # 'model__C':C_variable,\
                     'model__kernel': ['rbf'],\
-                    # 'gamma': ['auto'],\
+                    # 'model__gamma': ['scale'],\
                                 }}
 
-# Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
-#                   'parameters':{'fit_intercept':[True],\
+# Classifier['EN']={'model':ElasticNet(random_state=0),\
+#                   'parameters':{'model__alpha':epsilon,\
+#                                 'model__l1_ratio': [0.5]}} #Just a initial value will be changed by parameter tuning
+    
+    
+# from sklearn.neural_network import MLPRegressor
+# Classifier['MLP']={'model':MLPRegressor(),\
+#                   'parameters':{'model__random_state':[1],\
+#                                 'model__hidden_layer_sizes':[(40,),(60,),(80,),(100)],\
+#                                 'model__activation':['relu'],\
+#                                 'model__solver':['adam'],\
+#                                 'model__early_stopping':[True],\
+#                                 # 'max_iter':[1000],\
+#                                 # 'penalty':['elasticnet'],\
+#                                 # 'l1_ratio':[0.25,0.5,0.75],\
 #                                 }}
-###############################################################################
-    
-    
-# Classifier['XGBoost']={'model':xgboost.sklearn.XGBRegressor(),\
-#                   'parameters':{'fit_intercept':[True,False],\
-#                                 }}    
-    
-# Classifier['SVR']={'model':sklearn.svm.SVR(),\
-#                   'parameters':{'C':[50],\
-#                     'kernel': ['rbf'],\
-#                                 }}    
-    
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#               'parameters':{'alpha':[0.1, 0.5, 1],\
-#                             'l1_ratio': [0.1, 0.5, 1]}} #Just a initial value will be changed by parameter tuning
-    
-#                                                    # l1_ratio = 1 is the lasso penalty
 
-# Classifier['EN']={'model':ElasticNet(random_state=0),\
-#               'parameters':{'alpha':[0.5],\
-#                             'l1_ratio': [0.5]}} #Just a initial value will be changed by parameter tuning
-#                                                   # l1_ratio = 1 is the lasso penalty
 
+# Classifier['LinR']={'model':sklearn.linear_model.LinearRegression(),\
+#                   'parameters':{'model__fit_intercept':[True],\
+#                                 }}
 
 
 
@@ -522,8 +502,8 @@ OutFeature_dict=Dict()
 Best_param_dict=Dict()
 
 # ''' 要手動執行一次從Incorrect2Correct_indexes和Correct2Incorrect_indexes決定哪些indexes 需要算shap value 再在這邊指定哪些fold需要停下來算SHAP value '''
-SHAP_inspect_idxs_manual=[]
-# SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
+# SHAP_inspect_idxs_manual=[]
+SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
 # SHAP_inspect_idxs_manual=[1,3,5] # empty list means we do not execute shap function
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
     writer_clf = pd.ExcelWriter(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_"+final_result_file, engine = 'xlsxwriter')
@@ -543,6 +523,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         Labels = Session_level_all.X[feature_keys]
         print("=====================Cross validation start==================")
         pipe = Pipeline(steps=[('scalar',StandardScaler()),("model", clf['model'])])
+        # pipe = Pipeline(steps=[("model", clf['model'])])
         p_grid=clf['parameters']
         Gclf = GridSearchCV(estimator=pipe, param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
         Gclf_manual = GridSearchCV(estimator=pipe, param_grid=p_grid, scoring=args.selectModelScoring, cv=CV_settings, refit=True, n_jobs=-1)
@@ -689,10 +670,33 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
         df_best_result_AUC.to_excel(writer_clf,sheet_name="AUC")
         df_best_result_f1.to_excel(writer_clf,sheet_name="f1")
 
-writer_clf.save()
+
+
+# TASLP table.5 fusion的部份
+writer_clf.close()
 print(df_best_result_allThreeClassifiers)
-df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+"Regression_{knn_weights}_{knn_neighbors}_{Reorder_type}.xlsx".format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,Reorder_type=Reorder_type))
-print()
+df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+f"TASLPTABLE-RegressFusion_Norm[{args.Normalize_way}].xlsx")
+print("df_best_result_allThreeClassifiers generated at ",Result_path+"/"+f"TASLPTABLE-Regress_Norm[{args.Normalize_way}].xlsx")
+
+
+
+
+
+
+FeatNmeLst=[
+    'LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols',
+    'LOC_columns+DEP_columns+LOCDEP_Syncrony_cols',
+    'LOC_columns+DEP_columns+LOCDEP_Trend_D_cols',
+    'LOC_columns+DEP_columns'
+    ]
+
+for nameComb in FeatNmeLst:
+    FeatBag=[]
+    for single_feat in nameComb.split("+"):
+        InversedFeat=Swap2PaperName(single_feat,PprNmeMp)
+        FeatBag.append(InversedFeat)
+    Feature_combination='+'.join(FeatBag)
+    print(Feature_combination)
 
 
 #%%
@@ -810,7 +814,6 @@ quadrant2_indexes=list(df_Y_pred[quadrant2].index)
 quadrant3_indexes=list(df_Y_pred[quadrant3].index)
 quadrant4_indexes=list(df_Y_pred[quadrant4].index)
 
-# XXX
 
 # y_hat^p - y > 0, y_hat^b - y > 0
 global  Q1_idx
@@ -921,127 +924,107 @@ Baseline_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_leve
 Proposed_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, proposed_expstr)
 Baseline_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Session_level_all, baseline_expstr)
 Proposed_totalPoeple_info_dict=Organize_Needed_SHAP_info(df_Y_pred.index, Session_level_all, proposed_expstr)
+
 #%%
-# sellect_people_define=SellectP_define()
-# 畫炫炮的錯誤型態分析 (Changed smaples的logit 1 decision function 的移動)
-def Organize_Needed_decisionProb(Incorrect2Correct_indexes, df_Y_pred_withName, baseline_proposed_str='proposed'):
-    decision_function_str='y_true'
-    Incorrect2Correct_indexes=selected_idxs
-    Incorrect2Correct_info_dict=Dict()
-    for tst_idx in Incorrect2Correct_indexes:
-        Incorrect2Correct_info_dict[tst_idx]['predictproba']=df_Y_pred_withName[baseline_proposed_str].loc[tst_idx]
-        Incorrect2Correct_info_dict[tst_idx]['estimateError']=(df_Y_pred_withName[baseline_proposed_str].loc[tst_idx] - df_Y_pred_withName[decision_function_str].loc[tst_idx])
+# TASLP figure Feature importance plot
+# Feature set combination: Inter-VD+FD+GC[VSC]\textsubscript{inv}+Syncrony[VSC] 的summary plot
+def Prepare_data_for_summaryPlot_regression(SHAPval_info_dict, feature_columns=None,PprNmeMp=None):
+    keys_bag=[]
+    XTest_dict={}
+    shap_values_0_bag=[]
+    for people in sorted(SHAPval_info_dict.keys()):
+        keys_bag.append(people)
+        if not feature_columns == None:
+            df_=SHAPval_info_dict[people]['XTest'][feature_columns]
+            df_shape_value=SHAPval_info_dict[people]['shap_values'][feature_columns]
+        else:
+            df_=SHAPval_info_dict[people]['XTest']
+            df_shape_value=SHAPval_info_dict[people]['shap_values']
+        # if not SumCategorical_feats == None:
+        #     for k,values in SumCategorical_feats.items():
+        #         df_[k]=df_.loc[values].sum()
+        XTest_dict[people]=df_        
+        shap_values_0_bag.append(df_shape_value.loc[0].values)
+    shap_values_0_array=np.vstack(shap_values_0_bag)
+    shap_values=shap_values_0_array
+    df_XTest=pd.DataFrame.from_dict(XTest_dict,orient='columns').T
+    if PprNmeMp!=None:
+        df_XTest.columns=[Swap2PaperName(k,PprNmeMp) for k in df_XTest.columns]
+    return shap_values, df_XTest, keys_bag
 
-    return Incorrect2Correct_info_dict
-# step 1: prepare data
-selected_idxs=LargerVal_indexes+LowerVal_indexes
-
-Baseline_changed_decision_info_dict=Organize_Needed_decisionProb(selected_idxs, df_Y_pred_withName, baseline_proposed_str='baseline')
-Proposed_changed_decision_info_dict=Organize_Needed_decisionProb(selected_idxs, df_Y_pred_withName, baseline_proposed_str='proposed')
-Baseline_total_decision_info_dict=Organize_Needed_decisionProb(df_Y_pred.index, df_Y_pred_withName, baseline_proposed_str='baseline')
-Proposed_total_decision_info_dict=Organize_Needed_decisionProb(df_Y_pred.index, df_Y_pred_withName, baseline_proposed_str='proposed')
-
-
-df_Proposed_changed_decision_info_dict=pd.DataFrame.from_dict(Proposed_changed_decision_info_dict,orient='index')
-df_Baseline_changed_decision_info_dict=pd.DataFrame.from_dict(Baseline_changed_decision_info_dict,orient='index')
-df_Proposed_total_decision_info_dict=pd.DataFrame.from_dict(Proposed_total_decision_info_dict,orient='index')
-df_Baseline_total_decision_info_dict=pd.DataFrame.from_dict(Baseline_total_decision_info_dict,orient='index')
-Sample_idxs_array=df_Baseline_changed_decision_info_dict.index.values
-
-
-
-
-
-df_Y_true=df_Y_pred.loc[df_Baseline_changed_decision_info_dict.index]['y_true']
-
-Incorrect_baseline=df_Y_pred['baseline'] != df_Y_pred['y_true']
-Incorrect_proposed=df_Y_pred['proposed'] != df_Y_pred['y_true']
-Correct_baseline=df_Y_pred['baseline'] != df_Y_pred['y_true']
-Correct_proposed=df_Y_pred['proposed'] != df_Y_pred['y_true']
-
-fig, ax = plt.subplots()
-
-# decision function 負的表示predict logit 0, 正的表示logit 1
-Baseline_x= df_Baseline_changed_decision_info_dict['predictproba'].values.copy()
-# Baseline_y_decisionfunc= df_Baseline_changed_decision_info_dict['estimateError'].copy()
-Baseline_y= df_Baseline_changed_decision_info_dict['estimateError'].values.copy()
-
-Baseline_total_x= df_Baseline_total_decision_info_dict['predictproba'].values.copy()
-# Baseline_total_y_decisionfunc= df_Baseline_total_decision_info_dict['estimateError'].copy()
-Baseline_total_y= df_Baseline_total_decision_info_dict['estimateError'].values.copy()
-
-# estimateError是正的y軸就是正的，estimateError bar是負的y軸就是負的
-# Baseline_y[Improved_indexes.loc[df_Baseline_changed_decision_info_dict.index]]\
-#     =Baseline_y_decisionfunc[Improved_indexes.loc[df_Baseline_changed_decision_info_dict.index]]
-# Baseline_y[Degraded_indexes.loc[df_Baseline_changed_decision_info_dict.index]]\
-#     =Baseline_y_decisionfunc[Degraded_indexes.loc[df_Baseline_changed_decision_info_dict.index]]
-# Baseline_total_y[df_Baseline_total_decision_info_dict.loc[Incorrect_baseline]]\
-#     =-df_Baseline_total_decision_info_dict.loc[Incorrect_baseline]
-# Baseline_total_y[df_Baseline_total_decision_info_dict.loc[Incorrect_baseline]]\
-#     =df_Baseline_total_decision_info_dict.loc[Correct_baseline]
+# inspect_featuresets='Trend[LOCDEP]_d'  #Trend[LOCDEP]d + Proximity[phonation]
+# inspect_featuresets='LOC_columns'  #LOC_columns + Syncrony[phonation]
+inspect_featuresets_lst=['LOC_columns','DEP_columns']
+# inspect_featuresets_lst=list(Additional_featureSet)
 
 
+featuresetsListTotal_lst=[]
+for inspect_featuresets in inspect_featuresets_lst:
+    # featuresetsListTotal_lst+=FeatSel.CategoricalName2cols[inspect_featuresets]
+    featuresetsListTotal_lst+=getattr(FeatSel,inspect_featuresets)
+shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_totalPoeple_info_dict,\
+                                                          feature_columns=featuresetsListTotal_lst,\
+                                                          PprNmeMp=PprNmeMp)
+Col2Delete=""
+# Col2Delete="GC[BCC]$_\mathrm{inv}$"
+if len(Col2Delete) > 0:
+    Colidx2Delete=[list(df_XTest.columns).index(Col2Delete)]
+else:
+    Colidx2Delete=[]
 
-
-Proposed_x= df_Proposed_changed_decision_info_dict['predictproba'].values.copy()
-Proposed_y_decisionfunc= df_Proposed_changed_decision_info_dict['estimateError'].values.copy()
-Proposed_y= df_Proposed_changed_decision_info_dict['estimateError'].values.copy()
-Proposed_total_x= df_Proposed_total_decision_info_dict['predictproba'].values.copy()
-Proposed_total_y_decisionfunc= df_Proposed_total_decision_info_dict['estimateError'].values.copy()
-Proposed_total_y= df_Proposed_total_decision_info_dict['estimateError'].values.copy()
-
-
-
-# Proposed_y[Improved_indexes.loc[df_Baseline_changed_decision_info_dict.index]]=\
-#     Proposed_y_decisionfunc[Improved_indexes.loc[df_Baseline_changed_decision_info_dict.index]]
-# Proposed_y[Degraded_indexes.loc[df_Baseline_changed_decision_info_dict.index]]=\
-#     -Proposed_y_decisionfunc[Degraded_indexes.loc[df_Baseline_changed_decision_info_dict.index]]
-# Proposed_total_y[df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]]\
-#     =-df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]
-# Proposed_total_y[df_Proposed_total_decision_info_dict.loc[Incorrect_proposed]]\
-#     =df_Proposed_total_decision_info_dict.loc[Correct_proposed]
-
-Total_y=list(Baseline_y)+list(Proposed_y)
-Total_x=list(Baseline_x)+list(Proposed_x)
-
-y_max=np.max(Total_y)
-y_min=np.min(Total_y)
-x_max=np.max(Total_x)
-x_min=np.min(Total_x)
-x_middle=(x_max+x_min)/2
-y_middle=(y_max+y_min)/2
-
-# ax.annotate("", xy=(起點x, 起點y), xytext=(終點x, 終點y),arrowprops=dict(arrowstyle="->"))
-for B_x, B_y, P_x, P_y,idx in zip(Baseline_x,Baseline_y,Proposed_x,Proposed_y,Sample_idxs_array):
-    ax.annotate("", xy=(B_x, B_y), xytext=(P_x, P_y),arrowprops=dict(arrowstyle="<-",alpha=.4))
-    # ax.text((B_x+P_x)/2, (B_y+P_y)/2, str(idx), fontsize=12)
-    # ax.text(B_x, B_y, str(idx), fontsize=12)
-    # ax.text(P_x, P_y, str(idx), fontsize=12)
-
-plt.scatter(Baseline_x, Baseline_y, c='b', alpha=1)
-plt.scatter(Proposed_x, Proposed_y, c='r', alpha=1)
-
-
-# plt.scatter(df_Baseline_total_decision_info_dict.predictproba, df_Baseline_total_decision_info_dict.abs().decisionfunc, c='b', alpha=.05)
-# plt.scatter(df_Proposed_total_decision_info_dict.predictproba, df_Proposed_total_decision_info_dict.abs().decisionfunc, c='r', alpha=.05)
-xmin_global, xmax_global=0, 10
-xmiddle_global=(xmin_global+xmax_global)/2
-ax.annotate('',xy=(xmin_global, 0), xytext=(xmax_global, 0),arrowprops=dict(arrowstyle="<->",alpha=1,))                                                                     
-ax.annotate('',xy=(xmiddle_global, y_min), xytext=(xmiddle_global, y_max),arrowprops=dict(arrowstyle="<->",alpha=1,))
-margin_y=(y_max-y_min)/10
-margin_x=(xmax_global-xmin_global)/20
-
-ax.text(xmin_global, y_middle-margin_y, '10', fontsize=12)
-ax.text(xmax_global-margin_x, y_middle-margin_y, '0', fontsize=12)
-    
-ax.text(xmiddle_global, y_min, 'Overestimated', fontsize=12)
-ax.text(xmiddle_global, y_max-margin_y, 'Underestimated', fontsize=12)   
-fig.patch.set_visible(True)
-ax.axis('off')
-# plt.ylim(-1.5,1.5)
-plt.xlim(0,10)
+# TASLP 跑Fig.3 圖片的時候會用到
+max_display=5
+if len(Colidx2Delete)>0:
+    shap.summary_plot(np.delete(shap_values,obj=Colidx2Delete,axis=1), df_XTest.drop(columns=Col2Delete),feature_names=df_XTest.drop(columns=Col2Delete).columns, \
+                      max_display=max_display,\
+                      axis_color='black',\
+                      
+                      show=False
+                      )
+    plt.gcf().axes[-1].set_aspect(100)
+    plt.gcf().axes[-1].set_box_aspect(100)
+    # plt.gcf().axes[-1].set_aspect('auto')
+    # plt.colorbar()
+    fig = plt.gcf()
+    fig.set_size_inches((4,5))
+    plt.title("Task: prediction of ADOS$_\mathrm{comm}$",fontsize=15)
+    fig.savefig('images/SHAP_RegressionTask.png',format = "png",dpi = 300,bbox_inches = 'tight')
+else:
+    shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False, max_display=max_display)
+    plt.gcf().axes[-1].set_aspect(100)
+    plt.gcf().axes[-1].set_box_aspect(100)
+    # plt.gcf().axes[-1].set_aspect('auto')
+    # plt.colorbar()
+    fig = plt.gcf()
+    fig.set_size_inches((6, 4))
+    plt.title("Task: prediction of ADOS$_\mathrm{comm}$",fontsize=15)
+    fig.savefig('images/SHAP_RegressionTask.png',format = "png",dpi = 300,bbox_inches = 'tight')
 plt.title(experiment_title)
 plt.show()
+
+df_shap_values_withNames=pd.DataFrame(shap_values,columns=df_XTest.columns)
+df_feature_Importance = df_shap_values_withNames.abs().sum().sort()
+
+
+# 製造 importance plot
+# shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False, plot_type='bar', max_display=17)
+# plt.title(experiment_title)
+# plt.show()
+
+# 觀察Feature值跟SHAP value的correlation
+df_Pcorrela_FeaturesnSHAPVal=Calculate_XTestShape_correlation(Proposed_totalPoeple_info_dict,logit_number=logit_number)
+
+df_X_featureRank=pd.DataFrame()
+for col in df_XTest.columns:
+    
+    df_rank_features=df_XTest[col].argsort()  #從小排到大
+    df_rank=pd.Series(df_rank_features.index.values, index=df_rank_features ,name=df_rank_features.name).sort_index()
+    
+    df_X_featureRank=pd.concat([df_X_featureRank,df_rank],axis=1)
+    df_X_featureRank_T=df_X_featureRank.T
+    # if col == '$BCC$':
+    #     aaa=ccc
+
 #%%
 # 個體分析： 會存到SAHP_figures/{quadrant}/的資料夾，再開Jupyter去看
 def Calculate_sum_of_SHAP_vals(df_values,FeatSel_module,FeatureSet_lst=['Phonation_Proximity_cols'],PprNmeMp=None):
@@ -1231,6 +1214,106 @@ for Analysis_grp_str in ['quadrant1_indexes','quadrant2_indexes','quadrant3_inde
 
 
 #%%
+# sellect_people_define=SellectP_define()
+# 畫炫炮的錯誤型態分析 (Changed smaples的logit 1 decision function 的移動)
+def Organize_Needed_decisionProb(Incorrect2Correct_indexes, df_Y_pred_withName, baseline_proposed_str='proposed'):
+    decision_function_str='y_true'
+    Incorrect2Correct_indexes=selected_idxs
+    Incorrect2Correct_info_dict=Dict()
+    for tst_idx in Incorrect2Correct_indexes:
+        Incorrect2Correct_info_dict[tst_idx]['predictproba']=df_Y_pred_withName[baseline_proposed_str].loc[tst_idx]
+        Incorrect2Correct_info_dict[tst_idx]['estimateError']=(df_Y_pred_withName[baseline_proposed_str].loc[tst_idx] - df_Y_pred_withName[decision_function_str].loc[tst_idx])
+
+    return Incorrect2Correct_info_dict
+# step 1: prepare data
+selected_idxs=LargerVal_indexes+LowerVal_indexes
+
+Baseline_changed_decision_info_dict=Organize_Needed_decisionProb(selected_idxs, df_Y_pred_withName, baseline_proposed_str='baseline')
+Proposed_changed_decision_info_dict=Organize_Needed_decisionProb(selected_idxs, df_Y_pred_withName, baseline_proposed_str='proposed')
+Baseline_total_decision_info_dict=Organize_Needed_decisionProb(df_Y_pred.index, df_Y_pred_withName, baseline_proposed_str='baseline')
+Proposed_total_decision_info_dict=Organize_Needed_decisionProb(df_Y_pred.index, df_Y_pred_withName, baseline_proposed_str='proposed')
+
+
+df_Proposed_changed_decision_info_dict=pd.DataFrame.from_dict(Proposed_changed_decision_info_dict,orient='index')
+df_Baseline_changed_decision_info_dict=pd.DataFrame.from_dict(Baseline_changed_decision_info_dict,orient='index')
+df_Proposed_total_decision_info_dict=pd.DataFrame.from_dict(Proposed_total_decision_info_dict,orient='index')
+df_Baseline_total_decision_info_dict=pd.DataFrame.from_dict(Baseline_total_decision_info_dict,orient='index')
+Sample_idxs_array=df_Baseline_changed_decision_info_dict.index.values
+
+
+
+
+
+df_Y_true=df_Y_pred.loc[df_Baseline_changed_decision_info_dict.index]['y_true']
+
+Incorrect_baseline=df_Y_pred['baseline'] != df_Y_pred['y_true']
+Incorrect_proposed=df_Y_pred['proposed'] != df_Y_pred['y_true']
+Correct_baseline=df_Y_pred['baseline'] != df_Y_pred['y_true']
+Correct_proposed=df_Y_pred['proposed'] != df_Y_pred['y_true']
+
+fig, ax = plt.subplots()
+
+# decision function 負的表示predict logit 0, 正的表示logit 1
+Baseline_x= df_Baseline_changed_decision_info_dict['predictproba'].values.copy()
+# Baseline_y_decisionfunc= df_Baseline_changed_decision_info_dict['estimateError'].copy()
+Baseline_y= df_Baseline_changed_decision_info_dict['estimateError'].values.copy()
+
+Baseline_total_x= df_Baseline_total_decision_info_dict['predictproba'].values.copy()
+# Baseline_total_y_decisionfunc= df_Baseline_total_decision_info_dict['estimateError'].copy()
+Baseline_total_y= df_Baseline_total_decision_info_dict['estimateError'].values.copy()
+
+
+
+Proposed_x= df_Proposed_changed_decision_info_dict['predictproba'].values.copy()
+Proposed_y_decisionfunc= df_Proposed_changed_decision_info_dict['estimateError'].values.copy()
+Proposed_y= df_Proposed_changed_decision_info_dict['estimateError'].values.copy()
+Proposed_total_x= df_Proposed_total_decision_info_dict['predictproba'].values.copy()
+Proposed_total_y_decisionfunc= df_Proposed_total_decision_info_dict['estimateError'].values.copy()
+Proposed_total_y= df_Proposed_total_decision_info_dict['estimateError'].values.copy()
+
+Total_y=list(Baseline_y)+list(Proposed_y)
+Total_x=list(Baseline_x)+list(Proposed_x)
+
+y_max=np.max(Total_y)
+y_min=np.min(Total_y)
+x_max=np.max(Total_x)
+x_min=np.min(Total_x)
+x_middle=(x_max+x_min)/2
+y_middle=(y_max+y_min)/2
+
+# ax.annotate("", xy=(起點x, 起點y), xytext=(終點x, 終點y),arrowprops=dict(arrowstyle="->"))
+for B_x, B_y, P_x, P_y,idx in zip(Baseline_x,Baseline_y,Proposed_x,Proposed_y,Sample_idxs_array):
+    ax.annotate("", xy=(B_x, B_y), xytext=(P_x, P_y),arrowprops=dict(arrowstyle="<-",alpha=.4))
+    # ax.text((B_x+P_x)/2, (B_y+P_y)/2, str(idx), fontsize=12)
+    # ax.text(B_x, B_y, str(idx), fontsize=12)
+    # ax.text(P_x, P_y, str(idx), fontsize=12)
+
+plt.scatter(Baseline_x, Baseline_y, c='b', alpha=1)
+plt.scatter(Proposed_x, Proposed_y, c='r', alpha=1)
+
+
+# plt.scatter(df_Baseline_total_decision_info_dict.predictproba, df_Baseline_total_decision_info_dict.abs().decisionfunc, c='b', alpha=.05)
+# plt.scatter(df_Proposed_total_decision_info_dict.predictproba, df_Proposed_total_decision_info_dict.abs().decisionfunc, c='r', alpha=.05)
+xmin_global, xmax_global=0, 10
+xmiddle_global=(xmin_global+xmax_global)/2
+ax.annotate('',xy=(xmin_global, 0), xytext=(xmax_global, 0),arrowprops=dict(arrowstyle="<->",alpha=1,))                                                                     
+ax.annotate('',xy=(xmiddle_global, y_min), xytext=(xmiddle_global, y_max),arrowprops=dict(arrowstyle="<->",alpha=1,))
+margin_y=(y_max-y_min)/10
+margin_x=(xmax_global-xmin_global)/20
+
+ax.text(xmin_global, y_middle-margin_y, '10', fontsize=12)
+ax.text(xmax_global-margin_x, y_middle-margin_y, '0', fontsize=12)
+    
+ax.text(xmiddle_global, y_min, 'Overestimated', fontsize=12)
+ax.text(xmiddle_global, y_max-margin_y, 'Underestimated', fontsize=12)   
+fig.patch.set_visible(True)
+ax.axis('off')
+# plt.ylim(-1.5,1.5)
+plt.xlim(0,10)
+plt.title(experiment_title)
+plt.show()
+
+#%%
 # # 以feature set為單位畫summary plot
 # def ReorganizeFeatures4SummaryPlot(shap_values_logit, df_XTest,FeatureSet_lst=None,Featurechoose_lst=None):
 #     # step1 convert shapvalue to df_shapvalues
@@ -1305,93 +1388,7 @@ Quadrant_Sumedfeature_AddedFeatureImportance_sorted_dict['quadrant4_indexes']
 # =============================================================================
 
 
-#%%
-# Feature set combination: Inter-VD+FD+GC[VSC]\textsubscript{inv}+Syncrony[VSC] 的summary plot
-def Prepare_data_for_summaryPlot_regression(SHAPval_info_dict, feature_columns=None,PprNmeMp=None):
-    keys_bag=[]
-    XTest_dict={}
-    shap_values_0_bag=[]
-    for people in sorted(SHAPval_info_dict.keys()):
-        keys_bag.append(people)
-        if not feature_columns == None:
-            df_=SHAPval_info_dict[people]['XTest'][feature_columns]
-            df_shape_value=SHAPval_info_dict[people]['shap_values'][feature_columns]
-        else:
-            df_=SHAPval_info_dict[people]['XTest']
-            df_shape_value=SHAPval_info_dict[people]['shap_values']
-        # if not SumCategorical_feats == None:
-        #     for k,values in SumCategorical_feats.items():
-        #         df_[k]=df_.loc[values].sum()
-        XTest_dict[people]=df_        
-        shap_values_0_bag.append(df_shape_value.loc[0].values)
-    shap_values_0_array=np.vstack(shap_values_0_bag)
-    shap_values=shap_values_0_array
-    df_XTest=pd.DataFrame.from_dict(XTest_dict,orient='columns').T
-    if PprNmeMp!=None:
-        df_XTest.columns=[Swap2PaperName(k,PprNmeMp) for k in df_XTest.columns]
-    return shap_values, df_XTest, keys_bag
 
-# inspect_featuresets='Trend[LOCDEP]_d'  #Trend[LOCDEP]d + Proximity[phonation]
-# inspect_featuresets='LOC_columns'  #LOC_columns + Syncrony[phonation]
-# inspect_featuresets_lst=['LOC_columns','DEP_columns','Trend[LOCDEP]_d','Trend[LOCDEP]_k','Syncrony[LOCDEP]']
-
-
-
-inspect_featuresets_lst=list(Additional_featureSet)
-featuresetsListTotal_lst=[]
-for inspect_featuresets in inspect_featuresets_lst:
-    # featuresetsListTotal_lst+=FeatSel.CategoricalName2cols[inspect_featuresets]
-    featuresetsListTotal_lst+=getattr(FeatSel,inspect_featuresets)
-shap_values, df_XTest, keys=Prepare_data_for_summaryPlot_regression(Proposed_totalPoeple_info_dict,\
-                                                          feature_columns=featuresetsListTotal_lst,\
-                                                          PprNmeMp=PprNmeMp)
-# Col2Delete=""
-Col2Delete="GC[BCC]$_\mathrm{inv}$"
-if len(Col2Delete) > 0:
-    Colidx2Delete=[list(df_XTest.columns).index(Col2Delete)]
-else:
-    Colidx2Delete=[]
-
-# TASLP 跑Fig.5 圖片的時候會用到
-max_display=14
-if len(Colidx2Delete)>0:
-    shap.summary_plot(np.delete(shap_values,obj=Colidx2Delete,axis=1), df_XTest.drop(columns=Col2Delete),feature_names=df_XTest.drop(columns=Col2Delete).columns, \
-                      max_display=max_display,\
-                      axis_color='black',\
-                      
-                      show=False
-                      )
-    plt.gcf().axes[-1].set_aspect(100)
-    plt.gcf().axes[-1].set_box_aspect(100)
-    # plt.gcf().axes[-1].set_aspect('auto')
-    # plt.colorbar()
-    fig = plt.gcf()
-    fig.set_size_inches((4,5))
-    plt.title("Task: prediction of ADOS$_\mathrm{comm}$",fontsize=15)
-    fig.savefig('images/SHAP_RegressionTask.png',format = "png",dpi = 300,bbox_inches = 'tight')
-else:
-    shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False, max_display=max_display)
-plt.title(experiment_title)
-plt.show()
-
-# 製造 importance plot
-# shap.summary_plot(shap_values, df_XTest,feature_names=df_XTest.columns,show=False, plot_type='bar', max_display=17)
-# plt.title(experiment_title)
-# plt.show()
-
-# 觀察Feature值跟SHAP value的correlation
-df_Pcorrela_FeaturesnSHAPVal=Calculate_XTestShape_correlation(Proposed_totalPoeple_info_dict,logit_number=logit_number)
-
-df_X_featureRank=pd.DataFrame()
-for col in df_XTest.columns:
-    
-    df_rank_features=df_XTest[col].argsort()  #從小排到大
-    df_rank=pd.Series(df_rank_features.index.values, index=df_rank_features ,name=df_rank_features.name).sort_index()
-    
-    df_X_featureRank=pd.concat([df_X_featureRank,df_rank],axis=1)
-    df_X_featureRank_T=df_X_featureRank.T
-    # if col == '$BCC$':
-    #     aaa=ccc
 #%%
 # XXX Feature sets Inter-VD, FD, GC[VSC]\textsubscript{inv}, Syncrony[VSC] 的summary plot
 
@@ -1530,6 +1527,7 @@ def featureSetSHAPVal(df_shap_values, FeatSel , FeatSetLst=['InterVD','FD','GCVS
 
 proposed_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns+LOCDEP_Trend_D_cols+LOCDEP_Syncrony_cols::ADOS_C'
 baseline_expstr='static_feautre_LOC+dynamic_feature_LOC+dynamic_feature_phonation-LOC_columns+DEP_columns::ADOS_C'
+
 Proposed_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, proposed_expstr)
 Baseline_changed_info_dict=Organize_Needed_SHAP_info(selected_idxs, Session_level_all, baseline_expstr)
 def GetdfSHAPSUMdict(Proposed_changed_info_dict, FeatSetLst):
@@ -1605,9 +1603,8 @@ print("sigma_SE(Qs) {} = SE_all {}".format(sum([SE_Q1,SE_Q2,SE_Q3,SE_Q4]),SE_all
 
 round_number=6
 delta_group=['Δbaseval','ΔInterVD','ΔFD','ΔGCVSCinv','ΔSynchronyVSC']
-# proposed_group=['P_baseval','P_InterVD','P_FD','P_GCVSCinv','P_SynchronyVSC']
-# baseline_group=['b_baseval','b_InterVD','b_FD','b_GCVSCinv','b_SynchronyVSC']
-ProposedBaseline_group=['I+F_baseval','I+F_InterVD','I+F_FD','I+F_GCVSCinv','I+F_SynchronyVSC']
+proposed_group=['P_baseval','P_InterVD','P_FD','P_GCVSCinv','P_SynchronyVSC']
+baseline_group=['b_baseval','b_InterVD','b_FD','b_GCVSCinv','b_SynchronyVSC']
 MSE_group=['AE_proposed', 'AE_baseline', 'AE_DELTA']
 Y_group=['Y']
 
@@ -1622,10 +1619,9 @@ for q in range(1,5):
         
         value_baseline = np.round(baseline_shap_sum_dict[FSL][vars()[vrble]].sum(),round_number) if FSL in baseline_shap_sum_dict.keys() else 0
         df_FS_Qdrant_rslt.loc['Δ'+FSL,vrble]=value_delta
-        # df_FS_Qdrant_rslt.loc['P_'+FSL,vrble]=value_proposed
-        # df_FS_Qdrant_rslt.loc['b_'+FSL,vrble]=value_baseline
-        df_FS_Qdrant_rslt.loc['I+F_'+FSL,vrble]=value_baseline + value_proposed
-    # df_FS_Qdrant_rslt.loc['Y',vrble]=value_baseline + value_proposed
+        df_FS_Qdrant_rslt.loc['P_'+FSL,vrble]=value_proposed
+        df_FS_Qdrant_rslt.loc['b_'+FSL,vrble]=value_baseline
+
 
 for q in range(1,5):
     vrble='Q{}_idx'.format(q)
@@ -1649,16 +1645,21 @@ for q in range(1,5):
 df_FS_Qdrant_rslt.loc['MAE_proposed'] = df_FS_Qdrant_rslt.loc['AE_proposed'] / df_FS_Qdrant_rslt.loc['N']
 df_FS_Qdrant_rslt.loc['MAE_baseline'] = df_FS_Qdrant_rslt.loc['AE_baseline'] / df_FS_Qdrant_rslt.loc['N']
 df_FS_Qdrant_rslt.loc['MAE_delta'] = (df_FS_Qdrant_rslt.loc['AE_proposed'] - df_FS_Qdrant_rslt.loc['AE_baseline']) / df_FS_Qdrant_rslt.loc['N']
+df_FS_Qdrant_rslt.loc['Mean_Y'] = df_FS_Qdrant_rslt.loc['Y'] / df_FS_Qdrant_rslt.loc['N']
 
-# for feat_str in proposed_group+baseline_group:
-#     df_FS_Qdrant_rslt.loc['Mean_'+feat_str]=df_FS_Qdrant_rslt.loc[feat_str].multiply(1/df_FS_Qdrant_rslt.loc['N'])
-for feat_str in delta_group+ProposedBaseline_group+['Y']:
+for feat_str in delta_group+proposed_group+baseline_group:
     df_FS_Qdrant_rslt.loc['Mean_'+feat_str]=df_FS_Qdrant_rslt.loc[feat_str].multiply(1/df_FS_Qdrant_rslt.loc['N'])
+
+df_FS_Qdrant_rslt.loc['Mean_I+F_baseval'] = df_FS_Qdrant_rslt.loc['Mean_P_baseval'] + df_FS_Qdrant_rslt.loc['Mean_b_baseval']
+df_FS_Qdrant_rslt.loc['Mean_I+F_InterVD'] = df_FS_Qdrant_rslt.loc['Mean_P_InterVD'] + df_FS_Qdrant_rslt.loc['Mean_b_InterVD']
+df_FS_Qdrant_rslt.loc['Mean_I+F_FD'] = df_FS_Qdrant_rslt.loc['Mean_P_FD'] + df_FS_Qdrant_rslt.loc['Mean_b_FD']
+df_FS_Qdrant_rslt.loc['Mean_I+F_GCVSCinv'] = df_FS_Qdrant_rslt.loc['Mean_P_GCVSCinv'] + df_FS_Qdrant_rslt.loc['Mean_b_GCVSCinv']
+df_FS_Qdrant_rslt.loc['Mean_I+F_SynchronyVSC'] = df_FS_Qdrant_rslt.loc['Mean_P_SynchronyVSC'] + df_FS_Qdrant_rslt.loc['Mean_b_SynchronyVSC']
 
 
 df_FS_Qdrant_rslt_rounded=df_FS_Qdrant_rslt.round(3)
 df_deltagroup=df_FS_Qdrant_rslt_rounded.loc[delta_group]
-# df_proposednbaselinegroup=df_FS_Qdrant_rslt_rounded.loc[proposed_group+baseline_group]
+df_proposednbaselinegroup=df_FS_Qdrant_rslt_rounded.loc[proposed_group+baseline_group]
 Total_MAE_delta=df_FS_Qdrant_rslt.loc['MAE_delta'].dot(df_FS_Qdrant_rslt.loc['N'])/df_FS_Qdrant_rslt.loc['N'].sum()
 
 

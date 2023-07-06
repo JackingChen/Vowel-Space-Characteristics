@@ -155,7 +155,7 @@ def get_args():
                         help='')
     parser.add_argument('--selectModelScoring', default='neg_mean_squared_error',
                         help='')
-    parser.add_argument('--Mergefeatures', default=True,
+    parser.add_argument('--Mergefeatures', default=False,
                         help='')
     parser.add_argument('--knn_weights', default='uniform',
                             help='path of the base directory')
@@ -165,7 +165,7 @@ def get_args():
                             help='[DKIndividual, DKcriteria]')
     parser.add_argument('--Normalize_way', default='func10',
                             help='')
-    parser.add_argument('--FeatureComb_mode', default='Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation',
+    parser.add_argument('--FeatureComb_mode', default='Comb_dynPhonation',
                             help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
     args = parser.parse_args()
     return args
@@ -639,6 +639,6 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
 # TASLP table.5 fusion的部份
 writer_clf.save()
 print(df_best_result_allThreeClassifiers)
-df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+f"TASLPTABLE-RegressFusion_Norm[{args.Normalize_way}]_Experiment.xlsx")
-print("df_best_result_allThreeClassifiers generated at ",Result_path+"/"+f"TASLPTABLE-Regress_Norm[{args.Normalize_way}]_Experiment.xlsx")
+df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+f"TASLPTABLE-RegressFusion_Norm[{args.Normalize_way}_Comb[{args.FeatureComb_mode}]]_Experiment.xlsx")
+print("df_best_result_allThreeClassifiers generated at ",Result_path+"/"+f"TASLPTABLE-Regress_Norm[{args.Normalize_way}_Comb[{args.FeatureComb_mode}]]_Experiment.xlsx")
 

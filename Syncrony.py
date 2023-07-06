@@ -382,7 +382,8 @@ class Syncrony:
             
             df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index').T
             df_RESULT_list.index=[people]
-            df_basic_additional_info=df_basic_additional_info.append(df_RESULT_list)
+            # df_basic_additional_info=df_basic_additional_info.append(df_RESULT_list)
+            df_basic_additional_info=pd.concat([df_basic_additional_info,df_RESULT_list], ignore_index=True)
         return df_basic_additional_info
     def _calculate_features_col(self,functionDK_people,col):
         df_syncrony_measurement=pd.DataFrame()
@@ -427,7 +428,8 @@ class Syncrony:
             
             df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict,orient='index').T
             df_RESULT_list.index=[people]
-            df_syncrony_measurement=df_syncrony_measurement.append(df_RESULT_list)
+            # df_syncrony_measurement=df_syncrony_measurement.append(df_RESULT_list)
+            df_syncrony_measurement=pd.concat([df_syncrony_measurement,df_RESULT_list], ignore_index=True)
         return df_syncrony_measurement
     def xpearsonr(x, y):
         # x and y should have same length.
