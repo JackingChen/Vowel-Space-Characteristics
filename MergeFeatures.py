@@ -29,6 +29,7 @@ def get_args():
                         help='what kind of data you want to get')
     parser.add_argument('--exclude_people', default=['2015_12_07_02_003','2017_03_18_01_196_1'],
                         help='what kind of data you want to get')
+    
     args = parser.parse_args()
     return args
 args = get_args()
@@ -91,20 +92,19 @@ for role in ['ASD','TD']:
 
 
 
-for knn_weights in ['uniform', 'distance']:
-    for Reorder_type in ['DKIndividual','DKcriteria']:
-        for knn_neighbors in [2, 3, 4, 5, 6]:
+for knn_weights in ['uniform']:
+    for Reorder_type in ['DKIndividual']:
+        for knn_neighbors in [2]:
             if args.MergeClassificationfeatures:
                 # dataset_role='ASD_DOCKID'
                 for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
                     if args.ADDUtt_feature==True:
                         role=dataset_role.split("_")[0] #ASD or TD
                     Merg_filepath={}
-                    Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/Formant_AUI_tVSAFCRFvals_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
-                    Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
-                    Merg_filepath['dynamic_feature_LOC']='Features/artuculation_AUI/Interaction/Syncrony_Knnparameters/Syncrony_measure_of_variance_{knn_weights}_{knn_neighbors}_{Reorder_type}_{dataset_role}.pkl'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type)
-                    Merg_filepath['dynamic_feature_phonation']='Features/artuculation_AUI/Interaction/Syncrony_Knnparameters/Syncrony_measure_of_variance_phonation_{knn_weights}_{knn_neighbors}_{Reorder_type}_{dataset_role}.pkl'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type)
-                    
+                    Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/{Normalize_way}/Formant_AUI_tVSAFCRFvals_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role,Normalize_way=args.Normalize_way)
+                    # Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
+                    Merg_filepath['dynamic_feature_LOC']='Features/artuculation_AUI/Interaction/Formants/{Normalize_way}/Syncrony_measure_of_variance_DKIndividual_{dataset_role}.pkl'.format(dataset_role=dataset_role,Normalize_way=args.Normalize_way)
+                    Merg_filepath['dynamic_feature_phonation']='Features/artuculation_AUI/Interaction/Phonation/Syncrony_measure_of_variance_phonation_{dataset_role}.pkl'.format(dataset_role=dataset_role)
                     if args.ADDUtt_feature==True:
                         merge_out_path='Features/ClassificationMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/{dataset_role}/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type)
                     else:
@@ -165,11 +165,10 @@ for knn_weights in ['uniform', 'distance']:
                     if args.ADDUtt_feature==True:
                         role=dataset_role.split("_")[0] #ASD or TD
                     Merg_filepath={}
-                    Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/Formant_AUI_tVSAFCRFvals_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
-                    Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
-                    Merg_filepath['dynamic_feature_LOC']='Features/artuculation_AUI/Interaction/Syncrony_Knnparameters/Syncrony_measure_of_variance_{knn_weights}_{knn_neighbors}_{Reorder_type}_{dataset_role}.pkl'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type)
-                    Merg_filepath['dynamic_feature_phonation']='Features/artuculation_AUI/Interaction/Syncrony_Knnparameters/Syncrony_measure_of_variance_phonation_{knn_weights}_{knn_neighbors}_{Reorder_type}_{dataset_role}.pkl'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type)
-                    
+                    Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/{Normalize_way}/Formant_AUI_tVSAFCRFvals_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role,Normalize_way=args.Normalize_way)
+                    # Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
+                    Merg_filepath['dynamic_feature_LOC']='Features/artuculation_AUI/Interaction/Formants/{Normalize_way}/Syncrony_measure_of_variance_DKIndividual_{dataset_role}.pkl'.format(dataset_role=dataset_role,Normalize_way=args.Normalize_way)
+                    Merg_filepath['dynamic_feature_phonation']='Features/artuculation_AUI/Interaction/Phonation/Syncrony_measure_of_variance_phonation_{dataset_role}.pkl'.format(dataset_role=dataset_role)
                     if args.ADDUtt_feature==True:
                         merge_out_path='Features/RegressionMerged_dfs/ADDed_UttFeat/{knn_weights}_{knn_neighbors}_{Reorder_type}/{dataset_role}/'.format(knn_weights=knn_weights,knn_neighbors=knn_neighbors,dataset_role=dataset_role,Reorder_type=Reorder_type)
                     else:

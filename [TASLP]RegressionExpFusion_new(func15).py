@@ -672,7 +672,7 @@ for clf_keys, clf in Classifier.items(): #Iterate among different classifiers
 
 
 
-# TASLP table.5 fusion的部份
+# TASLP table.6 fusion的部份
 writer_clf.close()
 print(df_best_result_allThreeClassifiers)
 df_best_result_allThreeClassifiers.to_excel(Result_path+"/"+f"TASLPTABLE-RegressFusion_Norm[{args.Normalize_way}].xlsx")
@@ -972,7 +972,7 @@ if len(Col2Delete) > 0:
 else:
     Colidx2Delete=[]
 
-# TASLP 跑Fig.3 圖片的時候會用到
+# TASLP 跑Fig.4 圖片的時候會用到
 max_display=5
 if len(Colidx2Delete)>0:
     shap.summary_plot(np.delete(shap_values,obj=Colidx2Delete,axis=1), df_XTest.drop(columns=Col2Delete),feature_names=df_XTest.drop(columns=Col2Delete).columns, \
@@ -1094,6 +1094,8 @@ Top_featureSet_lst_dict['Baseline_changed_info_dict']=baseline_featset_lst
 # =============================================================================
 # expected_value_lst=[]
 UsePaperName_bool=True
+
+#%% TASLP table 8
 
 Quadrant_FeatureImportance_dict={}
 Quadrant_feature_AddedTopFive_dict={}

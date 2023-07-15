@@ -3,7 +3,7 @@
 """
 Created on Wed Jun 15 12:45:57 2022
 
-這個腳本用來畫TASLP paper的Fig.4 用來舉一個Vowel Space的例子
+這個腳本用來畫TASLP paper的Fig.5 用來舉一個Vowel Space的例子
 
 @author: jackchen
 """
