@@ -637,7 +637,7 @@ Index_arrangement_lst=[
     ]
 df_ManagedResult_regression=df_ManagedResult_regression.loc[Index_arrangement_lst]
 
-
+# TASLP table 6
 print(df_ManagedResult_regression)
 df_ManagedResult_regression.to_excel(Result_path+"/"+f"TASLPTABLE-RegressBaseFeat_Norm[{args.Normalize_way}].xlsx")
 print("df_ManagedResult_regression generated at ",Result_path+"/"+f"TASLPTABLE-RegressBaseFeat_Norm[{args.Normalize_way}].xlsx")
