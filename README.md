@@ -1,6 +1,6 @@
 # Acoustic_Biomarker
 ---
-<!---
+
 # 新增2022/03/08
 1. 生feature的兩個腳本：3.LevelOfClustering_LOC.py 、4.Calculate_coordinationindexes.py 會生出fraction的資料(df_formant_statistic_TD_normal_doc.pkl) 
 2. 這些fraction統一來自articulation/HYPERPARAM/PeopleSelect.py裡面定義
@@ -84,7 +84,7 @@
 從Formant_utt_symb製造各種context dependendt phone的script (會需要時間)，運作方式是
 可以從CtxDepPhone_merger.py 融合規則，從phonwopros編寫phone群組規則
 
--->
+
 
 
 # TASLP review 2023/07/15
