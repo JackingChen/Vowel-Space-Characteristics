@@ -173,11 +173,11 @@ def get_args():
         )
     parser.add_argument('--base_path', default='/media/jack/workspace/DisVoice/articulation',
                         help='path of the base directory', dest='base_path')
-    parser.add_argument('--inpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
+    parser.add_argument('--inpklpath', default='/media/jack/workspace/VC_test/Vowel-Space-Characteristics/data/pickles',
                         help='path of the base directory')
-    parser.add_argument('--outpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
+    parser.add_argument('--outpklpath', default='/media/jack/workspace/VC_test/Vowel-Space-Characteristics/data/pickles',
                         help='path of the base directory')
-    parser.add_argument('--dfFormantStatisticpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
+    parser.add_argument('--dfFormantStatisticpath', default='/media/jack/workspace/VC_test/Vowel-Space-Characteristics/data/pickles',
                         help='path of the base directory')
     parser.add_argument('--Inspect', default=False,
                             help='path of the base directory')
@@ -193,7 +193,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--poolWindowSize', default=3,
                             help='path of the base directory')
-    parser.add_argument('--dataset_role', default='KID_FromTD_DOCKID',
+    parser.add_argument('--dataset_role', default='KID_FromASD_DOCKID',
                             help='DOC_FromTD_DOCKID |KID_FromTD_DOCKID | DOC_FromASD_DOCKID | KID_FromASD_DOCKID')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
@@ -204,8 +204,6 @@ def get_args():
     return args
 
 
-args = get_args()
-base_path=args.base_path
 
 # =============================================================================
 '''
@@ -422,11 +420,10 @@ Aaadf_spearmanr_table_NoLimit=Eval_med.Calculate_correlation(label_correlation_c
 
 
 
-
-# =============================================================================
-# 以下的部份都是實驗或測試用的， 不在主要的流程裡面，
-# maintain程式的話以下的部份都跳過。
-# =============================================================================
+'''
+以下的部份都是實驗或測試用的， 不在主要的流程裡面，
+maintain程式的話以下的部份都跳過。
+'''
 '''
 
 Parse through evaluation dictionary

@@ -92,7 +92,7 @@ def get_args():
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='ASD_DOCKID',
+    parser.add_argument('--dataset_role', default='TD_DOCKID',
                             help='[TD_DOCKID | ASD_DOCKID_emotion | kid_TD | kid88]')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
@@ -331,7 +331,9 @@ def FillData_NormDistrib(AUI_info,People_data_distrib,Inspect_features,PhoneOfIn
                     df_filled_samples_ori=df_filled_samples.copy()
                     df_filled_samples_ori['cmps']='ori'
                     df_filled_samples=pd.concat([df_filled_samples_ori,df_filled_samples_cmp],axis=0)
-                    AUI_info_filled[people][phonesymb]=AUI_info_filled[people][phonesymb].append(df_filled_samples)        
+                    # AUI_info_filled[people][phonesymb]=AUI_info_filled[people][phonesymb].append(df_filled_samples)        
+                    AUI_info_filled[people][phonesymb]=\
+                        pd.concat([AUI_info_filled[people][phonesymb],df_filled_samples])
 
     return AUI_info_filled
 
@@ -875,6 +877,139 @@ final_result = pool.starmap(GetPersonalSegmentFeature_map, [(key,Formants_people
                                   args.Inspect_roles, args.Inspect_features,\
                                   Segment_lst, articulation,args.MinPhoneNum) for key in tqdm(keys)])
 print('GetPersonalSegmentFeature_map segment done !!!')
+
+# =============================================================================
+# DeBug
+# def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_dict, People_data_distrib,\
+#                               PhoneMapp_dict, PhoneOfInterest ,df_general_info,\
+#                               Inspect_roles ,Inspect_features, In_Segments_order,\
+#                               Feature_calculator, vowel_min_num):
+#     keys_people, Formants_people_segment_role_utt_dict, People_data_distrib,\
+#     PhoneMapp_dict, PhoneOfInterest ,df_general_info,\
+#     Inspect_roles ,Inspect_features, In_Segments_order,\
+#     Feature_calculator, vowel_min_num=\
+#         list(Formants_people_segment_DKcriterial_utt_dict.keys()),Formants_people_segment_DKcriterial_utt_dict,People_data_distrib, \
+#                                           PhoneMapp_dict, PhoneOfInterest ,df_general_info,\
+#                                           args.Inspect_roles, args.Inspect_features,\
+#                                           Segment_lst, articulation,args.MinPhoneNum
+    
+#     Eval_med=Evaluation_method()
+#     Segments_order=In_Segments_order
+#     Vowels_AUI_info_dict=Dict()
+#     df_person_segment_feature_dict=Dict()
+#     MissingSegment_bag=[]
+#     for people in keys_people:
+#         Formants_segment_role_utt_dict=Formants_people_segment_role_utt_dict[people]
+#         if len(In_Segments_order) ==0 :
+#             Segments_order=sorted(list(Formants_segment_role_utt_dict.keys()))
+            
+#         for role in Inspect_roles:
+#             df_person_segment_feature=pd.DataFrame([])
+#             for segment in Segments_order:
+#                 Formants_utt_symb_SegmentRole=Formants_segment_role_utt_dict[segment][role]
+#                 if len(Formants_utt_symb_SegmentRole)==0:
+#                     MissingSegment_bag.append([people,role,segment])
+#                 # =================================================================================================================
+#                 # AUI_info_filled = Fill_n_Create_AUIInfo(Formants_utt_symb_SegmentRole, People_data_distrib[role], Inspect_features ,PhoneMapp_dict, PhoneOfInterest ,people, vowel_min_num)
+#                 Formant_people_information=Formant_utt2people_reshape(Formants_utt_symb_SegmentRole,Formants_utt_symb_SegmentRole,Align_OrinCmp=False)
+#                 AUI_info=Gather_info_certainphones(Formant_people_information,PhoneMapp_dict,PhoneOfInterest)
+                
+#                 if len(AUI_info) == 0: # If someone does not have the whole segment
+#                                        # create a fake one for him  
+#                     AUI_info=Dict()
+#                     for phone_symb in PhoneMapp_dict.keys():
+#                         AUI_info[people][phone_symb]=pd.DataFrame()
+                    
+#                 # AUI_info_filled = FillData_NormDistrib(AUI_info,People_data_distrib[role],Inspect_features,PhoneOfInterest, vowel_min_num)
+#                 # Fill data with random samples sampled from normal distribution with ones mean and std
+#                 AUI_info_filled=Dict()
+#                 for people in AUI_info.keys():  # there will be only one people
+#                     for phonesymb, phonevalues in AUI_info[people].items():
+#                         if phonesymb in PhoneOfInterest: # Only fill missing phones in PhoneOfInterest
+#                             AUI_info_filled[people][phonesymb]=AUI_info[people][phonesymb]            
+#                             if len(phonevalues) == 0:
+#                                 phoneNum=0
+#                             else:
+#                                 phonevalues_ori=phonevalues[phonevalues['cmps']=='ori']
+#                                 phoneNum=len(phonevalues_ori)
+#                             if phoneNum < vowel_min_num:
+#                                 Num2sample=vowel_min_num -phoneNum
+#                                 df_filled_samples=pd.DataFrame()
+#                                 for feat in Inspect_features:
+#                                     mu=People_data_distrib[role][people][phonesymb].means.loc[feat]
+#                                     std=People_data_distrib[role][people][phonesymb].stds.loc[feat]
+                                    
+#                                     samples=np.random.normal(mu, std, Num2sample)
+#                                     df_filled_samples[feat]=samples
+#                                 df_filled_samples_cmp=df_filled_samples.copy()
+#                                 df_filled_samples_cmp['cmps']='cmp'
+#                                 df_filled_samples_ori=df_filled_samples.copy()
+#                                 df_filled_samples_ori['cmps']='ori'
+#                                 df_filled_samples=pd.concat([df_filled_samples_ori,df_filled_samples_cmp],axis=0)
+#                                 # AUI_info_filled[people][phonesymb]=AUI_info_filled[people][phonesymb].append(df_filled_samples)  
+#                                 AUI_info_filled[people][phonesymb]=\
+#                                     pd.concat([AUI_info_filled[people][phonesymb],df_filled_samples])
+#                 # =================================================================================================================
+#                 Vowels_AUI=Get_Vowels_AUI(AUI_info_filled, Inspect_features,VUIsource="From__Formant_people_information")
+#                 Vowels_AUI_info_dict[people][segment][role]=Vowels_AUI #bookeeping
+                
+#                 # Calculate articulation related features
+#                 # Will contain only one person
+#                 try:
+#                     df_formant_statistic=Feature_calculator.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_choose_lst)
+#                 except:
+#                     print("Error people: ",people," Role = ",role)
+#                     raise ValueError()
+                    
+#                 if len(df_formant_statistic.columns) < 10:
+#                     print("error people= ",people)
+#                     print("Tryping to set N =2 for calculate_features",)
+#                     Feature_calculator._updateN(2)
+#                     df_formant_statistic=Feature_calculator.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_choose_lst)
+#                     if len(df_formant_statistic.columns) < 10:
+#                         print("people: ",people,"Not successfully generated")
+                        
+                        
+#                 # Add informations to columns that are needed to df_formant_statistic
+#                 for i in range(len(df_formant_statistic)):
+#                     name=df_formant_statistic.iloc[i].name
+#                     df_formant_statistic.loc[name,'ADOS_cate_C']=Label.label_raw[Label.label_raw['name']==name]['ADOS_cate_C'].values
+#                 df_formant_statistic['u_num+i_num+a_num']=df_formant_statistic['u_num'] +\
+#                                                 df_formant_statistic['i_num'] +\
+#                                                 df_formant_statistic['a_num']
+#                 query_lst=list(Formants_utt_symb_SegmentRole.keys())
+#                 df_general_info_query=df_general_info.query("utt == @query_lst")
+                
+#                 # Padd a default IPU value for AUI_info_filled data
+#                 if len(df_general_info_query['st'])==0:
+#                     IPU_start_time=0
+#                 else:
+#                     IPU_start_time=df_general_info_query['st'].min()
+#                 if len(df_general_info_query['ed'])==0:
+#                     IPU_end_time=25
+#                 else:
+#                     IPU_end_time=df_general_info_query['ed'].max()
+#                 df_formant_statistic['IPU_st']=IPU_start_time
+#                 df_formant_statistic['IPU_ed']=IPU_end_time
+#                 # if len(PhoneOfInterest) >= 3:
+#                 #     df_formant_statistic=Eval_med._Postprocess_dfformantstatistic(df_formant_statistic)
+                
+#                 if len(df_person_segment_feature) == 0:
+#                     df_person_segment_feature=pd.DataFrame([],columns=df_formant_statistic.columns)
+#                 df_person_segment_feature.loc[segment]=df_formant_statistic.loc[people]
+#                 # try:
+#                 #     df_person_segment_feature.loc[segment]=df_formant_statistic.loc[people]
+#                 # except KeyError: 
+#                 #     print(df_formant_statistic)
+#                 #     raise KeyError
+#             df_person_segment_feature_dict[people][role]=df_person_segment_feature
+#     return df_person_segment_feature_dict, Vowels_AUI_info_dict, MissingSegment_bag
+
+
+# =============================================================================
+
+
+
 df_person_segment_feature_DKcriteria_dict=Dict()
 Vowels_AUI_info_segments_dict=Dict()
 MissSeg=[]

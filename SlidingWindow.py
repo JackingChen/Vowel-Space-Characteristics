@@ -48,8 +48,13 @@ class slidingwindow:
             # put target vowels in stack
             for i,ind in enumerate(list(values.index)):
                 if PhoneIn_check(ind, PhoneMapp_dict, PhonesOfInterest) != -1:
+                    # print("DEBUG: values.iloc[i] ", values.iloc[i])
+                    # print("DEBUG: Vowel_stack ", Vowel_stack)
+                    # Vowel_stack[PhoneIn_check(ind, PhoneMapp_dict, PhonesOfInterest)]=\
+                    #     Vowel_stack[PhoneIn_check(ind, PhoneMapp_dict, PhonesOfInterest)].append(values.iloc[i])
                     Vowel_stack[PhoneIn_check(ind, PhoneMapp_dict, PhonesOfInterest)]=\
-                        Vowel_stack[PhoneIn_check(ind, PhoneMapp_dict, PhonesOfInterest)].append(values.iloc[i])
+                        pd.concat([Vowel_stack[PhoneIn_check(ind, PhoneMapp_dict, PhonesOfInterest)],pd.DataFrame(values.iloc[i]).T])
+                        
             return Vowel_stack
         def Check_VowelStackFull(Vowel_stack, minNum=3):
             cond= True

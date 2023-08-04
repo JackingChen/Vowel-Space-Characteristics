@@ -347,7 +347,8 @@ class Articulation:
                 df_RESULT_list['FCR2']=10
                 for label_choose in label_choose_lst:
                     df_RESULT_list[label_choose]=RESULT_dict[label_choose][0]
-                df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
+                # df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
+                df_formant_statistic = pd.concat([df_formant_statistic, df_RESULT_list]) # index 很重要不能ignore
                 continue
             # =============================================================================
             ''' F-statistics, between class variance Valid Formant measure '''
@@ -363,7 +364,9 @@ class Articulation:
                     else:
                         df_=F12_raw_dict[keys]
                         df_['vowel']=keys
-                        df_vowel=df_vowel.append(df_)
+                        # print("DEBUG ", df_)
+                        df_vowel = pd.concat([df_vowel, df_], ignore_index=True)
+                        # df_vowel=df_vowel.append(df_)
                 df_vowel['target']=pd.Categorical(df_vowel['vowel'])
                 df_vowel['target']=df_vowel['target'].cat.codes
                 return df_vowel
@@ -457,7 +460,8 @@ class Articulation:
                 within_class_scatter_matrix = within_class_scatter_matrix 
                     
                 # Between class scatter matrix 
-                feature_means = df_vowel.mean()
+                feature_means = df_vowel[self.Inspect_features].mean()
+                # feature_means = df_vowel.mean()
                 between_class_scatter_matrix = np.zeros((groups_num,groups_num))
                 for c in class_feature_means:    
                     n = len(df_vowel.loc[df_vowel['vowel'] == c].index)
@@ -585,7 +589,8 @@ class Articulation:
                 a_center=a.mean()
                 u_center=u.mean()
                 i_center=i.mean()
-                total_center=df_vowel.mean()
+                # total_center=df_vowel.mean()
+                total_center=df_vowel[self.Inspect_features].mean()
                 # gravity_center=(a_center*len(a) + u_center*len(u) + i_center*len(i)) / len(df_vowel)
                 
                 
@@ -731,7 +736,10 @@ class Articulation:
             # =============================================================================
             df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
             df_RESULT_list.index=[people]
-            df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
+            # df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
+            # df_formant_statistic = pd.concat([df_formant_statistic, df_RESULT_list], ignore_index=True)
+            df_formant_statistic = pd.concat([df_formant_statistic, df_RESULT_list]) # index 很重要不能ignore
+
             
             ''' Especially return the scatter matrices '''
             if RETURN_scatter_matrix!=False:
