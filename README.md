@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Acoustic_Biomarker
 ---
 
