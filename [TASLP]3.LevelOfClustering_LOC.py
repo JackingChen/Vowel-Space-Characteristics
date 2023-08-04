@@ -228,7 +228,7 @@ outpklpath=args.inpklpath+"/Session_formants_people_vowel_feat/"
 if args.Normalize_way=='None':
     args.Normalize_way=None
 if not os.path.exists(outpklpath):
-    os.makedirs(outpklpath)
+    os.makedirs(outpklpath)                                                                             
 
 
 Formants_utt_symb=pickle.load(open(pklpath+"/Formants_utt_symb_by{0}_window{1}_{2}.pkl".format(args.poolMed,windowsize,role),'rb'))
