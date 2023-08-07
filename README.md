@@ -90,8 +90,22 @@
 # TASLP review 2023/07/15
 ---
 
-需要跑得實驗都會前面用[TASLP]開頭的腳本來跑
+## 執行順序：
+1. 生feature
+[TASLP]3.LevelOfClustering_LOC.py -> static LOC feature
+[TASLP]4-1.1.SynchronyVSC(Full).py -> dynamic VSC feature (記得TD, ASD都要跑)
+[TASLP]4-2.1.SynchronyPhonation(proprocess).py, [TASLP]4-2.2.SynchronyPhonation(Feat).py -> dynamic phonation feature (記得TD, ASD都要跑)
 
+2. 開始classify
+[TASLP]ClassificationExpBaseFeat_script.py
+[TASLP]ClassificationExpFusion_new(func15).py
+
+3. 開始Regression
+[TASLP]RegressionExpBaseFeat_script.py
+[TASLP]RegressionExpFusion_new(func15).py
+
+## 需要跑得實驗都會前面用[TASLP]開頭的腳本來跑
+---
 Table 4 用的是
 
 [TASLP]ClassificationExpBaseFeat_script.py
