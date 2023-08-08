@@ -90,7 +90,7 @@ def get_args():
                         help='')
     parser.add_argument('--selectModelScoring', default='recall_macro',
                         help='[recall_macro,accuracy]')
-    parser.add_argument('--Mergefeatures', default=True,
+    parser.add_argument('--Mergefeatures', default=False,
                         help='')
     parser.add_argument('--DEBUG', default=True,
                             help='')
@@ -247,6 +247,9 @@ def MERGEFEATURES():
         Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],df_infos_dict[e3])
         OutPklpath=merge_out_path+'+'.join(c)+".pkl"
         pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+
+
+
 if args.Mergefeatures:
     MERGEFEATURES()
 

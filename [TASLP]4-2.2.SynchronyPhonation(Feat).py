@@ -84,9 +84,7 @@ def get_args():
     parser = argparse.ArgumentParser(
         description="Select utterances with entropy values that are close to disribution of target domain data",
         )
-    parser.add_argument('--inpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
-                        help='path of the base directory')
-    parser.add_argument('--outpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
+    parser.add_argument('--inpklpath', default='/media/jack/workspace/VC_test/Vowel-Space-Characteristics/data/pickles',
                         help='path of the base directory')
     parser.add_argument('--reFilter', default=False, type=bool,
                             help='')

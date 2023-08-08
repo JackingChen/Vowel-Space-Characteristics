@@ -154,7 +154,7 @@ def get_args():
                         help='')
     parser.add_argument('--selectModelScoring', default='neg_mean_squared_error',
                         help='')
-    parser.add_argument('--Mergefeatures', default=False,
+    parser.add_argument('--Mergefeatures', default=True,
                         help='')
     parser.add_argument('--knn_weights', default='uniform',
                             help='path of the base directory')
@@ -166,6 +166,10 @@ def get_args():
                             help='')
     parser.add_argument('--FeatureComb_mode', default='Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation',
                             help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
+    parser.add_argument('--ADDUtt_feature', default=False,
+                            help='')
+    parser.add_argument('--exclude_people', default=['2015_12_07_02_003','2017_03_18_01_196_1'],
+                        help='what kind of data you want to get')
     args = parser.parse_args()
     return args
 
@@ -286,7 +290,9 @@ def MERGEFEATURES():
     '''
     # =============================================================================
     # dataset_role='ASD_DOCKID'
-    for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
+    for dataset_role in ['ASD_DOCKID']:
+        if args.ADDUtt_feature==True:
+            role=dataset_role.split("_")[0] #ASD or TD
         Merg_filepath={}
         Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/{Normalize_way}/Formant_AUI_tVSAFCRFvals_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role,Normalize_way=args.Normalize_way)
         # Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
@@ -305,36 +311,70 @@ def MERGEFEATURES():
         
         df_infos_dict=Dict()
         for keys, paths in Merg_filepath.items():
-            df_infos_dict[keys]=pickle.load(open(paths,"rb")).sort_index()
+            df_data=pickle.load(open(paths,"rb")).sort_index()
+            #!!!!!!!!!!!!!!!!!  注意這邊我們人為移除一些資訊量太少的人
+            for key_wrds in args.exclude_people:
+                if df_data.index.str.contains(key_wrds).any():
+                    df_data=df_data.drop(index=key_wrds)
+            df_infos_dict[keys]=df_data
         
         Merged_df_dict=Dict()
         comb1 = list(combinations(list(Merg_filepath.keys()), 1))
         comb2 = list(combinations(list(Merg_filepath.keys()), 2))
+        if args.ADDUtt_feature==True: # output only Utt features
+            OutPklpath=merge_out_path+ "Utt_feature.pkl"
+            #!!!!!!!!!!!!!!!!!  注意這邊我們人為移除一些資訊量太少的人
+            df_data=Utt_featuresCombinded_dict[role].copy()
+            for key_wrds in args.exclude_people:
+                if df_data.index.str.contains(key_wrds).any():
+                    df_data=df_data.drop(index=key_wrds)
+            pickle.dump(df_data,open(OutPklpath,"wb"))    
+            # pickle.dump(Utt_featuresCombinded_dict[role],open(OutPklpath,"wb"))
         for c in comb1:
             e1=c[0]
-            Merged_df_dict[e1]=df_infos_dict[e1]
-            OutPklpath=merge_out_path+ e1 + ".pkl"
+
+            if args.ADDUtt_feature==True: # Merge with Utt features
+                Merged_df_dict[e1]=Merge_dfs(df_infos_dict[e1],Utt_featuresCombinded_dict[role])
+                OutPklpath=merge_out_path+"Utt_feature+"+ e1 + ".pkl"
+            else:
+                Merged_df_dict[e1]=df_infos_dict[e1]
+                OutPklpath=merge_out_path+ e1 + ".pkl"
             pickle.dump(Merged_df_dict[e1],open(OutPklpath,"wb"))
-            
-            
+            # print(len(Merged_df_dict[e1]))
+            # assert Merged_df_dict[e1].isna().any().any() !=True
         for c in comb2:
             e1, e2=c
-            Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
             
-            OutPklpath=merge_out_path+'+'.join(c)+".pkl"
+            if args.ADDUtt_feature==True:
+                Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+                Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],Utt_featuresCombinded_dict[role])
+                OutPklpath=merge_out_path+"Utt_feature+"+'+'.join(c)+".pkl"
+            else:
+                Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+                OutPklpath=merge_out_path+'+'.join(c)+".pkl"
             pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+            # print(len(Merged_df_dict['+'.join(c)]))
         # Condition for : Columns_comb3 = All possible LOC feature combination + phonation_proximity_col
         c = ('static_feautre_LOC', 'dynamic_feature_LOC', 'dynamic_feature_phonation')
         e1, e2, e3=c
         
-        Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
-        Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],df_infos_dict[e3])
-        # Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],Utt_featuresCombinded_dict[role])
-        OutPklpath=merge_out_path+'+'.join(c)+".pkl"
-        pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
-        print("Generate Merged_df_dict['+'.join(c)] to", OutPklpath)
+        
+        if args.ADDUtt_feature==True:
+            Merged_df_dict['Utt_features'+'+'+'+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+            Merged_df_dict['Utt_features'+'+'+'+'.join(c)]=Merge_dfs(Merged_df_dict['Utt_features'+'+'+'+'.join(c)],df_infos_dict[e3])
+            Merged_df_dict['Utt_features'+'+'+'+'.join(c)]=Merge_dfs(Merged_df_dict['Utt_features'+'+'+'+'.join(c)],Utt_featuresCombinded_dict[role])
+            OutPklpath=merge_out_path+'Utt_features+'+'+'.join(c)+".pkl"
+            pickle.dump(Merged_df_dict['Utt_features'+'+'+'+'.join(c)],open(OutPklpath,"wb"))
+        else:
+            Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+            Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],df_infos_dict[e3])
+            OutPklpath=merge_out_path+'+'.join(c)+".pkl"
+            pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+
+
 if args.Mergefeatures:
     MERGEFEATURES()
+
 
 # All_combination_keys=[key2 for key in All_combinations.keys() for key2 in sorted(All_combinations[key], key=len, reverse=True)]
 Top_ModuleColumn_mapping_dict={}
@@ -502,8 +542,8 @@ OutFeature_dict=Dict()
 Best_param_dict=Dict()
 
 # ''' 要手動執行一次從Incorrect2Correct_indexes和Correct2Incorrect_indexes決定哪些indexes 需要算shap value 再在這邊指定哪些fold需要停下來算SHAP value '''
-# SHAP_inspect_idxs_manual=[]
-SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
+SHAP_inspect_idxs_manual=[]
+# SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
 # SHAP_inspect_idxs_manual=[1,3,5] # empty list means we do not execute shap function
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
     writer_clf = pd.ExcelWriter(Result_path+"/"+clf_keys+"_"+args.Feature_mode+"_"+final_result_file, engine = 'xlsxwriter')

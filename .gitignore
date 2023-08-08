@@ -2,3 +2,6 @@ data/**/*
 Features/**/*
 articulation/__pycache__/**/*
 articulation/__pycache__/*
+Statistics/**/*
+RESULTS/**/*
+__pycache__/**/*

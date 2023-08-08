@@ -68,11 +68,7 @@ def get_args():
     parser = argparse.ArgumentParser(
         description="Select utterances with entropy values that are close to disribution of target domain data",
         )
-    parser.add_argument('--inpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
-                        help='path of the base directory')
-    parser.add_argument('--outpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
-                        help='path of the base directory')
-    parser.add_argument('--dfFormantStatisticpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
+    parser.add_argument('--inpklpath', default='/media/jack/workspace/VC_test/Vowel-Space-Characteristics/data/pickles',
                         help='path of the base directory')
     parser.add_argument('--reFilter', default=False, type=bool,
                             help='')
@@ -92,7 +88,7 @@ def get_args():
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='TD_DOCKID',
+    parser.add_argument('--dataset_role', default='ASD_DOCKID',
                             help='[TD_DOCKID | ASD_DOCKID_emotion | kid_TD | kid88]')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
@@ -106,7 +102,7 @@ def get_args():
                             help='path of the base directory')
     parser.add_argument('--Reorder_type', default='DKIndividual',
                             help='[DKIndividual, DKcriteria]')
-    parser.add_argument('--Normalize_way', default='None',
+    parser.add_argument('--Normalize_way', default='func15',
                             help='')
     args = parser.parse_args()
     return args
@@ -199,7 +195,7 @@ def GetPersonalSegmentFeature_map(keys_people, Formants_people_segment_role_utt_
                 Vowels_AUI_info_dict[people][segment][role]=Vowels_AUI #bookeeping
                 
                 # Calculate articulation related features
-                # Will contain only one person
+                # Will contain only one persond
                 try:
                     df_formant_statistic=Feature_calculator.calculate_features(Vowels_AUI,Label,PhoneOfInterest=PhoneOfInterest,label_choose_lst=label_choose_lst)
                 except:
@@ -371,7 +367,6 @@ knn_weights=args.knn_weights
 knn_neighbors=args.knn_neighbors
 pklpath=args.inpklpath
 windowsize=args.poolWindowSize
-dfFormantStatisticpath=args.dfFormantStatisticpath
 label_choose_lst=args.label_choose_lst # labels are too biased
 dataset_role=args.dataset_role
 # Randseed=args.Randseed
@@ -1094,79 +1089,99 @@ pickle.dump(df_person_segment_feature_DKcriteria_dict,open(outpklpath+"df_person
 
 '''
 # dataset_role='ASD_DOCKID'
-for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
-    print('Start preparing Syncrony_measure_of_variance ')
-    if Reorder_type == 'DKIndividual':
-        df_person_segment_feature_DKIndividual_dict=pickle.load(open(outpklpath+"df_person_segment_feature_{Reorder_type}_dict_{0}_{1}.pkl".format(dataset_role, 'formant',Reorder_type=Reorder_type),"rb"))
-    elif Reorder_type == 'DKcriteria':
-        df_person_segment_feature_DKcriteria_dict=pickle.load(open(outpklpath+"df_person_segment_feature_{Reorder_type}_dict_{0}_{1}.pkl".format(dataset_role, 'formant',Reorder_type=Reorder_type),"rb"))
-    
-    
-    features=[
-     'VSA2',
-     'FCR2',
-     'between_covariance_norm(A:,i:,u:)',
-     'between_variance_norm(A:,i:,u:)',
-     'within_covariance_norm(A:,i:,u:)',
-     'within_variance_norm(A:,i:,u:)',
-     'total_covariance_norm(A:,i:,u:)',
-     'total_variance_norm(A:,i:,u:)',
-     'sam_wilks_lin_norm(A:,i:,u:)',
-     'pillai_lin_norm(A:,i:,u:)',
-     'hotelling_lin_norm(A:,i:,u:)',
-     'roys_root_lin_norm(A:,i:,u:)',
-     'Between_Within_Det_ratio_norm(A:,i:,u:)',
-     'Between_Within_Tr_ratio_norm(A:,i:,u:)',
-     'pear_12',
-     'spear_12',
-     'kendall_12',
-     'dcorr_12',
-     ]
-    
-    
-    
-    
-    exclude_cols=['ADOS_cate_C']   # To avoid labels that will cause errors 
-                                 # Covariance of only two classes are easily to be zero
-    FilteredFeatures = [c for c in features if c not in exclude_cols]
-    # =============================================================================
-    label_generate_choose_lst=['ADOS_C','ADOS_S']
-    
-    
-    syncrony=Syncrony()
-    PhoneOfInterest_str=''
-    MinNumTimeSeries=knn_neighbors+1
+# for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
+print('Start preparing Syncrony_measure_of_variance ')
+if Reorder_type == 'DKIndividual':
+    df_person_segment_feature_DKIndividual_dict=pickle.load(open(outpklpath+"df_person_segment_feature_{Reorder_type}_dict_{0}_{1}.pkl".format(dataset_role, 'formant',Reorder_type=Reorder_type),"rb"))
+elif Reorder_type == 'DKcriteria':
+    df_person_segment_feature_DKcriteria_dict=pickle.load(open(outpklpath+"df_person_segment_feature_{Reorder_type}_dict_{0}_{1}.pkl".format(dataset_role, 'formant',Reorder_type=Reorder_type),"rb"))
 
-    if Reorder_type == 'DKIndividual':
-        df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
-                                args.Inspect_roles, Label,\
-                                knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                                MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
-    elif Reorder_type == 'DKcriteria':
-        df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKcriteria_dict,features,PhoneOfInterest_str,\
-                                args.Inspect_roles, Label,\
-                                knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
-                                MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
+
+features=[
+ 'VSA2',
+ 'FCR2',
+ 'between_covariance_norm(A:,i:,u:)',
+ 'between_variance_norm(A:,i:,u:)',
+ 'within_covariance_norm(A:,i:,u:)',
+ 'within_variance_norm(A:,i:,u:)',
+ 'total_covariance_norm(A:,i:,u:)',
+ 'total_variance_norm(A:,i:,u:)',
+ 'sam_wilks_lin_norm(A:,i:,u:)',
+ 'pillai_lin_norm(A:,i:,u:)',
+ 'hotelling_lin_norm(A:,i:,u:)',
+ 'roys_root_lin_norm(A:,i:,u:)',
+ 'Between_Within_Det_ratio_norm(A:,i:,u:)',
+ 'Between_Within_Tr_ratio_norm(A:,i:,u:)',
+ 'pear_12',
+ 'spear_12',
+ 'kendall_12',
+ 'dcorr_12',
+ ]
+
+
+
+
+exclude_cols=['ADOS_cate_C']   # To avoid labels that will cause errors 
+                             # Covariance of only two classes are easily to be zero
+FilteredFeatures = [c for c in features if c not in exclude_cols]
+# =============================================================================
+label_generate_choose_lst=['ADOS_C','ADOS_S']
+
+
+syncrony=Syncrony()
+PhoneOfInterest_str=''
+MinNumTimeSeries=knn_neighbors+1
+
+if Reorder_type == 'DKIndividual':
+    df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKIndividual_dict,features,PhoneOfInterest_str,\
+                            args.Inspect_roles, Label,\
+                            knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
+                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
     
-    timeSeries_len_columns=[col  for col in df_syncrony_measurement.columns if 'timeSeries_len' in col]
-    df_syncrony_measurement['timeSeries_len']=df_syncrony_measurement[timeSeries_len_columns].min(axis=1)
-      
-    # feat_type='Syncrony_formant'
-    # N=args.timeseriesLen
-    # df_syncrony_measurement=criterion_filter(df_syncrony_measurement,N=N,evictNamelst=[],feature_type=feat_type)
-    
-    pickle.dump(df_syncrony_measurement,open(outpklpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type),"wb"))
-    
-    
-    # 複製到Features/資料夾下
-    import shutil
-    if not args.Normalize_way:
-        args.Normalize_way="None"
-    outFeatpath=f"Features/artuculation_AUI/Interaction/Formants/{args.Normalize_way}/"
-    if not os.path.exists(outFeatpath):
-        os.makedirs(outFeatpath)
-    Picklepath=outpklpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type)
-    Picklepath_Features=outFeatpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type)
-    print("Features generated at ", outFeatpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type))
-    shutil.copy(Picklepath, Picklepath_Features)
+    # TMP debug use, can ignore
+    # self=syncrony
+    # Inspect_roles=args.Inspect_roles
+    # Knn_aggressive_mode=True
+    # df_basic_additional_info=self._Add_additional_info(df_person_segment_feature_DKIndividual_dict,Label,label_choose_lst,\
+    #                                              Inspect_roles, MinNumTimeSeries=MinNumTimeSeries,PhoneOfInterest_str=PhoneOfInterest_str)
+    # df_syncrony_measurement_merge=pd.DataFrame()
+    # for col in features:
+    #     Col_continuous_function_DK=self.KNNFitting(df_person_segment_feature_DKIndividual_dict,\
+    #                col, Inspect_roles,\
+    #                knn_weights=knn_weights,knn_neighbors=knn_neighbors,MinNumTimeSeries=MinNumTimeSeries,\
+    #                st_col_str='IPU_st', ed_col_str='IPU_ed', aggressive_mode=Knn_aggressive_mode)
+            
+    #     df_syncrony_measurement_col=self._calculate_features_col(Col_continuous_function_DK,col)
+    #     df_syncrony_measurement_merge=pd.concat([df_syncrony_measurement_merge,df_syncrony_measurement_col],axis=1)
+    #     if col == 'pear_12':
+    #         aaa=ccc
+    # df_syncrony_measurement=pd.concat([df_basic_additional_info,df_syncrony_measurement_merge],axis=1)
+        
+elif Reorder_type == 'DKcriteria':
+    df_syncrony_measurement=syncrony.calculate_features_continuous_modulized(df_person_segment_feature_DKcriteria_dict,features,PhoneOfInterest_str,\
+                            args.Inspect_roles, Label,\
+                            knn_weights=knn_weights,knn_neighbors=knn_neighbors,\
+                            MinNumTimeSeries=MinNumTimeSeries, label_choose_lst=label_generate_choose_lst)
+
+timeSeries_len_columns=[col  for col in df_syncrony_measurement.columns if 'timeSeries_len' in col]
+df_syncrony_measurement['timeSeries_len']=df_syncrony_measurement[timeSeries_len_columns].min(axis=1)
+  
+# feat_type='Syncrony_formant'
+# N=args.timeseriesLen
+# df_syncrony_measurement=criterion_filter(df_syncrony_measurement,N=N,evictNamelst=[],feature_type=feat_type)
+
+pickle.dump(df_syncrony_measurement,open(outpklpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type),"wb"))
+
+
+# 複製到Features/資料夾下
+import shutil
+if not args.Normalize_way:
+    args.Normalize_way="None"
+outFeatpath=f"Features/artuculation_AUI/Interaction/Formants/{args.Normalize_way}/"
+if not os.path.exists(outFeatpath):
+    os.makedirs(outFeatpath)
+Picklepath=outpklpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type)
+Picklepath_Features=outFeatpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type)
+print("Features generated at ", outFeatpath+"Syncrony_measure_of_variance_{Reorder_type}_{}.pkl".format(dataset_role,Reorder_type=Reorder_type))
+shutil.copy(Picklepath, Picklepath_Features)
     

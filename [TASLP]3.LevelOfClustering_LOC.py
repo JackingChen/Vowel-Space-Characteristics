@@ -171,8 +171,6 @@ def get_args():
     parser = argparse.ArgumentParser(
         description="Select utterances with entropy values that are close to disribution of target domain data",
         )
-    parser.add_argument('--base_path', default='/media/jack/workspace/DisVoice/articulation',
-                        help='path of the base directory', dest='base_path')
     parser.add_argument('--inpklpath', default='/media/jack/workspace/VC_test/Vowel-Space-Characteristics/data/pickles',
                         help='path of the base directory')
     parser.add_argument('--outpklpath', default='/media/jack/workspace/VC_test/Vowel-Space-Characteristics/data/pickles',
@@ -197,7 +195,7 @@ def get_args():
                             help='DOC_FromTD_DOCKID |KID_FromTD_DOCKID | DOC_FromASD_DOCKID | KID_FromASD_DOCKID')
     parser.add_argument('--Inspect_features', default=['F1','F2'],
                             help='')
-    parser.add_argument('--Normalize_way', default='proposed',
+    parser.add_argument('--Normalize_way', default='func15',
                             help='')
 
     args = parser.parse_args()
@@ -214,7 +212,6 @@ def get_args():
 # =============================================================================
 ''' parse namespace '''
 args = get_args()
-base_path=args.base_path
 pklpath=args.inpklpath
 dfFormantStatisticpath=args.dfFormantStatisticpath
 INSPECT=args.Inspect

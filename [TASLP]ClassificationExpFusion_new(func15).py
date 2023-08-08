@@ -198,6 +198,10 @@ def get_args():
                             help='func1 func2 func3 func4 func7 proposed')
     parser.add_argument('--FeatureComb_mode', default='Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation',
                             help='[Add_UttLvl_feature, feat_comb3, feat_comb5, feat_comb6,feat_comb7, baselineFeats,Comb_dynPhonation,Comb_staticLOCDEP_dynamicLOCDEP_dynamicphonation]')
+    parser.add_argument('--ADDUtt_feature', default=False,
+                            help='')
+    parser.add_argument('--exclude_people', default=['2015_12_07_02_003','2017_03_18_01_196_1'],
+                        help='what kind of data you want to get')
     args = parser.parse_args()
     return args
 args = get_args()
@@ -300,7 +304,7 @@ label_choose=['ADOS_C']
 # label_choose=['ADOS_cate','ASDTD']
 
 
-def MERGEFEATURES():
+def MERGEFEATURES_old():
     # =============================================================================
     '''
 
@@ -357,6 +361,86 @@ def MERGEFEATURES():
         # Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],Utt_featuresCombinded_dict[role])
         OutPklpath=merge_out_path+'+'.join(c)+".pkl"
         pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+
+
+def MERGEFEATURES_new():
+    # =============================================================================
+    '''
+
+        Feature merging function
+        
+        Ths slice of code provide user to manually make functions to combine df_XXX_infos
+
+    '''
+    # =============================================================================
+    # dataset_role='ASD_DOCKID'
+    for dataset_role in ['ASD_DOCKID','TD_DOCKID']:
+        if args.ADDUtt_feature==True:
+            role=dataset_role.split("_")[0] #ASD or TD
+        Merg_filepath={}
+        Merg_filepath['static_feautre_LOC']='Features/artuculation_AUI/Vowels/Formants/{Normalize_way}/Formant_AUI_tVSAFCRFvals_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role,Normalize_way=args.Normalize_way)
+        # Merg_filepath['static_feautre_phonation']='Features/artuculation_AUI/Vowels/Phonation/Phonation_meanvars_KID_From{dataset_role}.pkl'.format(dataset_role=dataset_role)
+        Merg_filepath['dynamic_feature_LOC']='Features/artuculation_AUI/Interaction/Formants/{Normalize_way}/Syncrony_measure_of_variance_DKIndividual_{dataset_role}.pkl'.format(dataset_role=dataset_role,Normalize_way=args.Normalize_way)
+        Merg_filepath['dynamic_feature_phonation']='Features/artuculation_AUI/Interaction/Phonation/Syncrony_measure_of_variance_phonation_{dataset_role}.pkl'.format(dataset_role=dataset_role)
+        merge_out_path='Features/ClassificationMerged_dfs/{Normalize_way}/{dataset_role}/'.format(
+            knn_weights=knn_weights,
+            knn_neighbors=knn_neighbors,
+            Reorder_type=Reorder_type,
+            dataset_role=dataset_role,
+            Normalize_way=args.Normalize_way
+            )
+        if not os.path.exists(merge_out_path):
+            os.makedirs(merge_out_path)
+        
+        df_infos_dict=Dict()
+        for keys, paths in Merg_filepath.items():
+            df_data=pickle.load(open(paths,"rb")).sort_index()
+            #!!!!!!!!!!!!!!!!!  注意這邊我們人為移除一些資訊量太少的人
+            for key_wrds in args.exclude_people:
+                if df_data.index.str.contains(key_wrds).any():
+                    df_data=df_data.drop(index=key_wrds)
+            df_infos_dict[keys]=df_data
+        
+        Merged_df_dict=Dict()
+        comb1 = list(combinations(list(Merg_filepath.keys()), 1))
+        comb2 = list(combinations(list(Merg_filepath.keys()), 2))
+        
+        if args.ADDUtt_feature==True: # output only Utt features
+            OutPklpath=merge_out_path+ "Utt_feature.pkl"
+            pickle.dump(Utt_featuresCombinded_dict[role],open(OutPklpath,"wb"))
+        
+        for c in comb1:
+            e1=c[0]
+            
+            if args.ADDUtt_feature==True: # Merge with Utt features
+                Merged_df_dict[e1]=Merge_dfs(df_infos_dict[e1],Utt_featuresCombinded_dict[role])
+                OutPklpath=merge_out_path+"Utt_feature+"+ e1 + ".pkl"
+            else:
+                Merged_df_dict[e1]=df_infos_dict[e1]
+                OutPklpath=merge_out_path+ e1 + ".pkl"
+            pickle.dump(Merged_df_dict[e1],open(OutPklpath,"wb"))
+            
+            
+        for c in comb2:
+            e1, e2=c
+            if args.ADDUtt_feature==True:
+                Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+                Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],Utt_featuresCombinded_dict[role])
+                OutPklpath=merge_out_path+"Utt_feature+"+'+'.join(c)+".pkl"
+            else:
+                Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+                OutPklpath=merge_out_path+'+'.join(c)+".pkl"
+            pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+        
+        # Condition for : Columns_comb3 = All possible LOC feature combination + phonation_proximity_col
+        c = ('static_feautre_LOC', 'dynamic_feature_LOC', 'dynamic_feature_phonation')
+        e1, e2, e3=c
+        Merged_df_dict['+'.join(c)]=Merge_dfs(df_infos_dict[e1],df_infos_dict[e2])
+        Merged_df_dict['+'.join(c)]=Merge_dfs(Merged_df_dict['+'.join(c)],df_infos_dict[e3])
+        OutPklpath=merge_out_path+'+'.join(c)+".pkl"
+        pickle.dump(Merged_df_dict['+'.join(c)],open(OutPklpath,"wb"))
+# MERGEFEATURES=MERGEFEATURES_old
+MERGEFEATURES=MERGEFEATURES_new
 if args.Mergefeatures:
     MERGEFEATURES()
 
@@ -553,6 +637,7 @@ ErrorFeat_bookeep=Dict()
 
 
 
+
 FeatureLabelMatch_manual=[
 
     ['TD vs df_feature_lowMinimal_CSS >> LOC_columns+LOCDEP_Trend_D_cols+LOCDEP_Convergence_cols+LOCDEP_Syncrony_cols+Phonation_Trend_K_cols+Phonation_Proximity_cols+Phonation_Convergence_cols', 'ASDTD'],
@@ -566,7 +651,6 @@ FeatureLabelMatch_manual=[
     ['TD vs df_feature_high_CSS >> Phonation_Trend_D_cols+Phonation_Proximity_cols', 'ASDTD'],
     ['TD vs df_feature_high_CSS >> Phonation_Proximity_cols', 'ASDTD'],
  ]
-
 
 
 # FeatSel 掌管該出現的columns
@@ -688,9 +772,9 @@ Best_param_dict=Dict()
 sellect_people_define=SellectP_define()
 
 # ''' 要手動執行一次從Incorrect2Correct_indexes和Correct2Incorrect_indexes決定哪些indexes 需要算shap value 再在這邊指定哪些fold需要停下來算SHAP value '''
-SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
+# SHAP_inspect_idxs_manual=None # None means calculate SHAP value of all people
 # SHAP_inspect_idxs_manual=[4, 6, 15] # None means calculate SHAP value of all people
-# SHAP_inspect_idxs_manual=[] # empty list means we do not execute shap function
+SHAP_inspect_idxs_manual=[] # empty list means we do not execute shap function
 # SHAP_inspect_idxs_manual=sorted(list(set([14, 21]+[]+[24, 28, 30, 31, 39, 41, 45]+[22, 23, 27, 47, 58]+[6, 13, 19, 23, 24, 25]+[28, 35, 38, 45])))
 
 for clf_keys, clf in Classifier.items(): #Iterate among different classifiers 
@@ -1445,6 +1529,8 @@ for key, values in df_Result_dict.items():
 以下就是TASLP paper沒有用到備著的部分
 '''
 # =============================================================================
+
+
 Reverse_lst=[
 'Inter-Vowel Dispersion+GC[VSC]\\textsubscript{inv}+Syncrony[VSC]+GC[P]\\textsubscript{inv}+GC[P]\\textsubscript{part}+Proximity[P]',
 'GC[P]\\textsubscript{inv}+GC[P]\\textsubscript{part}+Proximity[P]',
@@ -1457,7 +1543,7 @@ Reverse_lst=[
 'Proximity[P]'
 ]
 for nameComb in Reverse_lst:
-    print(nameComb)
+    # print(nameComb)
     FeatBag=[]
     for single_feat in nameComb.split("+"):
         InversedFeat=Swap2PaperName(single_feat,PprNmeMp,method='inverse')

@@ -65,7 +65,8 @@ class Phonation:
                     else:
                         df_=F12_raw_dict[keys]
                         df_['vowel']=keys
-                        df_vowel=df_vowel.append(df_)
+                        # df_vowel=df_vowel.append(df_)
+                        df_vowel = pd.concat([df_vowel, df_], ignore_index=True)
                 df_vowel['target']=pd.Categorical(df_vowel['vowel'])
                 df_vowel['target']=df_vowel['target'].cat.codes
                 return df_vowel
@@ -116,7 +117,8 @@ class Phonation:
             # =============================================================================
             df_RESULT_list=pd.DataFrame.from_dict(RESULT_dict)
             df_RESULT_list.index=[people]
-            df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
+            # df_formant_statistic=df_formant_statistic.append(df_RESULT_list)
+            df_formant_statistic = pd.concat([df_formant_statistic, df_RESULT_list]) # index 很重要不能ignore
         return df_formant_statistic
 class Phonation_disvoice:
     """

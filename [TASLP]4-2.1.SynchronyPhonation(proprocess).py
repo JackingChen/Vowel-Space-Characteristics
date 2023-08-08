@@ -84,9 +84,7 @@ def get_args():
     parser = argparse.ArgumentParser(
         description="Select utterances with entropy values that are close to disribution of target domain data",
         )
-    parser.add_argument('--inpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
-                        help='path of the base directory')
-    parser.add_argument('--outpklpath', default='/media/jack/workspace/DisVoice/articulation/Pickles',
+    parser.add_argument('--inpklpath', default='/media/jack/workspace/VC_test/Vowel-Space-Characteristics/data/pickles',
                         help='path of the base directory')
     parser.add_argument('--reFilter', default=False, type=bool,
                             help='')
@@ -98,7 +96,7 @@ def get_args():
                             help='path of the base directory')
     # parser.add_argument('--Randseed', default=5998,
     #                         help='path of the base directory')
-    parser.add_argument('--dataset_role', default='ASD_DOCKID',
+    parser.add_argument('--dataset_role', default='TD_DOCKID',
                             help='[TD_DOCKID | ASD_DOCKID_emotion | kid_TD | kid88]')
     parser.add_argument('--Inspect_roles', default=['D','K'],
                             help='')
@@ -329,7 +327,9 @@ def FillData_NormDistrib(AUI_info,People_data_distrib,Inspect_features,PhoneOfIn
                     df_filled_samples_ori=df_filled_samples.copy()
                     df_filled_samples_ori['cmps']='ori'
                     df_filled_samples=pd.concat([df_filled_samples_ori,df_filled_samples_cmp],axis=0)
-                    AUI_info_filled[people][phonesymb]=AUI_info_filled[people][phonesymb].append(df_filled_samples)        
+                    # AUI_info_filled[people][phonesymb]=AUI_info_filled[people][phonesymb].append(df_filled_samples)        
+                    AUI_info_filled[people][phonesymb]=\
+                        pd.concat([AUI_info_filled[people][phonesymb],df_filled_samples])
                     if verbose:
                         print("Filled ", Num2sample ,'EmptIES ')
     return AUI_info_filled
